@@ -1,0 +1,85 @@
+{
+ "wave": "B",
+ "round": 39,
+ "states_reviewed": 140,
+ "findings": [
+  {
+   "id": "B39-001",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r39/round-1/wave-B-shots/B39-001-vault-locked-after-held-enter.png",
+   "category": "vault / keyboard auto-repeat",
+   "severity": "P2",
+   "evidence": "Prod bundle (5902/3902), iPhone 13 profile, learner with a complete Hematology vault. Type any wrong 3-digit code in the Code Vault input, then hold Enter (12 keydown repeats at 40 ms, i.e. about 0.5 s of key repeat). Network: 5 x 422 then 7 x 429. The card shows 'Too many incorrect codes. Try again in 10 minutes.' and the CORRECT code is then refused with the same message (API check: correct code while locked = 429). The form has no e.repeat guard, so one slightly long Enter press burns all 5 tries. Recovery exists only by waiting 10 minutes or Reset guest session (reproduced: after /demo/reset + replay the correct code returns 200), which also wipes progress; the message does not say so. Script: scratchpad/r39B/vaultheld.mjs, lockrec.mjs.",
+   "fix_hint": "Ignore event.repeat on the vault form (onKeyDown Enter with repeat), or disable Unlock until the code differs from the last rejected one; optionally count only distinct codes server-side.",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "B39-002",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r39/round-1/wave-B-shots/B39-002-held-enter-25-wrong.png",
+   "category": "keyboard auto-repeat / scoring display",
+   "severity": "P3",
+   "evidence": "Prod bundle desktop. bio-01 step 1: select a wrong option, focus Submit answer, hold Enter (25 repeats at 30 ms). 26 POSTs: 25 wrong answers recorded; Case status reads Wrong answers 25, XP penalty so far -150 (capped); a 160-repeat hold recorded 85 wrong answers. Each repeat re-submits the same wrong answer because focus returns to Submit after every reply. The wrong-answer count is permanent history (accuracy). Extends known B-004 (same wrong answer charged each time) with the one-keypress amplification. Also: after that, one paid hint made 'XP penalty so far' go from -150 to -130 (the hint removes the +20 No-hint bonus so the cap budget shrinks), i.e. paying for a hint lowered the displayed penalty.",
+   "fix_hint": "Skip submit when event.repeat or when the answer is identical to the last rejected one; compute 'XP penalty so far' including forfeited bonuses.",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "B39-003",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r39/round-1/wave-B-shots/B39-003-master-hint-says-15xp.png",
+   "category": "misleading price statement",
+   "severity": "P2",
+   "evidence": "Mission screen says 'Each hint costs 15 XP.' (also Case status 'XP penalty so far'), but the first hint on a mission also forfeits the No-hint bonus (+20 standard, +60 Master). Reproduced on prod: hem-01 with 1 hint, 0 wrong = 145 of 180 (-35, ledger 'No hint used 1 hint used 0' + 'Hint used -15'); Master 'Clinical Detective' with 1 hint + 1 wrong = 455 of 570, i.e. the single hint cost 75 XP, five times the stated 15 (see B39-003-master-result.png). /api/rules lists noHint and hintPenalty separately but no screen states the combined cost before the learner decides; the dashboard only says 'a hint costs more'. The learner learns the real price only on the result ledger.",
+   "fix_hint": "Say 'The first hint on a mission also forfeits the No-hint bonus (N XP)' next to the button using /api/rules values, and count the forfeited bonus in XP penalty so far.",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "B39-004",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r39/round-1/wave-B-shots/B39-004-origin-mismatch.png",
+   "category": "failure not explained",
+   "severity": "P3",
+   "evidence": "Prod bundle loaded at http://localhost:5902 while built for http://127.0.0.1:3902/api (CORS_ORIGIN exactly http://127.0.0.1:5902); same on dev 5901. User sees 'Demo laboratory unavailable ... Cannot reach the Escape Lab server. Check your connection and retry.' with Reopen button; the real cause (CORS: origin not allowed) is only in the console. Retrying can never succeed, nothing says to open the site on the address the server was configured for. The demo script mentions the 127.0.0.1 vs localhost trap, the UI does not.",
+   "fix_hint": "On a status-0 failure at startup add a line such as 'If you opened this page on a different address than the one the server expects (localhost vs 127.0.0.1), use the address from the instructions.'",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "B39-005",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r39/round-1/wave-B-shots/B39-005-strongest-area-tie.png",
+   "category": "content presentation",
+   "severity": "P3",
+   "evidence": "Student who cleared everything (all 100%): Lab results, Master Lab card lists four competencies all at 100% and prints 'Strongest area: Hematology interpretation.' (first of a four-way tie). The same on the standard labs (e.g. Microbiology 'Strongest area' with one competency). A strongest-area claim is made when nothing is stronger than anything else.",
+   "fix_hint": "Print 'Strongest area' only when one competency strictly leads; otherwise omit or say all at 100%.",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "B39-006",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r39/round-1/wave-B-shots/B39-006-two-tab-stale-submit.png",
+   "category": "concurrency messaging",
+   "severity": "P3",
+   "evidence": "Two tabs on hem-02 (same shared guest, same attempt id eae27ed7...). Tab A answers step 1; tab B (stale, still on step 1) submits step 1: B shows only 'This could not be completed. This is not the current step.' while its screen silently jumps to step 2; no mention that the attempt was advanced elsewhere. Concurrent hint presses: server charged one hint (-15, correct, no double charge); tab B shows Hint 1 text plus an alert 'No more hints are available for this step.' with no explanation that the other tab already bought it. After A finishes, B's next submit lands on the result screen with no explanation. No lost hint, no double charge, no corrupted state.",
+   "fix_hint": "Map wrong_step / no_more_hints on a resync to 'This case was changed in another tab or window; the screen now shows the current step.'",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  }
+ ],
+ "summary": {
+  "P0": 0,
+  "P1": 0,
+  "P2": 2,
+  "P3": 4,
+  "open_P0": 0,
+  "open_P1": 0,
+  "open_P2": 2,
+  "open_P3": 4
+ },
+ "verdict": "GREEN",
+ "notes": "Snapshot id at start and end: 96233cf7caabeb02b0d9cf871892151627ae48bf3bbc20b7cd2974def258c81d (identical, 143 files). S-1 confirmed unchanged (hem-01 accessibility tree still holds only the button 'Select a point on the scientific image'; not re-reported).\nPRODUCTION BUNDLE REALLY EXERCISED: vite build into scratchpad dist-prod with VITE_API_URL=http://127.0.0.1:3902/api, served by vite preview on 5902, second API on 3902 with CORS_ORIGIN exactly http://127.0.0.1:5902 (dev 5901 + API 3901 in parallel for dev-vs-prod comparison). Own PIDs only killed by PID at the end; ports 3901/3902/5901/5902 verified free; 3000/5173 untouched.\nATTACKED: (a) all 10 missions played through the UI (hem-01 played visually, not skipped) on the PROD bundle at 1440x900, iPhone 13 (390x844, touch, DPR3) and Pixel 7 (412x915), each with fresh learner, one hint on first step of most missions, one wrong answer, wrong vault code then right code for 3 labs, Master Lab, then Progress, Lab results, Settings, About, plus Reset guest session (UI Confirm reset). Per screen: horizontal overflow 0, no touch target under 44 px on phones, no control covered by a sticky layer (elementFromPoint on every control), no clipped text without title, console/network: only the expected 422 on a deliberate wrong vault code (visible alert). Dev run on iPhone profile identical to prod (no minification, StrictMode, hashing difference). Real touchscreen taps on hem-01 (wrong then right) and bio-02 text version (Select Sodium wrong, Potassium right; 72x44 buttons; table region scrolls inside itself; page overflow 0) on both phones. Landscape iPhone/Pixel, 320x480, 320x225 (400% zoom), 640x450 (200%), WCAG text-spacing override on home, lab map, progress, results, about, settings and three mission types: no clipping (decorative arc only). Sticky mission header 108 px vs scroll-padding 120 px: no focus obscured at 320/360/390/412/600/768/901 widths. Expiry on prod (DB started_at shifted on my own DB): alert, focus on Restart, reload keeps closed state, Restart works, focus-event resync detects expiry; desktop and iPhone.\n(b) Environment matrix: fr-FR, ar-EG, ja-JP, de-CH, hi-IN with matching Accept-Language, timezones UTC-12, UTC+14 (Kiritimati), Asia/Kolkata, Cairo, Tokyo: text of home, lab map, progress, results, settings, about, lobby and mission is byte-identical to the en-US/UTC baseline (all numbers use toLocaleString('en'), no date on any student screen, streak is server UTC; html lang stays en, no dir). JavaScript disabled: visible noscript message at desktop and iPhone widths (not a blank page). Storage: sessionStorage fully throwing is handled by memory fallback (works); only getItem-throws or setItem-throws variants loop to 'Demo laboratory unavailable' with 'The server keeps rejecting guest sessions' (known B35-011 class, not re-reported). No cookies used. Offline mid-session: clear 'This page could not be loaded ... Retry', Retry recovers. API unreachable at start: gate with message and Reopen. Origin mismatch localhost vs 127.0.0.1: B39-004. No service worker; prod assets served Cache-Control no-cache + ETag; a hashed hero image missing after a 'rebuild' (renamed file, SPA fallback returns html): the app shows its Reload alert and disables Submit; index never stale. prefers-reduced-data: no CSS reacts to it (nothing to test).\n(c) Navigation/concurrency: reload on every screen returns to dashboard (known), mission restored after reload with hint list and timer; Back leaves app (known) and Forward restores; bfcache-style away/back keeps mission, hints, timer; double-click Start sends one POST; Start in flight then navigating elsewhere leaves attempt as Resume with no stuck banner; two tabs same mission (B39-006; no double charge, no lost hint, result ledger 145 correct); Reset from a second tab while a hint request is held in flight: tab shows 'This case is no longer available' with Restart, XP unchanged at 8,240, restart gives a clean attempt; closing the tab mid-mission and reopening: dashboard 'Resume active investigation', hint kept; an attempt that expired while the tab was closed shows Replay (fresh attempt); Faculty guest from a phone (Guest options) works; token is identical for both tabs (shared guest, known item 5); held Enter on Submit/Unlock (B39-001/002), held Enter on hint bought exactly one hint; 160 rapid repeats produced no 429 and no UI breakage; viewport resize across the 900 px breakpoint keeps match selections, order arrangement and hint list.\n(d) Content sweep of every student screen (fresh learner, demo guest, all-complete learner), About/demo guide for both roles with every About button exercised on desktop and phone (all land on the right heading, no obscured focus): no raw ids, enums, '[object Object]', clipped or ellipsised text; document titles correct per screen; nothing claims clinical validity ('not a validated image', 'Educational scenario — not clinical guidance', 'Not yet biomedically validated' present). Items found: B39-003, B39-005. Known mixed terminology (Hematology vs Hematology Lab, Master vs Master Lab, ACTIVE/CLEARED) left unreported by instruction.\n(e) Console/network without visible alert: none except the browser's own 'Failed to load resource' line for the deliberate 422/409 which each had a visible alert.\nNOT TESTED: WebKit/Safari, real on-screen keyboard (emulated only via viewport sizes), real key auto-repeat hardware (simulated with repeated keydown), real screen reader, browser default font-size change, a real translation prompt. Faculty date rendering across time zones not examined beyond reading the code (toLocaleString('en') in the browser's own time zone, no zone label)."
+}

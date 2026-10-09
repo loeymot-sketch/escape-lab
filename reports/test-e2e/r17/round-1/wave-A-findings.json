@@ -1,0 +1,85 @@
+{
+  "wave": "A",
+  "round": 17,
+  "states_reviewed": 21000,
+  "findings": [
+    {
+      "id": "R17-A-01",
+      "severity": "P3",
+      "category": "state-integrity (multi-process only)",
+      "area": "hint refund path vs completed attempt",
+      "title": "With two processes on one database, a hint that finishes after the attempt was completed elsewhere is REFUNDED in the counters while the frozen result keeps the -15 XP: hints_total=0, result stats hintsUsed=1, and the No Hint badge is later granted",
+      "evidence": "Two Game instances on one file DB (= two processes). A starts a hint (provider pending), B answers every step correctly (attempt completed, result_json computed with hints=1, score 145). A's provider then answers: the second tx sees status<>in_progress and runs the refund branch (game.ts:526-531): step_results.hints, attempts.hints_total decremented, hint_log row deleted, 409 wrong_step. Final: attempts.hints_total=0, step_results empty of hints, hint_log empty, but result_json.stats.hintsUsed=1 and ledger 'Hint used -15'; badges() then grants 'no-hint'. Under a 3-process random-play stress on one DB (users shared across processes, /scratchpad/r17-A/stress.ts), 563 of 4,658 completed attempts had result_json.stats.hintsUsed != attempts.hints_total; the same stress in ONE process: 0 of 1,778. A second residual of the same family: two processes reserve level 1 and level 2, level 1 is refunded on expiry, so hints=1 while the surviving row is level 2 (the next hint would be issued as level 2 again) - harmless because the attempt is over by then. docs/KNOWN_LIMITATIONS.md:24 documents the cross-process in-flight limit as 'not supported' but describes it as 'can still cost the hint penalty without delivering the text'; since R16 the row is deleted and the counters are refunded, so the real effect is an inconsistent attempt (penalty in the result, no hint in the log, badge granted).",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r17-A/hint1.ts (scenario S1: node --disable-warning=ExperimentalWarning hint1.ts <scratch dir>) and stress.ts (3 processes) + the SQL in the notes of this file",
+      "expected": "Either the charge and the row stay (the result already contains them) or the attempt is never completed while a reserved hint exists; counters, hint_log and result_json agree.",
+      "actual": "hints_total=0 / no hint row / result says 1 hint and -15 XP; No Hint badge granted although the ledger shows a hint.",
+      "fix_hint": "game.ts:526 refund branch: when cur.status === 'completed' do NOT decrement or delete (the result_json of complete() already counted the hint; keep the standard row so the log matches). Only refund for 'expired' / step change on an in_progress attempt. Update docs/KNOWN_LIMITATIONS.md:24 to say what happens.",
+      "status": "open"
+    },
+    {
+      "id": "R17-A-02",
+      "severity": "P3",
+      "category": "quality (AI hint guard false positives)",
+      "area": "assistant.ts namesOptionByCapital article rule",
+      "title": "The article 'A' rule drops ordinary AI hint openers ('A first look at...', 'A likely cause is...', 'A most useful clue...', 'A clearly abnormal...', 'A just...', 'A also...', 'A now...') on every step whose correct option is A (5 of 19 guarded steps)",
+      "evidence": "leaksAnswer(text, step) for hem-03-s1 (answer A): DROP for 'A first look at the red cell indices will narrow this down.', 'A likely cause is reduced iron stores, so check the indices.', 'A most useful clue is the MCV.', 'A clearly abnormal MCV should guide you.', 'A, B and C are all possible, so compare each with the MCV.'; PASS for 'A single index...', 'A quick check...', 'A good approach...', 'A key point...'. The cause is ADVERB / TAIL words (first, likely, most, clearly, just, also, now, once, here) being treated as linking words after the capital A (assistant.ts namesOptionByCapital, the letter === 'A' branch). Also 'Look at Sample C and compare it with Tube B' and 'Compare tube C against the reference' are dropped on answer-C steps (documented). Fallback verified safe: the standard hint is delivered at the same price and stays persisted (hint1.ts S3 leak/long/blank/throw cases: charge -15, one hint_log row, view == response, invariants hold).",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r17-A/fp3.ts",
+      "expected": "'A first look at ...' (article) passes; the letter reading is limited to A + linking verb ('A is', 'A seems').",
+      "actual": "Common article phrasing is read as the letter A and the AI text is thrown away (cost: the learner gets the faculty hint instead).",
+      "fix_hint": "assistant.ts namesOptionByCapital (letter === 'A' branch): only LINK words (is, was, seems, ...) after A keep it a letter; remove ADVERB and TAIL from that exception. Zero effect on the other letters.",
+      "status": "open"
+    },
+    {
+      "id": "R17-A-03",
+      "severity": "P3",
+      "category": "validation",
+      "area": "email / program / studyLevel / password",
+      "title": "A lone surrogate is still accepted and silently stored as U+FFFD in e-mail, program, studyLevel (and equals U+FFFD in a password); two different e-mails that differ only in the surrogate collide",
+      "evidence": "POST /api/auth/register email 'e<ts>\\ud800@ex.org' -> 201 with user.email 'e<ts>\\uFFFD@ex.org'; the same address with '\\ud801' -> 409 email_taken; login with the '\\ud801' form -> 200 as the first account. PUT /api/profile {program:'Bio\\ud800logy', studyLevel:'L\\udc003'} -> 200 and GET returns U+FFFD in both. Password 'correct-horse-9\\ud800' registers and logs in with '\\ud801' and with a literal U+FFFD. Echoes are consistent with what is stored (no read/write mismatch), so this is the 'accepted, documented' class for program/studyLevel; e-mail and password are not mentioned in docs/KNOWN_LIMITATIONS.md (R16-A-01). No authz impact (the colliding address is not deliverable).",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r17-A/surr.mjs",
+      "expected": "400 validation_error ('must not contain unpaired surrogate characters') for every typed string field, or at least the e-mail.",
+      "actual": "201 / 200 with substitution.",
+      "fix_hint": "http.ts validate(): apply the LONE_SURROGATE test to every string field (not only pattern '\\\\S'), or add it to the email pattern branch; document the password behaviour.",
+      "status": "open"
+    },
+    {
+      "id": "R17-A-04",
+      "severity": "P3",
+      "category": "contract",
+      "area": "OpenAPI Node-level statuses",
+      "title": "431 is declared everywhere but the sibling Node-level 400 (malformed request line / header / version, CL+TE conflict) is not declared on operations without params or body (e.g. GET /api/health)",
+      "evidence": "Raw sockets against :6801: 'GET /api/health HTTP/1.1' with a header line without colon, 'FOO /api/health', 'GET ... HTTP/9.9', and Content-Length + Transfer-Encoding all answer 'HTTP/1.1 400 Bad Request' from Node (no body, no JSON envelope); GET /api/health declares only 200/404/405/431. 431 itself verified live (20 KB Authorization on GET, POST, authenticated and anonymous routes -> 431) and declared on all 31 operations; the document has no broken $ref, all path params declared, byte-identical to a fresh generation; web check-api-contract.mjs passes.",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r17-A/rawh.mjs",
+      "expected": "Either document the protocol-level 400 next to 431 or state in the 431 text that other protocol errors exist.",
+      "actual": "Undeclared protocol-level 400 on parameterless GETs; the UI never produces it.",
+      "fix_hint": "openapi.ts: add a generic protocol-error note to components.responses.HeaderTooLarge description or declare '400' as ERROR_RESPONSE-or-empty on every operation.",
+      "status": "open"
+    },
+    {
+      "id": "R17-A-05",
+      "severity": "P3",
+      "category": "performance",
+      "area": "demo reset (single write transaction)",
+      "title": "A student reset of an account with very many attempts holds the write lock and blocks the event loop for the whole delete (2.5 s for 4,000 attempts / 400,000 answer_log rows)",
+      "evidence": "Scratch DB with 4,000 completed attempts (+step_results, hint_log, 100 answer_log each) for the demo student: resetDemoStudent took 2,501 ms and the event-loop gap was 2,504 ms (bigreset.ts). Normal reset: 6-16 ms, max /api/health latency during 5 resets 15 ms. Not a regression (the old reset deleted the same rows synchronously) but the lock is now held for the delete + replay in one transaction, so another PROCESS waiting for BEGIN IMMEDIATE blocks synchronously up to the 5 s busy timeout. There is no cap on attempts per account, only the 60/min start limit.",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r17-A/bigfill.ts then bigreset.ts",
+      "expected": "Bounded stall.",
+      "actual": "Proportional to the row count (only for a demo account that was never reset).",
+      "fix_hint": "demo.ts playAlex: the demo account is shared and reset on demand; optionally cap/prune old attempts (keep latest N) or document the bound.",
+      "status": "open"
+    }
+  ],
+  "summary": { "P0": 0, "P1": 0, "P2": 0, "P3": 5 },
+  "verdict": "GREEN",
+  "round16_fix_verification": {
+    "R16-A-01 lone surrogates (validate + toWellFormed keys)": "HOLDS for name / class name / profile name (400 on every unpaired surrogate; astral names, emoji, flags, ZWJ families still 201; keys computed on well-formed text; no echo/storage mismatch); PARTIAL only in that e-mail / program / studyLevel / password still accept it (R17-A-03, P3)",
+    "R16-A-02 hint charge + log atomic": "HOLDS single-process: kill -9 at the provider wait leaves hints_total 1, penalty -15 and the standard hint listed (second hint level 2, third no_more_hints, db integrity clean); provider throw/blank/null/leak/long/NUL+lone-surrogate/ok all keep one row == one counter; GET during generation shows the standard hint, then the assistant text replaces it (one entry per level); expiry mid-generation refunds counters and row (never negative); HTTP-level parallel hint/answer during generation -> 409 hint_in_progress. PARTIAL across processes (R17-A-01, documented as unsupported but the described effect is understated)",
+    "R16-A-03 namesOptionByCapital guard": "HOLDS: 0 refusals on all faculty hints / re-checks / prompts / contexts / captions of the 19 choice+decision steps, own and cross-step (200 texts x 19 steps; only hits are a step's own option labels, which are the guard's purpose); squared, fullwidth, circled, math-bold, Cyrillic and Greek capitals caught for A/B/C/D; 1 MB hostile inputs answered in 0-18 ms (cap 4000 code points, worst case on 4000-char hostile strings 17 ms); fallback charges the same and persists; PARTIAL on quality: article 'A' openers dropped (R17-A-02, P3); lower-case, small capitals (U+1D00 block), Cherokee Ꭰ remain undetected (documented heuristic)",
+    "R16-A-04 readOnlyRequest": "HOLDS: HEAD on every GET route with student and teacher tokens, over an overdue attempt: 0 5xx, database content hash unchanged, query_only back to 0",
+    "R16-A-05 demo reset in one BEGIN IMMEDIATE": "HOLDS: 3 processes x 20 resets + 20 HTTP resets at once: 80/80 answered ok, db:check clean, hint/attempt invariants hold; 25 random kill -9 during reset loops: db:check clean, no half state, next reset ok; injected failures (trigger on badges / lab_exits / hint_log / users.xp_carry / attempts.result_json) roll the whole reset back, db.isTransaction false afterwards, other users untouched; successful reset leaves every other user, class, content_status and content_audit byte-identical; teacher reset keeps another teacher's review and adds one audit row for the demo teacher's own; nested SAVEPOINT semantics tested to depth 3 (inner failure rolls back only the inner part). Pipelined requests do not interleave with the reset (handlers run one at a time per socket, other sockets cannot run inside the microtask chain). Residual: stall proportional to row count (R17-A-05); a SQLite auto-rollback error would be masked by 'cannot rollback' in tx() (same as before)",
+    "R16-A-06 not changed": "HOLDS (documented)",
+    "R16-A-07 431 in OpenAPI": "HOLDS: declared on 31/31 operations, refs resolve, structural checks pass, byte-identical to a fresh generation, web contract check passes, live 431 verified; sibling Node-level 400 undeclared (R17-A-04, P3)",
+    "tsconfig ES2024 / Node >=22.18": "HOLDS: npm run typecheck clean; no API newer than 22.16 (db.isTransaction) used; server starts on v22.23.2. Node 22.18.0 itself is not installed here (only 18/20/22.23.2), so the minimum was checked by API inventory, not by running it"
+  },
+  "notes": "Environment: Node v22.23.2, own server on :6801 with scratch DB (killed at the end), all scripts under scratchpad/r17-A. npm test: 250/250 pass (and r16-fixes.test.ts 6 more runs: 10/10 each, no flake). Route x role matrix against be/openapi.json: 2,950 requests (31 operations x 5 roles x path/body variants), 0 undeclared statuses, 0 5xx. 3,000-request fuzz (random bodies with lone surrogates, NUL, bidi, huge numbers, wrong content types, malformed JSON, bad percent-encoding): 0 5xx (statuses 200/201/400/401/403/404/409/415). Answer-leak scan: all 10 missions / six engines played with wrong answers, hints and correct answers; no explanation, hint (before request), re-check (before wrong answer), key coordinates or key field appeared in any response; master code null until the lab exit. State machine: IDOR on GET/answer/hint/result -> 404; 6 parallel hints -> 2x200 + 4x409 no_more_hints (hem-01 has 2), 8 parallel answers -> exactly one applied; scoring oracle over 21 (wrong, hints) combinations incl. the 0-floor cap: ledger sums to score, 0 mismatches; kill -9 of the server during a play loop + reset loop: db:check problems [] and invariants hold. SQL invariants checked after every concurrent run (inv.mjs): hints_total == SUM(step_results.hints) == COUNT(hint_log) per attempt, no duplicate (attempt, step, level), no negative counter, wrong_total == SUM(wrong), no orphans; 3-process stress incl. refunds: invariants hold (only the result_json mismatch of R17-A-01). Old DB (schema v5, hint_log rows without text): standard rows are backfilled from the faculty hint, assistant rows without text are left out while hints_total still counts them (as documented). Not broken (tried): blank/over-long/leaking/throwing/hanging-then-expiring providers, double refund (guards hints > 0), step advance mid-generation in one process (answer is blocked with 409 hint_in_progress), reset + in-flight hint (hint answers 404 for a deleted attempt, no 5xx), concurrent reset + play in 3 processes (only 404/409/429 for the player), event-loop stall in the normal case (max 15 ms). Ideas dismissed: reset interleaving with another request inside the transaction (needs two handlers in one microtask drain; pipelined requests on one socket are serialised by Node); ReDoS (analysis capped at 4,000 code points before any regex runs)."
+}

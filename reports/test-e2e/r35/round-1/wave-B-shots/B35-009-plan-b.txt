@@ -1,0 +1,5 @@
+Script section 2.5 (Plan B): "l'application affiche une erreur visible avec un bouton Retry. Relancez l'API (...), puis cliquez Retry."
+Observed with the API stopped:
+ - first load (gate): title "Demo laboratory unavailable", button "Reopen the laboratory" (no Retry)  [B35-009-gate-button-is-Reopen-not-Retry.png]
+ - already open, click Lab map: panel "This page could not be loaded", button "Retry" [B35-009-panel-button-is-Retry.png]
+After restarting the API (script command, no AUTH_SECRET so the signing key changes) and pressing Retry: 401 -> "Your guest session expired, so a new guest session was opened. Unsaved progress on the previous one is not shown here." and the app is back on Mission control: the screen the presenter was on is lost, not retried. The script does not say that.

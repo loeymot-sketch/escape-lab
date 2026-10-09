@@ -1,0 +1,37 @@
+{
+  "wave": "D",
+  "round": 24,
+  "findings": [
+    {
+      "id": "R24-D-01", "severity": "P3", "category": "residual garbled fragment (residual of R23-D-04)",
+      "where": "docs/FACULTY_DEMO_SCRIPT.md:20",
+      "what": "The Node 18 symptom now reads 'node: bad option: --disable-warning=ExperimentalWarning' (correct, matches node v18.20.7 output) but is followed by a redundant parenthesis '(ou `--disable-warning=ExperimentalWarning`)' that repeats the same flag without the 'node: bad option:' prefix. Harmless, not false; README.md:7, be/README.md:7 and FINAL:25 are clean.",
+      "evidence": "grep 'bad option' README.md be/README.md docs/ ; sed -n 20p docs/FACULTY_DEMO_SCRIPT.md",
+      "suggested_fix": "Delete the '(ou ...)' parenthesis."
+    },
+    {
+      "id": "R24-D-02", "severity": "P3", "category": "traceability",
+      "where": "docs/FINAL_VALIDATION_REPORT.md Tour 21 row and 'Non reaudite' row ('trace du P1 visuel')",
+      "what": "The row mentions a trace of the visual P1 (overlap) but no document or archive README cites reports/test-e2e/r21/internal-p1-overlap.json by path (grep finds no reference). The file exists, parses, severity P1, status fixed; its 'geometry assertion in web/e2e/escape-lab.spec.ts' is real (lines 240-242 stack check).",
+      "evidence": "grep -rn internal-p1-overlap docs README.md .ci-artifacts/.../README.md -> none",
+      "suggested_fix": "Cite the path in the Tour 21 row (optional)."
+    }
+  ],
+  "resolved_from_r23": [
+    "R23-D-01 (P2): resolved. Opening sentence of 'Tour 20 / Tour 21 / Tour 22' now says tour 21 audited the code BEFORE the R21-A-01 fix, tour 22 the final code, tour 23 documents; states the 'aucun P2 nouveau' criterion is NOT strictly met; 'Le code n'a plus de P2 connu non traite hors A-02' is true (r20 code P2s: R20-A-02 design item remains, documented in KNOWN_LIMITATIONS item 10; r21 A P2 = R21-A-01 fixed; r22 A has 0 P2). 'P0=P1=0 sur deux tours consecutifs' true (21, 22, 23).",
+    "R23-D-02 (P2): resolved. Tour 22 row now says '1 paire et 2 triplets', matching wave-A r22 resolved_from_r21 text (pair + triple + second triple; 50 logins, 0 failures).",
+    "R23-D-03 (P3): resolved. CODEX_INITIAL_AUDIT.md banner uses 'Tour 20 / Tour 21 / Tour 22'.",
+    "R23-D-04 (P3): mostly resolved; see R24-D-01 for a redundant parenthesis in FACULTY_DEMO_SCRIPT.md:20.",
+    "R23-D-05 (P3): resolved. Archive README now lists prod-only.log, r21-failed-pass/watch.log, watch.log and misconfigured-parallel-repeat-load.log (4 failed / 20 passed in log, consistent with '4 echecs R5-02/03')."
+  ],
+  "checked": [
+    "Counts recomputed from JSON: r23 wave-D = P2 2 / P3 8 (matches '0/0/2/8'); r22 wave-A = P3 2 (P2 0), wave-D = P2 4 / P3 7 (matches); r21 = visual 0/0/0/6, docs 0/0/2/7, backend 0/0/1/3 = 0/0/3/16 (matches); r20 = 2+7+4=13 P2, 9+9+6=24 P3 (matches).",
+    "'Aucun code n'a change depuis la chaine finale': find in be/src be/test be/scripts be/openapi.json web/src web/e2e web/playwright.config.ts newer than r23/DONE (12:31) returns nothing; newer than the chain start (12:21:31) only be/openapi.json (12:21:48, regenerated inside the chain, openapi-cmp exit 0, hash identical). routes.ts 12:21:04 predates the chain. TRUE.",
+    "shasum: be/openapi.json f1dbd031...c6c6 and be/src/content.ts d4bd3b64...5a39 equal the report (FINAL:120-121) and final-r23/identity-sha256.txt.",
+    "Node 18 text: `node --disable-warning=ExperimentalWarning -e 1` on v18.20.7 prints exactly 'node: bad option: --disable-warning=ExperimentalWarning'; README.md:7, be/README.md:7, FINAL:25, FACULTY_DEMO_SCRIPT:20 carry it.",
+    "KNOWN_LIMITATIONS line 3 (items 12-14 after rounds 21 and 22) and item 14 verified: e2e2 of r21-failed-pass = 3 failed / 408 passed, prod-only.log 3 passed (8.5s), 4 later full passes 411/411 (root e2e1/e2e2, final-r23 e2e1/e2e2), webserver-exit.log written by web/playwright.config.ts.",
+    "Archive README: every named file exists (r20-supervisor-pass/, r21-failed-pass/{prod-only,watch}.log, watch.log, final-r23/{...,identity-sha256.txt}); backend 264 at root and 265/265 in final-r23, frontend 322/322, typecheck/audit exit 0 (final-r23/exit.log all 0).",
+    "reports/test-e2e/r21/internal-p1-overlap.json exists, parses.",
+    "Overclaim grep (production ready, certified, biomedically validated, independent/independant) over docs/, README.md, be/README.md: all hits are negations, ESCALATE statements, historical sections under the historical-state banners, or 'independent' explicitly redefined as same-team AI agents (AUDIT_EVIDENCE, INDEPENDENT_REVIEW_REPORT precision notes, FINAL:77). Historical E2E_VALIDATION_REPORT:61 'apres revue independante' and FINAL:518 'superviseurs adversariaux independants' sit under banners stating no independent human review exists: not counted as findings."
+  ]
+}

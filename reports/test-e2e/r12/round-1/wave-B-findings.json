@@ -1,0 +1,97 @@
+{
+ "wave": "B",
+ "round": 12,
+ "states_reviewed": 1450,
+ "findings": [
+  {
+   "id": "R12-B-01",
+   "severity": "P2",
+   "category": "keyboard_focus",
+   "area": "Mission player, passive time expiry",
+   "viewport": "375x812 touch and 1440x900",
+   "title": "When the countdown reaches zero while the learner is on the question, keyboard focus drops to BODY and does not go to Restart",
+   "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r12-B/shots/ex-phone.png (Time is up panel, Restart mission present); script output: 'expired: ... focus BODY'",
+   "repro": "node /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r12-B/ex.mjs (fresh student, start hem-01, shift attempt started_at so 6 s remain, reload, click the image, wait). After the timer hits 00:00 the image button, Submit and Ask Lab Assistant become disabled and document.activeElement is BODY.",
+   "expected": "Same as the action-triggered expiry (answer/hint -> 409 time_expired), where focus lands on Restart mission: a keyboard or screen-reader user keeps their place and reaches the only useful action.",
+   "actual": "Focus resets to the top of the document; the role=alert panel is announced but the user must Tab through the whole page to Restart or Return. Also true for any passive close (server says expired or gone through the timer sync).",
+   "fix_hint": "web/src/pages/mission.tsx ~line 170-181: the focus effect only acts when pendingFocus.current is set by an action. Set pendingFocus.current='question' (or focus restartRef) when serverExpired/gone flips to true from sync/timer, e.g. in applyAttempt/sync where setServerExpired(true)/setGone(true) are called, or add a separate effect on [serverExpired, gone] that focuses restartRef when document.activeElement is BODY or a now-disabled control.",
+   "status": "open"
+  },
+  {
+   "id": "R12-B-02",
+   "severity": "P3",
+   "category": "copy",
+   "area": "describeError for other 4xx",
+   "viewport": "all",
+   "title": "Empty-bodied 400/408/409/413/422 still surface the raw 'Request failed (n)'",
+   "evidence": "node /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r12-B/v1.mjs: vault unlock fulfilled with 422/400/409/408 and empty body shows 'Request failed (422)' etc.",
+   "repro": "Route POST /api/labs/*/unlock (or any endpoint) to status 408 with empty body; open Progress, submit a code.",
+   "expected": "Same friendly fallback as 5xx for a reply that has no readable sentence.",
+   "actual": "'Request failed (408)'. progress.tsx unlockMessage 422 with details.attemptsLeft but no message would print 'Request failed (422) 3 attempts left...'. Real API always sends JSON for these, so only proxies/gateways reach it.",
+   "fix_hint": "web/src/ui/state.tsx:41 and web/src/pages/progress.tsx:168: use serverSentence(error) ?? generic text for every status, not only 403/404/429/5xx.",
+   "status": "open"
+  },
+  {
+   "id": "R12-B-03",
+   "severity": "P3",
+   "category": "keyboard_focus",
+   "area": "Mission player lab-assistant block at the 900px breakpoint",
+   "viewport": "768x1024 -> 1024x768 (rotating a tablet)",
+   "title": "The hint button is remounted when the viewport crosses 900px, so focus on it drops to BODY",
+   "evidence": "node /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r12-B/s1.mjs (last block): 'hint focus after crossing 900px breakpoint: BODY:'",
+   "repro": "Open a mission at 768 wide, focus Ask Lab Assistant, resize to 1024 wide.",
+   "expected": "Focus stays on the hint button.",
+   "actual": "The assistant block is rendered in two different tree positions (narrow vs wide), so React unmounts/mounts it and focus is lost. Selected answers and typed state are kept.",
+   "fix_hint": "web/src/pages/mission.tsx:345-375: render the assistant once and move it with CSS order/grid areas instead of two JSX positions.",
+   "status": "open"
+  },
+  {
+   "id": "R12-B-04",
+   "severity": "P3",
+   "category": "copy",
+   "area": "describeError 429",
+   "viewport": "all",
+   "title": "A 429 sentence without final punctuation joins badly with the appended delay ('Slow down Try again in 5 seconds.')",
+   "evidence": "node /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r12-B/v1.mjs 429 variants",
+   "repro": "Fulfil a 429 with message 'Slow down' and details.retryAfterSeconds 5.",
+   "expected": "'Slow down. Try again in 5 seconds.'",
+   "actual": "'Slow down Try again in 5 seconds.' The real server messages end with a period, so only a proxy or future message triggers it.",
+   "fix_hint": "web/src/ui/state.tsx:34-36: add a period to kept when it does not end in .!?",
+   "status": "open"
+  },
+  {
+   "id": "R12-B-05",
+   "severity": "P3",
+   "category": "silent_state_change",
+   "area": "Resume after reload when the attempt is gone",
+   "viewport": "all",
+   "title": "Reloading with a stored attempt the server no longer knows silently drops the learner on the dashboard with no explanation",
+   "evidence": "node /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r12-B/m1.mjs 'gone-reload' (focus BODY, no alert); x1 'attempt 404' rows 'NO-ALERT'",
+   "repro": "Start a mission, delete or reset the attempt server-side, reload.",
+   "expected": "A short status ('Your unfinished investigation no longer exists') as on the other restore failures.",
+   "actual": "Dashboard appears as if nothing happened (documented as deliberate in app.tsx comment). A transient 404 from a proxy would have the same effect.",
+   "fix_hint": "web/src/app.tsx ~line 226: on 404 set a notice before setRestore({phase:'done'}).",
+   "status": "open"
+  }
+ ],
+ "summary": {
+  "P0": 0,
+  "P1": 0,
+  "P2": 1,
+  "P3": 4
+ },
+ "verdict": "AMBER",
+ "round11_fix_verification": {
+  "R11-B-01": "HOLDS",
+  "R11-B-02": "HOLDS",
+  "R11-B-03": "HOLDS",
+  "R11-B-04": "HOLDS",
+  "R11-B-05": "HOLDS",
+  "R11-B-06": "HOLDS",
+  "R11-B-07": "HOLDS",
+  "R11-C-02": "HOLDS",
+  "R11-C-04": "HOLDS",
+  "R11-C-05": "HOLDS"
+ },
+ "notes": "Stack: own API 5101 (DEMO_MODE, NODE_ENV=test, restarted once with RATE_REGISTER_PER_HOUR=5000) + Vite 5102, headless Chromium via Playwright; scripts, shots, DB, logs in /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r12-B. Servers killed at the end. No file under be/web/docs/sources was touched (two stray output files I wrote by mistake into the repo root were deleted at once). ROUND-11 FIXES: (1) Dashboard (d1, d2, d3): fresh, 3 done, 3 done + hematology exited, 9 done w/o exits, 9 done + all exits (Master open), everything done, everything exited: '9 of 9 / 100% of the standard missions . The Master Lab is tracked separately', 'Labs cleared 3 of 3 / standard labs', headline 'All investigations complete.' only when no open Master and continue is null (Master done but not exited shows 'Open the Code Vault: Unlock the Master Lab'); all figures equal the API at 375/1440 and wrap cleanly at 320; payload variants through page.route (no Master entry, third lab coming_soon, empty labs, labsCompleted 4, total 10, Master only) degrade to 'N' + 'Standard labs' or drop the Master sentence, never a wrong denominator; Master done with others open and Master locked are impossible server states. (2) Retry buttons: banner Retry and rules Retry, ErrorPanel Retry, Continue without it, Dismiss, gate Reopen all >=44x44 at 375 and 320 (f1, tt). (3) Vault 429 (v1): real server 'Too many incorrect codes. Try again in 10 minutes.'; 118 s -> '118 seconds', 120 -> '2 minutes', 121 -> '3 minutes', 1 -> '1 second'; HTML/empty 429 -> generic wait text; 422 attempts-left copy intact; 5xx -> friendly. (4) Order boundary (o1, 4 viewports x reduced motion): one keyed span replaced per press (mutation log add/remove pairs), exactly one child in the live region after any number of presses, ordinary moves announce once; focus stays on the aria-disabled button, order unchanged on Enter/Space. (5) Return to mission control (m1, 3 entry paths x expired-live/expired-reload/gone-live/result-load-failure at 375 and 1440): present, >=44px, lands on the dashboard with focus on its h1, attempt cleared, no leftover alert. (6) Focus after automatic 401 recovery (a1, r1, c5): real 401 from deleting the user in SQLite on answer, hint, vault unlock, lab map, focus sync: h1 focused, notice shown, mission screen replaced by the dashboard of the new guest (the unsent answer is lost by design); no steal because the tree is replaced. (7) describeError (x1: me, dashboard, labs, lobby, vault, badges, leaderboard, lab results, profile GET/PUT, rules, start, restore, answer, hint, result x 6 statuses x empty/HTML/JSON bodies + invalid JSON/empty/{}/[]/null/HTML 200 + abort = ~470 scenarios): every one shows an alert or the documented recovery, a server-sent JSON message passes through for 403/404/429/5xx, empty/HTML bodies give the friendly text, no plausible default anywhere, no stuck loading, no console error. (8) Reduce motion on token change and failed profile on a switch (rm1): dataset cleared (null) while the banner says not applied, restored on Retry. (9) 401 landing during a failing switch (c5, 500 and network failure, phone+desk): normal recovery with notice, one /auth/demo retry.\n\nSWEEP: full UI play of all 10 missions (stepper, decision, point, order, match, Master) with wrong first, hint (persisted across reload), reload at each step, vault unlock by UI and Lab results, at 375 pointer, 320 pointer+reduced motion, 768 keyboard, 1440 keyboard-only and 375 keyboard-only: after every step the status card, step counter, hints text, result score/accuracy/ledger rows, XP delta, dashboard figures and vault digits equal the API (e2: 0 mismatches, 0 focus losses, no console output). Keyboard-only completion of every engine including select type-ahead, arrow-key point placement and order buttons works. axe: 0 violations on dashboard, lab map, lobby, progress, results, settings, order/point/match/choice/decision states incl. hint, wrong, duplicate-match, vault form/wrong, error panels at 375/320/768/1440, reduced motion on/off, dark colour scheme; no horizontal scroll at 12 widths 280-1920; no off-screen controls, no tap target <44 on touch (the 24px settings checkbox sits in a 59px label that toggles from its edge). Network: slow start/answer with double taps send exactly one request, buttons lock, Exit locked while checking; offline answer -> alert, online resubmit works; two tabs: stale tab shows the result via 409 resync; stale unlock tab says already unlocked; double-tap hint charges once; expiry (live and reload) and Restart (double click = one start); rotation keeps picks; image load failure shows an alert with Reload; replay copy 'did not beat your best score'. Chaos monkey (4 seeds x ~200 actions with random 500/503/abort/429/{} injection and an API oracle on dashboard and vault): no wrong figures, no stuck loading, no console errors. Not reproduced/ not broken: plausible defaults, silent errors, double submission, answer leakage in wrong feedback, tap targets, overflow, console errors. Known and not re-reported: live vs reloaded Master result (no 'Vault progress' line live), shared guest, guest note for registered students, bio-02 artwork, px->rem. Test-harness artifacts I discarded: stale-route ordering in x1 labsMap, aria-label match for 'Review Hematology Lab' in lobby (rerun clean), offline reload browser error pages in the monkey runs."
+}

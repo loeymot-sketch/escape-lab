@@ -1,0 +1,113 @@
+{
+ "results": [
+  {
+   "title": "Fix the Sample",
+   "engine": "decision",
+   "focusBefore": "B\nReject and request a new sample",
+   "focusAfter": "Restart mission",
+   "timer": "Time is up",
+   "alerts": [
+    "Time is up. The server closed this attempt because its time limit passed. Your answers can no longer be submitted. Start the mission again for a fresh attempt. Restart mission Return to mission control"
+   ],
+   "live": [
+    {
+     "t": 6400,
+     "kind": "region-inserted",
+     "role": "alert",
+     "text": "Time is up.The server closed this attempt because its time limit passed. Your answers can no longer be submitted. Start the mission again for a fresh attempt.Re"
+    }
+   ]
+  },
+  {
+   "title": "Anemia Detective",
+   "engine": "choice",
+   "focusBefore": "C\nMacrocytic",
+   "focusAfter": "Restart mission",
+   "timer": "Time is up",
+   "alerts": [
+    "Time is up. The server closed this attempt because its time limit passed. Your answers can no longer be submitted. Start the mission again for a fresh attempt. Restart mission Return to mission control"
+   ],
+   "live": [
+    {
+     "t": 15230,
+     "kind": "region-inserted",
+     "role": "alert",
+     "text": "Time is up.The server closed this attempt because its time limit passed. Your answers can no longer be submitted. Start the mission again for a fresh attempt.Re"
+    }
+   ]
+  },
+  {
+   "title": "Microbe Detective",
+   "engine": "choice",
+   "focusBefore": "B\nGram-positive cocci in clusters",
+   "focusAfter": "Restart mission",
+   "timer": "Time is up",
+   "alerts": [
+    "Time is up. The server closed this attempt because its time limit passed. Your answers can no longer be submitted. Start the mission again for a fresh attempt. Restart mission Return to mission control"
+   ],
+   "live": [
+    {
+     "t": 24060,
+     "kind": "region-inserted",
+     "role": "alert",
+     "text": "Time is up.The server closed this attempt because its time limit passed. Your answers can no longer be submitted. Start the mission again for a fresh attempt.Re"
+    }
+   ]
+  },
+  {
+   "title": "Gram Stain Challenge",
+   "engine": "order",
+   "focusBefore": "Move down: Gram iodine (mordant)",
+   "focusAfter": "Restart mission",
+   "timer": "Time is up",
+   "alerts": [
+    "Time is up. The server closed this attempt because its time limit passed. Your answers can no longer be submitted. Start the mission again for a fresh attempt. Restart mission Return to mission control"
+   ],
+   "live": [
+    {
+     "t": 32902,
+     "kind": "region-inserted",
+     "role": "alert",
+     "text": "Time is up.The server closed this attempt because its time limit passed. Your answers can no longer be submitted. Start the mission again for a fresh attempt.Re"
+    }
+   ]
+  },
+  {
+   "title": "Petri Dish Mystery",
+   "engine": "match",
+   "focusBefore": "Association for Clear zone of beta-hemolysis on blood agar, ",
+   "focusAfter": "Restart mission",
+   "timer": "Time is up",
+   "alerts": [
+    "Time is up. The server closed this attempt because its time limit passed. Your answers can no longer be submitted. Start the mission again for a fresh attempt. Restart mission Return to mission control"
+   ],
+   "live": [
+    {
+     "t": 41731,
+     "kind": "region-inserted",
+     "role": "alert",
+     "text": "Time is up.The server closed this attempt because its time limit passed. Your answers can no longer be submitted. Start the mission again for a fresh attempt.Re"
+    }
+   ]
+  },
+  {
+   "title": "Lab Value Hacker",
+   "engine": "point-text",
+   "focusBefore": "Select Potassium result",
+   "focusAfter": "Restart mission",
+   "timer": "Time is up",
+   "alerts": [
+    "Time is up. The server closed this attempt because its time limit passed. Your answers can no longer be submitted. Start the mission again for a fresh attempt. Restart mission Return to mission control"
+   ],
+   "live": [
+    {
+     "t": 50570,
+     "kind": "region-inserted",
+     "role": "alert",
+     "text": "Time is up.The server closed this attempt because its time limit passed. Your answers can no longer be submitted. Start the mission again for a fresh attempt.Re"
+    }
+   ]
+  }
+ ],
+ "logs": []
+}

@@ -1,0 +1,64 @@
+{
+  "wave": "B",
+  "round": 38,
+  "states_reviewed": 64,
+  "findings": [
+    {
+      "id": "B38-001",
+      "state_artifact": "reports/test-e2e/r38/round-1/wave-B-shots/summary-closed.png; txt-closed.png",
+      "category": "a11y / non-text state: disclosure state of 'Text version of this image' has no visible indicator",
+      "severity": "P3",
+      "evidence": "Lab Value Hacker (bio-02), 1440x900 and 320 px. getComputedStyle(summary): display:flex, ::marker content 'normal', no svg/chevron child (flex summary suppresses the native triangle). The control looks like a titled card, not an expandable section; open/closed is conveyed only by the content appearing below. The accessibility tree is fine (details group, summary); this concerns sighted keyboard/low-vision users who are the audience of the text version.",
+      "fix_hint": "Add a chevron (rotating on [open]) or '+/-' to the summary, or use display:list-item with a styled ::marker.",
+      "status": "open", "first_seen_round": 38, "rounds_open": 1
+    },
+    {
+      "id": "B38-002",
+      "state_artifact": "reports/test-e2e/r38/round-1/wave-B-shots/kb-trace.json (hint, correct-step, fragment entries)",
+      "category": "a11y / live regions: hint text, 'Step N correct' explanation and fragment note are role=status nodes inserted already filled, and focus moves in the same turn",
+      "severity": "P3",
+      "evidence": "MutationObserver + focus trace on a fresh student played by keyboard only. Hint: Enter on 'Ask Lab Assistant' -> a new <div role=status>'Hint 1. Inspect the tube...' is inserted (kind region-inserted) and focus goes to the h1 of the question when that was the last hint (button disabled). Correct step: on Fix the Sample, Organ Rescue, Acid-Base, Clinical Detective, 'Step 1 correct. <explanation>' appears (first time region-inserted; later text-changed) while focus is moved to the next step's h1 in the same tick. Fragment found on a non-final step (Master Lab): inserted filled. Hint status does not mention the 15 XP charge; 'Hints used / XP penalty so far' (CASE STATUS) are not live. Only role=alert (wrong answer, Time is up, vault errors: 9 of 9 wrong vault codes re-inserted the alert) is reliable. Announcement could not be verified without a screen reader, hence P3, not P2. Related to known B35-001/B36-002 but a different set of events.",
+      "fix_hint": "Keep one persistent polite live region per mission screen and write messages into it (hint text + 'cost 15 XP', 'Step 1 correct: ...', 'Fragment 2 found'); do not move focus away in the same turn, or fold the message into the new heading's description.",
+      "status": "open", "first_seen_round": 38, "rounds_open": 1
+    },
+    {
+      "id": "B38-003",
+      "state_artifact": "reports/test-e2e/r38/round-1/wave-B-shots/B38-print-mission-page1.png",
+      "category": "print: mission screen prints with the player header overprinting the content and the selected state unreadable",
+      "severity": "P3",
+      "evidence": "Lab Value Hacker with 'Select Potassium result' chosen, details open, page.pdf (A4, media print): the sticky 'Exit mission / CASE FILE / timer' header is rendered in the middle of page 1 and hides the Sodium, Potassium and Chloride rows of the image; in the printed text table the selected button is white-on-white (background not printed), so the selection is invisible. Only @media print rule in the app (refine.css) un-sticks the sidebar (B35-013 family, mission player not covered).",
+      "fix_hint": "In @media print: .player header {position:static}, button[aria-pressed=true] {outline:2px solid; font-weight:700} and hide Exit/Submit controls.",
+      "status": "open", "first_seen_round": 38, "rounds_open": 1
+    },
+    {
+      "id": "B38-004",
+      "state_artifact": "docs/FACULTY_DEMO_SCRIPT.md section 3 row 1 and 'Dites d'abord l'ouverture de la section 6 (30 secondes, comprise dans la premiere ligne)'",
+      "category": "demo script timing: row 0:00-0:30 cannot hold what the script asks to say",
+      "severity": "P3",
+      "evidence": "Counted from the file: section 6 has 5 bullets = 88 words (about 35 s at 150 wpm, 40 s at 130 wpm) and the row-1 line is 32 words (13-15 s): about 50-55 s of speech inside a 30 s row, while the script says the section 6 opening is 'comprise dans la premiere ligne'. Other rows: speech 10-18 s each, mechanics measured below, so only row 1 is infeasible as written. The script already says the durations are unrehearsed estimates, so P3.",
+      "fix_hint": "Allow 0:00-0:50 for row 1 (and shorten the later rows, or total 5:20), or cut section 6 to its first two bullets in the 5-minute version and keep the others as slide text.",
+      "status": "open", "first_seen_round": 38, "rounds_open": 1
+    },
+    {
+      "id": "B38-005",
+      "state_artifact": "reports/test-e2e/r38/round-1/wave-B-shots/demo5-rows.json, demo7-rows.json",
+      "category": "demo script wording: two identical 'Open the Hematology lab' buttons, and the row-6 button is reachable only from the About page",
+      "severity": "P3",
+      "evidence": "About page (student) has two buttons named 'Open the Hematology lab' (steps 3 and 4): Playwright strict-mode violation, a presenter reading the script sees two equal choices (both work). Row 6 says 'Open the Progress vault': after row 5 the presenter is inside Fix the Sample (no sidebar), so it costs Exit mission + About & demo guide + Open the Progress vault = 3 clicks, whereas the sidebar 'Progress' is 2 (Exit + Progress). Measured literal route: 5-minute version 22 clicks in 29.3 s of script clock (1.2 s pointing per click, app latency 14-68 ms per action); 7-minute version 27 clicks in 35.9 s. All rows are therefore mechanically achievable; time is dominated by speech.",
+      "fix_hint": "Name the second button differently or drop it; in row 6 say 'Exit mission, then Progress in the sidebar'.",
+      "status": "open", "first_seen_round": 38, "rounds_open": 1
+    },
+    {
+      "id": "B38-006",
+      "state_artifact": "reports/test-e2e/r38/round-1/wave-B-shots/txt-forced-page.png (clipboard text in this finding)",
+      "category": "text version: copied table loses the caption wording and carries the 'Choose / Select' column",
+      "severity": "P3",
+      "evidence": "Selecting the table and Ctrl+C gives text/plain 'Test\\tResult\\tReference\\tFlag\\tChoose / Sodium 139 mmol/L 135 - 145 none Select / Potassium 6.4 mmol/L 3.5 - 5.1 High Select ...'; the caption 'illustrative training image, not a real report' (outside the table by design, B37-004) is not part of the copy, the text/html flavour carries aria-labelledby pointing at an id that does not exist outside the page. A pasted table can therefore look like a real chemistry report. Cosmetic.",
+      "fix_hint": "Put the caption in a <caption> inside the table and mark the Choose column user-select:none, or accept.",
+      "status": "open", "first_seen_round": 38, "rounds_open": 1
+    }
+  ],
+  "summary": { "P0": 0, "P1": 0, "P2": 0, "P3": 6, "open_P0": 0, "open_P1": 0, "open_P2": 0, "open_P3": 6 },
+  "verdict": "GREEN",
+  "notes": "Snapshot id at start and at end identical: 96233cf7caabeb02b0d9cf871892151627ae48bf3bbc20b7cd2974def258c81d (143 files). Own servers: API 3901 (throw-away seeded DB in scratchpad r38B, DEMO_MODE=1, CORS 5901), Vite dev 5901, prod bundle built to a scratch outDir and served on 5902 (built and reachable, but the single-origin CORS of the API was set to 5901 so all journeys ran on the dev server; no prod-only run this round). All three stopped by exact PID (79676, 76849, 76873); ports verified free. The API was stopped/restarted by recorded PID several times for outage tests. S-1 CONFIRMED UNCHANGED: hem-01 AX tree is still only button 'Select a point on the scientific image'; for the keyboard game I cleared hem-01 through the API (POST start + answer {x:73.6,y:46.8}) on a freshly registered student and said so; no new evidence, not re-reported. ATTACKED. (a) Inventory of non-text content on dashboard (demo guest and fresh student), lab map (locked, coming soon, cleared, active), lab lobbies (completed, in progress, locked rows with reason text), progress (vault slots with sr-only text, badges, leaderboard rows, unavailable leaderboard), lab results, settings, About, all five engines (AX tree of question, wrong, hint, correct, result, expiry), error panels, loading states: every score, level/XP, lock reason, fragment slot, badge state, timer and flag has a text equivalent (lock icon = img 'LOCKED', timer = role=timer aria-label, flags spoken as High/Low, progress bars/ring/marker decorative with numbers beside them, selected option has bold + 2 px border besides colour). Level progress (levelProgress.into/size) is returned by the API but not drawn, so there is no level meter to be missing. No dark theme exists (color-scheme normal, no prefers-color-scheme rule): dark and light render identically, which is a note, not a defect. Live regions: only role=alert events are reliable (B38-002); timer expiry alert verified on decision, choice, order, match and point-text missions (alert inserted, timer label 'Time is up', focus to Restart mission, controls disabled). (b) Keyboard-only full game on a fresh student: skip link first Tab, dashboard CTA 1-9 Tabs, all 9 remaining missions (decision, choice, order via move buttons, match via select type-ahead, Lab Value Hacker via the text table, Master Lab 4 steps), 4 vault unlocks by typing digits, hint + repeated wrong answer + retry on Fix the Sample, 0 focus-lost/trapped/unreachable cases by the trace (focus goes to the h1 on every view/step change, to Submit after a wrong answer, to the vault card after unlock, to Return to mission control targets in 1 Tab), focus indicator measured by pixel diff focused vs blurred on 60+ tab stops (dashboard, map, progress, about, hem-01, choice): none weak. Known and not re-reported: repeated wrong answer not announced (B35-001), order grip (B35-003), marker move silent (B35-004). (c) Presenter timing: 5- and 7-minute routes run literally at 1440x900 on a freshly reset demo guest: every row mechanically achievable (B38-004/005 list the only script mismatches); all quoted UI strings exist (Reset guest session/Confirm reset, Open the Hematology lab, Replay Blood Smear Code, Ask Lab Assistant, Not quite., XP penalty: -10, Step 1 correct., Server-calculated, Official timer, Open the Progress vault, Faculty guest, Class intelligence, Go to quality, Go to roadmap, Reopen the laboratory vs Retry); canonical state 8,240 XP, then 8,252 after the BSC replay (+12, as the script says); Content review 10 x Draft; Master Lab 'Clear 3 labs (1 of 3 cleared)'; countdown 04:00/06:00. docs/demo-screenshots: re-shot all 10 with the README procedure (DPR 2, reduced motion); images 01-09 are PIXEL-IDENTICAL to the files (0 differing pixels, 05 differs by 0.008%); image 10 has identical content, scroll offset differs by 16 css px. (d) Text version after unusual sequences: open, wrong row, hint, resize 320/360/390/600/900/1440/320/1440 with it open (open state, selection, marker and focus kept, no page overflow, hint line only <=560, caption outside the scroll region at every width), replay (closed again), time expiry, forced-colors (selected row dark fill + 3 px border visible; marker has a border), reduced motion, dark, clipboard (B38-006), print (B38-003), flag words 'High'/'none'. 401 mid-flow reuses the r37 result (not repeated). (e) Console/network: 0 pageerror, 0 unhandled rejection, 0 console warning over all runs; the only console errors are browser 'Failed to load resource' lines for 422/429 vault answers and for the API-down tests, each accompanied by a visible alert (vault error text with attempts left then 'Too many incorrect codes. Try again in 10 minutes.'; 'This could not be completed. Cannot reach the Escape Lab server' on submit/hint; 'This page could not be loaded' + Retry on the lab map; 'Your laboratory could not be opened' + Retry on reload with a stored session; recovery after the API returned worked each time, the unsubmitted answer was kept). Not tested: a real screen reader, WebKit, prod bundle journeys this round, real print dialog (PDF via Chromium used)."
+}

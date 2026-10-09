@@ -1,0 +1,89 @@
+{
+  "wave": "B",
+  "round": 19,
+  "states_reviewed": 96,
+  "findings": [
+    {
+      "id": "R19-B-01",
+      "severity": "P2",
+      "category": "docs-accuracy",
+      "area": "docs/demo-screenshots/README.md, row 02-lab-map-1440.png",
+      "viewport": "1440",
+      "title": "Caption text for screenshot 02 says 'eight Coming soon labs'; the screen (and the app) shows seven",
+      "evidence": "Screenshot 02 and the live Lab map list labs 05-11 (Immunology, Parasitology, Blood Bank / Immunohematology, Molecular Biology, Cytology, Histology, Quality Management) = 7 'Coming soon' cards. README 'what it shows' column: 'locked Master Lab, eight \"Coming soon\" labs'. Live check: scratchpad/r19-B/shots/t2-labmap.png and docs/demo-screenshots/02-lab-map-1440.png.",
+      "repro": "Read docs/demo-screenshots/README.md line 18, then open docs/demo-screenshots/02-lab-map-1440.png (or the Lab map in the app) and count the 'Coming soon' cards.",
+      "expected": "README description matches the image: seven Coming soon labs.",
+      "actual": "README says eight.",
+      "fix_hint": "Change 'eight' to 'seven' in the README row for 02. The FR/EN captions themselves (the text a reader would reuse) do not contain the number, only the 'what it shows' column.",
+      "status": "open"
+    },
+    {
+      "id": "R19-B-02",
+      "severity": "P3",
+      "category": "docs-staleness",
+      "area": "docs/FACULTY_DEMO_SCRIPT.md sections 2.5 and 5",
+      "viewport": "n/a",
+      "title": "Script still speaks of the 10 portfolio screenshots in the future tense",
+      "evidence": "Section 5: 'Elles seront produites dans docs/demo-screenshots/ avec exactement ces noms'. Section 2.5 Plan B: 'une fois produites'. The 10 files exist with exactly those names.",
+      "repro": "Read the two passages, ls docs/demo-screenshots.",
+      "expected": "Present tense, with a pointer to docs/demo-screenshots/README.md.",
+      "actual": "A presenter reading it tomorrow would think the screenshots are missing and might regenerate them.",
+      "fix_hint": "Reword to 'Elles sont dans docs/demo-screenshots/ (voir son README)'; Plan B: 'presentez les captures de docs/demo-screenshots/'.",
+      "status": "open"
+    },
+    {
+      "id": "R19-B-03",
+      "severity": "P3",
+      "category": "docs-consistency",
+      "area": "docs/FACULTY_DEMO_SCRIPT.md step 3 / section 3.2 and About 'Before you present' timing note",
+      "viewport": "1440 and 375",
+      "title": "Blood Smear Code is a one-step mission: it ends on the result screen and 'Return to mission control' lands on the dashboard, which the 5-minute script does not say",
+      "evidence": "Real run (scratchpad/r19-B/shots/t6-bsc-result.png): after the schistocyte click + 'Submit answer' the CASE COMPLETE screen shows (Score 180 of 180 XP 'Server-calculated', 'Official timer', '+12 XP personal best' when replayed from a reset state). Script 3.2 and the About timing note say the 5-minute version does not show a result screen (they mean Fix the Sample). Only button on the screen: 'Return to mission control' (dashboard, not the Hematology lab), so row 4 'Meme labo' needs 'Review lab' or About > 'Open the Hematology lab' again (script line 79 says to reopen About after each mission, so this is covered, but not in row 3/4).",
+      "repro": "Reset guest session, About, Open the Hematology lab, Replay Blood Smear Code, click schistocyte, Submit answer.",
+      "expected": "Script row 3 mentions that the result screen appears and that one returns via mission control then About.",
+      "actual": "Presenter is surprised by a result screen in the 5-minute path and by landing on the dashboard.",
+      "fix_hint": "Add one sentence to row 3: 'L'ecran de resultat apparait (mission a une etape) : dites une phrase, puis Return to mission control, About, Open the Hematology lab.'",
+      "status": "open"
+    },
+    {
+      "id": "R19-B-04",
+      "severity": "P3",
+      "category": "docs-accuracy",
+      "area": "docs/FACULTY_DEMO_SCRIPT.md 2.2/2.3 vs screenshot 09",
+      "viewport": "1440",
+      "title": "After the teacher reset curl, a mission that was changed during a rehearsal reads 'Now draft - <date>', not 'No review recorded yet'",
+      "evidence": "Mark reviewed on Blood Smear Code, Approve, Return to draft, then curl demo/reset as teacher: API still returns updatedAt for hem-01 and the UI row reads 'Now draft . Oct 9, 2026, 2:06 AM' (t22 output) while the other nine read 'No review recorded yet.' as in screenshot 09. All 10 are Draft, so the stated canonical state (10 in Draft) holds.",
+      "repro": "As teacher: Content review > Mark reviewed on any row, then the two reset curl commands of 2.2, reopen Content review.",
+      "expected": "Script 2.3 notes that a trace stays by design (content_audit is append-only) so the row is not identical to screenshot 09.",
+      "actual": "Not mentioned in the script (it is mentioned in the About page for the UI revert).",
+      "fix_hint": "One line in 2.3.",
+      "status": "open"
+    },
+    {
+      "id": "R19-B-05",
+      "severity": "P3",
+      "category": "copy",
+      "area": "error message for an empty or malformed 200 response",
+      "viewport": "1280",
+      "title": "Empty-body 200 shows developer wording: 'Invalid server dashboard payload: object.'",
+      "evidence": "Error injection (empty body) on dashboard, labs, lab detail, vault, leaderboard, results, start, answer, hint and four faculty endpoints: exactly one role=alert each, with 'The server sent an unexpected response. Invalid server <x> payload: object.' under it. Invalid JSON gives the clean 'The server returned an unreadable response.'",
+      "repro": "Route the endpoint to a 200 with an empty body (scratchpad/r19-B/t16.mjs).",
+      "expected": "No internal type name in user text.",
+      "actual": "Technical suffix visible. One alert and a Retry button are present, so nothing is stuck.",
+      "fix_hint": "Drop the suffix from the displayed message and keep it in the console/diagnostic only.",
+      "status": "open"
+    }
+  ],
+  "summary": { "P0": 0, "P1": 0, "P2": 1, "P3": 4 },
+  "verdict": "GREEN",
+  "script_rehearsal": {
+    "total_seconds": 30,
+    "disagreements": [
+      "README row 02 says 'eight Coming soon labs'; the screen shows seven (R19-B-01).",
+      "Script sections 2.5 and 5 say the screenshots 'will be produced'; they exist (R19-B-02).",
+      "Blood Smear Code ends on a result screen and Return to mission control goes to the dashboard; row 3 and 3.2 imply no result screen is shown in the 5 minute path (R19-B-03).",
+      "After the teacher reset a previously modified row reads 'Now draft . date', unlike screenshot 09 (R19-B-04)."
+    ]
+  },
+  "notes": "Mechanical click-through time only (reset, About, lab map, Blood Smear Code with result, Fix the Sample hint + wrong + retry + exit, Progress, Faculty, student detail, Content review, quality/roadmap): about 30 s of pure UI time on a loaded machine; the remaining time of the 5 and 7 minute versions is narration, which cannot be measured by a script. Everything else in the script matched the real app: button names (Reset guest session, Confirm reset, Guest options, Faculty guest, Return to student demo, Open the Hematology lab, Open the Progress vault, Go to quality, Go to roadmap, Open Faculty analytics, Open Content review, Mark reviewed, Approve, Return to draft), canonical state (Alex Martin, level 6, 8,240 XP, 5 of 9, Hematology 3/3 with exit unlocked, Microbiology 2/3, 10 Draft), hint -15 XP, wrong -10 XP, 'Not quite.', 'Server-calculated', 'Official timer', both reset curl commands (tested on port 7401; jq present), and the literal setup block (cp .env.example .env, DB_PATH=./data/demo.db npm run seed:demo, DEMO_MODE=1 DB_PATH=./data/demo.db npm start, tested in a scratch copy with PORT overridden; works without NODE_ENV=test). Focus after 'Reset guest session' lands on Cancel (deliberate), Confirm reset is one Shift+Tab away. About page: both roles, 320/375/768/1440, axe zero violations, no horizontal scroll, no request of its own (including anchor jumps), Open buttons work (Faculty analytics, Content review, lab picker, lab map, Progress), anchors move focus to the heading, 'Before you present' blocks verified incl. Approve then Return to draft. 'Demonstration data' note present on Class intelligence, Student detail and Content review. All 10 docs/demo-screenshots viewed: no bug, raw error or personal data (fictitious names only); captions true except the 'eight' count. Brand-new registered student (token injection): first mission Ready, missions 2 and 3 'Locked' with 'Complete mission 01 to unlock' and disabled buttons, first hint (-15), first wrong (-10), score 105 = 100+30-15-10, fragment appears in Vault. Mobile: iPhone 13 and Pixel 7 descriptors, order (Gram Stain Challenge) and match (Petri Dish Mystery) played by touch, wrong then right, axe clean, no horizontal scroll, console clean; 375x812 phone path for reset, About, lab picker and Faculty guest through Guest options works. Error injection 401/429/500/503/empty/invalid JSON on 14 endpoints (dashboard, labs, lab detail, vault, leaderboard, results, mission start, answer, hint, classes, analytics, content, student detail): exactly one role=alert each; 401 gives one status notice 'Your guest session expired, so a new guest session was opened' (or the 'keeps rejecting' alert on the initial load), no stuck loading, console clean. Keyboard only: point (Enter centres marker, Shift+arrows), decision, choice, order (move buttons keep focus), match (select typing) all completed to the result screen, visible focus ring, axe clean. Not reachable through the UI and only noted: a registered non-demo token still shows the 'Guest demo ... not real people' text and the Reset guest session button; the app has no sign-in UI so this is not user reachable. Known items not re-reported. No files written outside scratchpad except this JSON; be/data untouched; own servers (7401, 7402) and scratch copy (7403) stopped."
+}

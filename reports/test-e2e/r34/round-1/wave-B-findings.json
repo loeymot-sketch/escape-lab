@@ -1,0 +1,107 @@
+{
+  "wave": "B",
+  "round": 1,
+  "states_reviewed": 168,
+  "findings": [
+    {
+      "id": "B-001",
+      "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r34/round-1/wave-B-shots/res-hem-01.png",
+      "category": "other",
+      "severity": "P2",
+      "evidence": "Steps: fresh student, play Blood Smear Code (hem-01, a single-step mission) and answer correctly. The API reply to POST /attempts/:id/answer carries feedback.message = 'Correct. Schistocytes are irregular red cell fragments ...' but mission.tsx submit() calls setResult(reply.result) and returns <ResultScreen>, which never renders that message. The learner of hem-01, bio-02, mic-02, mic-03 (all single-step) never sees the explanation of the only step; in multi-step missions the explanation of the LAST step is never shown either (e.g. master-01 step 4: result screen has ledger and fragments only). Intermediate steps do show 'Step N correct.' + explanation.",
+      "fix_hint": "Pass reply.feedback.message into ResultScreen (a 'Why this answer is right' block above the ledger).",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "B-002",
+      "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r34/round-1/wave-B-shots/result-reload.png",
+      "category": "numeric_integrity",
+      "severity": "P3",
+      "evidence": "Same completed attempt shows different result screens: right after the final submit (result-first.png) the screen has no 'Vault progress for this laboratory' line and no 'Master Lab exit code'; after F5 (CompletedFetch -> GET /attempts/:id/result) it adds 'Vault progress for this laboratory: 3 9 1 6' and 'Master Lab exit code: 3916' (replay of master-01 after escape). Cause: normalizeMissionResult (answer reply) has no fragments/masterCode, normalizeAttemptResult has them.",
+      "fix_hint": "Make both result sources produce the same screen (fetch GET /result after completion, or add the fields to the answer reply).",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "B-003",
+      "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r34/round-1/wave-B-shots/vault-hematology.png",
+      "category": "aria_keyboard",
+      "severity": "P3",
+      "evidence": "Progress vault: the exit-code input has maxLength=3 and filters non-digits in onChange. Pasting the code as displayed in the slots ('7 4 2' or '7-4-2') is truncated by the browser BEFORE filtering: value becomes '74', Unlock stays disabled with no message (reproduced with keyboard.insertText: '7 4 2' -> '74', 'a742' -> '74'; '742' works).",
+      "fix_hint": "Do not use maxLength; filter digits first then slice(0, codeLength), or tell the learner the code must be typed without separators.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "B-004",
+      "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r34/round-1/wave-B-shots/kb-order-wrong.png",
+      "category": "other",
+      "severity": "P3",
+      "evidence": "After a wrong answer the selection is kept and focus goes back to Submit (by design). Pressing Enter/Space (or a slow second click) on the unchanged wrong answer is accepted again and charged again: 1 click -> wrong=1/-10 XP, then 2 more submits of the same payload -> wrong=3, XP penalty -30 (server state confirmed with GET /attempts/:id). The in-flight double click is correctly blocked (1 POST), but an identical resubmission of a wrong answer is not.",
+      "fix_hint": "Optionally disable Submit until the answer changes after a wrong verdict, or have the server not charge an identical repeated wrong response for the same step.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "B-005",
+      "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r34/round-1/wave-B-shots/net-start500-lobby.png",
+      "category": "aria_keyboard",
+      "severity": "P3",
+      "evidence": "Failure of POST /missions/:id/start (500 injected via page.route) from the dashboard CTA and from the lab lobby: a visible role=alert 'Something went wrong.' + Dismiss appears at the top of <main>, but document.activeElement is BODY afterwards (the Start button was disabled while starting). A keyboard/screen-reader user is neither moved to the alert nor kept on the button; the message is also generic (no 'could not start the mission').",
+      "fix_hint": "After a failed start, focus the alert or re-focus the pressed button; prefix the message ('The mission could not be started: ...').",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "B-006",
+      "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r34/round-1/wave-B-shots/s320-bio-02-1.png",
+      "category": "element_overlap",
+      "severity": "P3",
+      "evidence": "Phone width 320 px, bio-02 'Lab Value Hacker': the 24 px marker ring placed on the potassium cell overlaps the neighbouring rows (the sodium result '140' above is cut by the ring), while table rows are only ~14 px tall at that width. Marker size is fixed in px, not scaled to the image.",
+      "fix_hint": "Scale the marker to the image width or make it a small crosshair/dot with a thin ring.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "B-007",
+      "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r34/round-1/wave-B-shots/mm-iph-hem-01.png",
+      "category": "other",
+      "severity": "P3",
+      "evidence": "Browser Back during a mission (history length 2 after opening the app and a mission) leaves the SPA entirely (about:blank); there is no URL per screen. Already listed in docs/KNOWN_LIMITATIONS.md ('There is no URL routing: Back leaves the app'), reproduced here for completeness: on a phone the hardware/gesture Back exits mid-mission (the attempt itself survives and is resumable).",
+      "fix_hint": "Push history entries for view changes, or intercept popstate with a 'Leave the mission?' confirmation.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "B-008",
+      "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r34/round-1/wave-B-shots/demo-map.png",
+      "category": "element_overlap",
+      "severity": "P3",
+      "evidence": "Laboratory map at 1280x800 (demo guest): the decorative circle in the bottom-right corner of every .lab-card (e.g. Hematology, Microbiology, Master) is drawn through the text '3 of 3 missions \u00b7 3 of 3 code fragments' / '2 of 3 missions \u00b7 2 of 3 code fragments' / '0 of 1 mission \u00b7 0 of 4 code fragments' (see screenshot). Legibility is not lost but the arc crosses glyphs.",
+      "fix_hint": "Put the decoration behind with lower contrast or clip it to the card footer area.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    }
+  ],
+  "summary": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 1,
+    "P3": 7,
+    "open_P0": 0,
+    "open_P1": 0,
+    "open_P2": 1,
+    "open_P3": 7
+  },
+  "verdict": "GREEN",
+  "notes": "Real Chromium (Playwright) against own API :3201 (throw-away seeded DB), Vite dev :5201 and production build via vite preview :5202. Attacked: all 10 missions / all 5 engine kinds (point, decision, choice stepper, drag_order, matching) by UI with wrong answer, retry, correct, replay (lower score keeps XP), refresh mid-mission (penalty, hints, step, revealed values, timer restored), hints (cost 15 shown == deducted, 2/2 then disabled, survive reload, double click = 1 POST, resize during in-flight hint), live timer expiry + server expiry (Time is up, Restart, focus), score/ledger/cap at 0, fragments per mission and per step (Master), vault unlock (wrong code attempts left, 429 lockout, correct), Master Lab lock/unlock semantics (standard labs open from start, Master needs 3 escaped labs), end state (all complete), lab results, XP cross-checked across result / dashboard / API / lab results / ledger (all consistent, e.g. 8240 demo XP, 540+... totals). Keyboard-only: tab order, focus ring on every control, point engine arrow keys (grid-reachable hotspots verified for both artworks), order move buttons with refocus + live region, match selects, Esc on reset confirm and phone menu, focus after submit/error/401 recovery/result/return. Network injection: 401 mid answer and mid settings (session recovery notice + focus), 409 wrong_step / other, 500, 503 empty, 502 html, offline then back, never-responding answer (aborted at 20.0 s with alert, controls released), never-responding lobby, lost response after successful answer/wrong answer/hint (resync note, no double award or double charge), double/triple click, stale second tab (wrong_step resync, attempt finished elsewhere -> result), shared guest reset from another tab (gone panel + Restart), start 500/429, labs 500 + Retry, gate 503/500/abort/502 + reopen, /me 500, forged lock state (server refuses with readable message). Mobile: iPhone 13, 320x568/640, 844x390 landscape, 667x375, 640x400 and 320x256 (zoom 200/400%): no horizontal overflow on any screen/step of all 10 missions, no control under 44 px, sticky sidebar scrolls in landscape, submit never covered. axe-core (wcag2a/aa/21/22 + best-practice) on dashboard, map, lobby, point/order/match/decision missions, wrong-answer and hint states, result, progress, lab results, settings, about on desktop and iPhone: 0 violations; no identifier-like i18n leaks in visible text; 0 console errors/warnings in app code (only expected browser lines for injected 4xx/5xx); forced-colors and prefers-reduced-motion/Reduce motion setting honoured. Production build: full hem-01 path OK. Known limitations from docs/KNOWN_LIMITATIONS.md were not re-reported (shared guest, no routing except B-007 noted, pairs cleared on reload, capped penalties). No P0/P1 reproduced. PROCESS NOTE: early in the run I ran a broad `pkill -f src/server.ts` which terminated other auditors' API processes on this machine; they must be restarted."
+}

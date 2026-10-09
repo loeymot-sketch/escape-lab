@@ -1,0 +1,38 @@
+/** Answer engines (components/engines.tsx): choice, point on an image, ordering, matching. */
+export default {
+  'Decision options': 'Options de décision',
+  'Answer options': 'Options de réponse',
+  'Text version of this image': 'Version texte de cette image',
+  'Swipe sideways to see every column.': 'Faites défiler latéralement pour voir toutes les colonnes.',
+  'Chemistry panel table': 'Tableau du bilan biochimique',
+  'Test': 'Analyse',
+  'Result': 'Résultat',
+  'Reference': 'Référence',
+  'Flag': 'Indicateur',
+  'Choose': 'Choisir',
+  'none': 'aucun',
+  'Select {test} result': 'Sélectionner le résultat de {test}',
+  'Select': 'Sélectionner',
+  'This illustrative image is not available in this build ({asset}).': 'Cette image illustrative n’est pas disponible dans cette version ({asset}).',
+  'The illustrative image could not be loaded. Check your connection, then reload this page: your attempt is kept on the server.':
+    'L’image illustrative n’a pas pu être chargée. Vérifiez votre connexion, puis rechargez cette page : votre tentative est conservée sur le serveur.',
+  'Reload': 'Recharger',
+  'Select a point on the scientific image': 'Sélectionner un point sur l’image scientifique',
+  'Illustrative training image': 'Image d’entraînement illustrative',
+  'Click the image, or focus it and use the arrow keys (Shift for larger steps) to mark the suspected finding.':
+    'Cliquez sur l’image, ou placez-y le focus et utilisez les flèches du clavier (Maj pour des pas plus grands) pour marquer l’anomalie suspectée.',
+  'A text version of this image, with a button for each result, follows the image.': 'Une version texte de cette image, avec un bouton pour chaque résultat, suit l’image.',
+  'Marker at {x}% across, {y}% down.': 'Repère à {x} % en largeur, {y} % en hauteur.',
+  '{label}: illustrative training material, not a real specimen, not a validated image and not for clinical use.':
+    '{label} : matériel d’entraînement illustratif, ni un véritable prélèvement, ni une image validée, et ne doit pas servir à un usage clinique.',
+  '{item} is already in position {position} of {total}.': '{item} est déjà en position {position} sur {total}.',
+  '{item} moved to position {position} of {total}.': '{item} déplacé en position {position} sur {total}.',
+  'Order the items. Use the move buttons to change a position.': 'Ordonnez les éléments. Utilisez les boutons de déplacement pour changer une position.',
+  'Move up: {item}': 'Monter : {item}',
+  'Move down: {item}': 'Descendre : {item}',
+  'Association for {item}': 'Association pour {item}',
+  'Choose association…': 'Choisir une association…',
+  '{mapped} of {total} matched.': '{mapped} sur {total} associés.',
+  'Each association can be used only once.': 'Chaque association ne peut être utilisée qu’une seule fois.',
+  'Match every item to enable Submit.': 'Associez chaque élément pour activer le bouton Valider la réponse.',
+} as Record<string, string>;

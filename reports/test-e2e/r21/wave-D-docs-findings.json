@@ -1,0 +1,121 @@
+{
+ "wave": "D",
+ "round": 21,
+ "findings": [
+  {
+   "id": "R21-D-01",
+   "severity": "P2",
+   "category": "evidence-integrity",
+   "where": "docs/FINAL_VALIDATION_REPORT.md:22 and :47 (top section)",
+   "what": "The report states that the SHA-256 of be/openapi.json is a10dd1e5...951eb, 'identique a .ci-artifacts/.../openapi.json', 'Verifiables avec shasum -a 256 be/openapi.json be/src/content.ts', and the results table says 'OpenAPI identique a be/openapi.json (sha256 a10dd1e5...951eb)'. The command now prints f1dbd031f6c1ee65ddec55d9d22bc7c98b86004c4e9abcdf00d4949bec48c6c6 for be/openapi.json (the file was regenerated at 12:00 after the round-20 backend changes: NFC e-mail note, requestBody for two POST routes). A reader who runs the documented command gets a mismatch on the first of the two 'reproducible identity proofs'. Line 26 says the numbers below do not cover later changes, but lines 22 and 47 are in the present tense about be/openapi.json. content.ts hash is still correct (d4bd3b64...85a39).",
+   "evidence": "shasum -a 256 be/openapi.json -> f1dbd031...; .ci-artifacts/local-2026-10-09/openapi.json and openapi.sha256 -> a10dd1e5.... I regenerated with Node 22.23.2 (scripts/openapi.ts > scratchpad): sha f1dbd031... = committed be/openapi.json, so the current file is internally consistent; json diff vs archive shows only the 3 round-20 additions.",
+   "suggested_fix": "Say 'a10dd1e5... = the archived file of the 2026-10-09 evidence run (be/openapi.json has since changed, current sha f1dbd031...)', or fill the Tour 20/21 placeholder with the new hash once the supervisor archive exists."
+  },
+  {
+   "id": "R21-D-02",
+   "severity": "P2",
+   "category": "stale-banner-introduced-by-fix",
+   "where": "docs/*.md line 3 banners (12 files: RELEASE_GATE_DECISION, ULTRA_STRICT_EXECUTION_PLAN, CODEX_INITIAL_AUDIT, INDEPENDENT_REVIEW_REPORT, API_CONTRACT_MATRIX x2, E2E_VALIDATION_REPORT, GATE_TRACEABILITY_MATRIX, HUMAN_REVIEW_HANDOFF, AUDIT_EVIDENCE, CLAUDE_CODE_EXECUTION_BRIEF)",
+   "what": "Every banner says 'L'etat a jour (backend 258/258, frontend 322/322, Playwright 411/411 trois fois de suite, 0 P0/P1 ouverts apres deux tours adversariaux consecutifs propres...) est dans FINAL_VALIDATION_REPORT'. These are the figures of the 03:04 archive. Since then be/src (app, http, game, routes), be/test/r20-fixes.test.ts (new), web/src pages (shell, mission, progress, faculty), polish.css and three e2e specs changed, and the FINAL report itself says (line 26) that its numbers do not cover them and that rounds 20/21 are pending. So the banners present as 'a jour' a count (258 backend tests) that no longer matches the tree (r20-fixes.test.ts adds tests; I did not run them). The banners are more confident than the report they point to.",
+   "evidence": "find be web -newer .ci-artifacts/local-2026-10-09/DONE lists be/src/app.ts, http.ts, game.ts, routes.ts, be/test/r20-fixes.test.ts, web/src/pages/{shell,mission,progress,faculty}.tsx, web/e2e/*.spec.ts; FINAL_VALIDATION_REPORT.md:26 and :104-118.",
+   "suggested_fix": "Reword the banner: 'chiffres de l'archive du 2026-10-09 (03:04), avant les corrections du tour 20 ; voir la section Tour 20/Tour 21 du rapport', or drop the numbers from the banners."
+  },
+  {
+   "id": "R21-D-03",
+   "severity": "P3",
+   "category": "stale-line-references",
+   "where": "docs/SCIENTIFIC_REVIEW_BACKLOG.md:32 and :35 (and :157)",
+   "what": "Backlog cites docs/KNOWN_LIMITATIONS.md:26 for the AI hint guard and :38 for the language:'fr' limitation. After items 10-11 were added to KNOWN_LIMITATIONS the AI-guard bullet is at line 28 and the language bullet at line 40; line 26 is now the 'SQLite on a single node' bullet and line 38 the 'Hint text is stored' bullet. Same drift problem that D-09 reported for game.ts/scoring.ts, now introduced by the D-01 edit. :20 in C-12 is historical (describes where the false sentence used to be) but is now a heading.",
+   "evidence": "grep -n 'AI hint guard\\|language: .fr.' docs/KNOWN_LIMITATIONS.md -> 28, 40; sed -n 26p / 38p.",
+   "suggested_fix": "Update to :28 and :40 or cite the bullet titles instead of line numbers."
+  },
+  {
+   "id": "R21-D-04",
+   "severity": "P3",
+   "category": "demo-runbook",
+   "where": "README.md:7 ; docs/FACULTY_DEMO_SCRIPT.md:20",
+   "what": "README says '`nvm use 22`, which reads `.nvmrc`'. That is wrong: `nvm use 22` takes an explicit version and ignores .nvmrc (it picks the newest installed 22.x, which could be below 22.18); only a bare `nvm use` reads .nvmrc (root .nvmrc = 22.18.0, found from be/ or web/ by walking up). The script has the same ambiguity ('le depot contient .nvmrc : nvm use 22'). Works on this machine only because the sole installed 22.x is v22.23.2 (~/.nvm/versions/node). The hard-coded PATH example is machine-specific but labelled as an example. The mandatory `node -v` check after it makes the failure visible, so P3.",
+   "evidence": "ls ~/.nvm/versions/node -> v18.20.7 v20.19.5 v20.20.2 v22.23.2; cat .nvmrc -> 22.18.0.",
+   "suggested_fix": "Write 'nvm use (no argument: reads .nvmrc)' or 'nvm install 22.18 && nvm use 22.18'."
+  },
+  {
+   "id": "R21-D-05",
+   "severity": "P3",
+   "category": "demo-runbook",
+   "where": "README.md:7 ; be/README.md:7 ; docs/FACULTY_DEMO_SCRIPT.md:20",
+   "what": "The docs say that on Node 18 `npm start` / `npm run seed:demo` fail with `node: bad option: --env-file-if-exists=.env` (alternative `--disable-warning=...` in parentheses). Because `--disable-warning=ExperimentalWarning` comes first on the command line, the message actually printed on Node 18.20.7 is `node: bad option: --disable-warning=ExperimentalWarning` (and seed:demo has no --env-file flag at all, so it can only show that one). The text is hedged with 'ou', but the lead example is the one that does not appear. The practical advice ('if you see bad option, it is the Node version') is correct.",
+   "evidence": "Ran with Node 18: `node --disable-warning=ExperimentalWarning --env-file-if-exists=.env -e 0` -> 'bad option: --disable-warning=ExperimentalWarning'; `node --env-file-if-exists=.env -e 0` -> '--env-file-if-exists=.env'. be/package.json start/seed:demo scripts.",
+   "suggested_fix": "Put `--disable-warning=ExperimentalWarning` first, or say 'node: bad option: --...'."
+  },
+  {
+   "id": "R21-D-06",
+   "severity": "P3",
+   "category": "ui-overclaim-residual",
+   "where": "web/src/pages/progress.tsx:237",
+   "what": "D-08 asked to replace the 'EVIDENCE OF MASTERY' eyebrow (suggested 'LAB RESULTS'). It is now 'MASTERY PROGRESS' on the Lab results page: the string 'mastery' remains for a product whose pedagogical effectiveness is explicitly unevaluated (About page). Much weaker than before; 'server verified' and 'Earned milestones' are gone; 'secure guest session' is gone (shell.tsx:26 now 'a guest demo session').",
+   "evidence": "grep -rn -i 'mastery' web/src -> only progress.tsx:237.",
+   "suggested_fix": "Use 'LAB RESULTS' or 'YOUR RESULTS'."
+  },
+  {
+   "id": "R21-D-07",
+   "severity": "P3",
+   "category": "count-honesty",
+   "where": "docs/SCIENTIFIC_REVIEW_BACKLOG.md:175 ; FINAL_VALIDATION_REPORT.md:15 ; FACULTY_DEMO_SCRIPT.md:116 ; KNOWN_LIMITATIONS.md:22",
+   "what": "'25 constats' is arithmetically consistent everywhere (I counted the entries: 1 blocker, 12 should fix = C-02..C-12 + B-01, 12 nice = C-13..C-22 + B-02 + B-03) and the old '22' no longer appears. But two of the 25 are not content findings: C-12 is a documentation-pointer error that is already marked corrected, and B-03 is a re-qualification (wording) of C-01. Distinct open biomedical points are therefore 23. Cosmetic inflation, not a safety issue; the items are clearly labelled in the backlog itself.",
+   "evidence": "backlog lines 138-175: C-12 'Corrige le 2026-10-09', B-03 'Qualification de C-01'.",
+   "suggested_fix": "Say '25 entrees (dont 1 deja corrigee et 1 requalification)' or move C-12/B-03 out of the count."
+  },
+  {
+   "id": "R21-D-08",
+   "severity": "P3",
+   "category": "demo-runbook-gap",
+   "where": "docs/FACULTY_DEMO_SCRIPT.md 2.1 / 2.5 (Plan B)",
+   "what": "The runbook copies be/.env.example to .env, whose AUTH_SECRET is blank. app.ts uses `env.AUTH_SECRET || randomBytes(32)`, so every API start has a new secret. Plan B says 'relancez l'API, puis cliquez Retry': the old guest token will then be invalid and the app (App.tsx recovery) opens a new guest session with the notice 'Your guest session expired, so a new guest session was opened. Unsaved progress on the previous one is not shown here.' The script does not warn the presenter about this notice or about losing the in-progress mission. From code reading only (servers not run).",
+   "evidence": "be/src/app.ts configFromEnv secret line; be/.env.example AUTH_SECRET=; web/src/App.tsx:70-71.",
+   "suggested_fix": "Add one sentence to Plan B: after an API restart a notice 'Your guest session expired' is expected; or set a fixed AUTH_SECRET in the runbook for demos."
+  },
+  {
+   "id": "R21-D-09",
+   "severity": "P3",
+   "category": "overclaim-independent-residual",
+   "where": "docs/INDEPENDENT_REVIEW_REPORT_2026-10-04.md:1,7",
+   "what": "Title 'Revue independante Escape Lab', file name, and 'Reviewer : agent independant G0-G8' are unchanged; the 2026-10-09 precision on line 5 says 'independent' means same-team AI agents and that no independent human review took place. Acceptable disclaimer, but a reader who only sees the title or the file name (links from AUDIT_EVIDENCE line 68) still gets the word without the qualifier.",
+   "evidence": "sed -n 1,7p docs/INDEPENDENT_REVIEW_REPORT_2026-10-04.md",
+   "suggested_fix": "Optional: prefix the title with '[revue croisee par agent IA]'."
+  }
+ ],
+ "resolved_from_r20": [
+  {"id": "D-01", "how": "KNOWN_LIMITATIONS.md:22 now points to SCIENTIFIC_REVIEW_BACKLOG.md, calls it an unsigned AI preparation document, and says FINAL_VALIDATION_REPORT contains no content-findings list; FINAL line 15 says the same. Verified."},
+  {"id": "D-02", "how": "Step 0 (node -v >= 22.18, nvm/PATH) added to README.md and FACULTY_DEMO_SCRIPT 2.1; be/README.md:7 states which scripts have no preflight; FINAL line 23 qualified. Verified against be/package.json (pretest/pretypecheck only) and web/package.json (pretest/prebuild/pretest:e2e). Residual wording nits R21-D-04, R21-D-05."},
+  {"id": "D-03", "how": "Snapshot id explicitly labelled 'non reproductible, indicatif seulement', manifest has snapshot_reproducible:false and a status note, reproducible hashes (openapi, content.ts) given separately, and 'what changed after the evidence pass' paragraph added. content.ts sha and the three asset shas still match. New staleness of the openapi sha: R21-D-01."},
+  {"id": "D-04", "how": "Banners now on all 12 dated docs (verified by head of every file); HUMAN_REVIEW_HANDOFF addendum no longer says 'a jour' for 108/108; be/README no longer says '120 tests'; CODEX heading renamed 'Positive signals (not a readiness claim)'; FINAL line 122 labels everything from 'Verdict historique' to the end as historical and the 'Action suivante obligatoire' as a past instruction. New problem with the banner text: R21-D-02."},
+  {"id": "D-05", "how": "Disclaimers added to INDEPENDENT_REVIEW_REPORT and AUDIT_EVIDENCE line 5 and to CLAUDE_CODE_EXECUTION_BRIEF 'Mise a jour' paragraph. Residual title wording: R21-D-09 (P3)."},
+  {"id": "D-06", "how": "web/src/pages/faculty.tsx:398 adds data-testid=approval-note: 'Approved is a faculty workflow flag in this demonstration. It is not a biomedical or scientific validation of the content.' Visible in regenerated screenshot 09 (read the PNG)."},
+  {"id": "D-07", "how": "shell.tsx:26 now 'a guest demo session'; no 'secure' left in web/src."},
+  {"id": "D-08", "how": "'Guest demo . server-side scoring' (shell.tsx:208, seen in screenshots 06 and 09); 'server verified' and 'Earned milestones' gone from web/src, web/e2e, docs. 'EVIDENCE OF MASTERY' replaced by 'MASTERY PROGRESS' (partial, R21-D-06)."},
+  {"id": "D-09", "how": "game.ts:413/427, scoring.ts:4-5, engines.ts:14/:40/:12-14 all verified correct at the current lines. New drift in KNOWN_LIMITATIONS refs: R21-D-03."},
+  {"id": "D-10", "how": "FINAL line 53 now says the same test failed 3/3 at first attempt, 'deterministe, pas aleatoire', cause attributed (not established), 'pas une preuve par les seuls journaux', no product defect excluded from logs alone, fix in tests only, 411/411 x3 afterwards. Checked against first-attempt logs: pass1 1 failed, pass2 1, pass3 2, R17-D-01 in pass1; manifest first_attempt_note matches. The wording about races is accurate."},
+  {"id": "D-11", "how": "Script 3/3.1: the 5-min table (30+60+30+60+30+60+30 = 300 s) vs guide 30+30+60+60+60+45+75+30 = 390 s is explained and the arithmetic is correct (differences 30+30+15+15 = 90 s); 405 s and '7 minutes' reconciled as unmeasured estimates; zoom now 'emulation de fenetre reduite ... pas un vrai zoom'. demo-guide.ts seconds verified."},
+  {"id": "D-12", "how": "Script 2.3 explains the 'Now draft' trace that the teacher reset does not remove, advises deleting demo.db + seed:demo for a pristine screen, and explains 9 standard vs 10 missions."},
+  {"id": "D-13", "how": "Script 2.1 'localhost ou 127.0.0.1 ?' and README recommend VITE_API_URL=http://127.0.0.1:3000/api; CORS_ORIGIN advice verified against app.ts (exact-match origin check) and be/.env.example (http://localhost:5173)."},
+  {"id": "B-01", "how": "Added to backlog (should-fix) with c:196/199/209 refs and PLAUSIBLE label."},
+  {"id": "B-02", "how": "Added to backlog (nice) with c:62-70."},
+  {"id": "B-03", "how": "C-01 re-worded 'ambigu' and B-03 added; FINAL says 'bloquant provisoire'."}
+ ],
+ "still_open_from_r20": [
+  {"id": "D-08", "residual": "eyebrow 'MASTERY PROGRESS' (R21-D-06, P3)"},
+  {"id": "D-05", "residual": "title 'Revue independante' kept with a disclaimer (R21-D-09, P3)"}
+ ],
+ "checked": [
+  "shasum -a 256 recomputed: be/src/content.ts = d4bd3b64...85a39 (matches FINAL line 22 and backlog header); the 3 asset hashes in the backlog all match; be/openapi.json = f1dbd031...c6c6 (does NOT match the a10dd1e5 stated in FINAL lines 22/47: R21-D-01). openapi regenerated with Node 22.23.2 equals the committed file; diff vs archive = 3 round-20 additions only.",
+  "Evidence archive: backend-test.log '# tests 258 # pass 258 # fail 0', frontend-unit.log '17 files / 322 passed', exit-codes.log all 10 = 0, DONE present, manifest tests '258/258'. FINAL numbers (258, 322, 411 x3, JS 359139, CSS 65969) match the archive. No doc states 264 anywhere; the current backend count is not documented (new r20-fixes.test.ts exists, tests not run by me).",
+  "'Tour 20 / Tour 21' section (FINAL lines 104-118): every result cell is '*a completer*', the verdict row says unchanged while empty, and a blockquote tells readers not to infer a clean round 20/21. Honest placeholder, not a P1. rounds table 9-19 unchanged and consistent with r20 reports (r20 has 0 P0, 0 P1 in waves A, D, V: 2+7+4 P2, 9+9+6 P3).",
+  "Backlog count: 1 + 12 + 12 = 25 verified by counting entries; no remaining '22' constats in docs/, README, be/README, web/src (grep). FACULTY_DEMO_SCRIPT:116, FINAL:15, KNOWN_LIMITATIONS:22, backlog:175 all say 25 and 1 provisional blocker.",
+  "Overclaim grep over docs, README, be/README, web/src (production ready, certified, secure, GDPR/RGPD, WCAG, compliant, validated, mastery, independent): no GDPR/WCAG/certification claim; 'production-ready' appears only in negations (README 'Not production ready', brief 'ne pas declarer production-ready'); 'secure' gone from UI; only residuals R21-D-06 and R21-D-09.",
+  "Old docs: all 12 have the line-3 banner; CONTENT_VALIDATION_CHECKLIST and REVIEW_SIGNOFF_TEMPLATE carry no figures. Old verdicts (CONDITIONAL PASS, PASS, 108/108, 186/186, 232/232, '108 tests backend') remain below banners as historical text; every one of those docs still ends in ESCALATE. R21-D-02 is about the banner wording.",
+  "UI strings vs docs: docs/demo-screenshots/README.md quotes 'server-side scoring', 'Milestones', 'accuracy NN%', approval note; all exist in web/src (shell.tsx:208, progress.tsx:65, faculty.tsx:125/398). Screenshots 06 ('4 of 7 earned', LOCKED labels, 'Guest demo . server-side scoring') and 09 (approval note, 10 Draft rows, 'No review recorded yet') read and consistent with README/script. No src file newer than the screenshots (all PNG 12:00:06; latest src 11:59 polish.css, 11:56 faculty.tsx are older). Old strings 'server verified', 'Earned milestones', 'EVIDENCE OF MASTERY', 'secure guest' appear only in docs/GOAL_FINAL_MVP.md as the list of things to fix.",
+  "Runbook: web/package.json prebuild/pretest/pretest:e2e and be/package.json pretest/pretypecheck exist; start/dev/seed:demo have none (claim true). .nvmrc = 22.18.0; engines >=22.18; ~/.nvm has v22.23.2 so the PATH example works here; cp .env.example .env exists; CORS_ORIGIN=http://localhost:5173 matches the exact-origin check in app.ts and the advice to change it when opening 127.0.0.1:5173; API binds 127.0.0.1 in demo mode (app.ts hostFor); web dev default API http://localhost:3000/api (api.ts) so the VITE_API_URL advice is valid; `node -v` here is v18.20.7 so the warning is real. Not run: servers, tests, browsers.",
+  "FINAL line 26 'what changed after the evidence pass' checked against file mtimes: report, README, be/README, openapi, be/src (app/http/game/routes), r20-fixes.test.ts, web pages and three e2e specs are newer than DONE; web/src unit-test files are not, so 322 frontend unit tests are plausibly unchanged but not re-run.",
+  "Not found: no 'validated', 'certified' or 'GDPR' claim, no doc says GO. Honest limits: I did not run tests, so I cannot say whether the current backend count is 264; the docs do not claim it."
+ ]
+}

@@ -1,0 +1,41 @@
+{
+  "round": 30,
+  "scope": "Verification of the two post-r29 edits (docs/GOAL_FINAL_MVP.md line 21 + 'Note de reformulation'; docs/FINAL_VALIDATION_REPORT.md line 108). Read-only: find, grep, python json recount.",
+  "counts": {"P0": 0, "P1": 0, "P2": 2, "P3": 2},
+  "findings": [
+    {
+      "id": "R30-01", "severity": "P2", "category": "claim contradicted by the report's own record",
+      "where": "docs/GOAL_FINAL_MVP.md, 'Note de reformulation', '(tous corrigés ensuite, aucun dans le code)'",
+      "what": "The note explains why the ORIGINAL criterion ('aucun P2 nouveau introduit par ces corrections') could not be demonstrated and says the P2s came from document edits, 'aucun dans le code'. For the enumerated rounds 22/23/25/27/28 this is literally true (r22 wave-A 0 P2; the P2s of those rounds are all in documents). But the original criterion also failed in code: R21-A-01 (round 21 wave-A, P2) was a regression introduced by the round-20 backend fix, fixed afterwards with a test; docs/FINAL_VALIDATION_REPORT.md line 123 records it ('R21-A-01 régression sur d'anciennes lignes : corrigée avec test'), and R22-D-04/R23-D-01 earlier flagged the same fact. Presented as the reason for the reformulation, 'aucun dans le code' therefore gives the false impression that code corrections never broke the criterion.",
+      "suggested_fix": "Add the code case: 'des retouches de documents ont fait apparaître des P2 ... aux tours 22, 23, 25, 27 et 28 (aucun dans le code à ces tours) ; au tour 21, la correction du backend du tour 20 avait elle-même introduit un P2 de code (R21-A-01, corrigé avec test)'."
+    },
+    {
+      "id": "R30-02", "severity": "P2", "category": "internal inconsistency / citation without trace",
+      "where": "docs/FINAL_VALIDATION_REPORT.md:108 '(tours 26 et 29)' and 'l'état final n'a pas été réaudité après la dernière correction' versus :131 (row 'Non réaudité par un agent adversarial après coup') and the tour table :122-130",
+      "what": "Line 108 cites tour 29 as a demonstration, but the report has no Tour 29 row (table stops at Tour 28, line 130; the section title still says 'tours 23 à 28') and nowhere cites reports/test-e2e/r29/. Line 131 still says the corrections made after tour 28 were verified 'par script ... pas par un agent' and that sev recounts go 'de r20 à r28'; yet r29 (reports/test-e2e/r29/last-edits-findings.json, 0/0/0/2) IS the agent audit of exactly those corrections. So the report simultaneously cites an agent round (29) as proof and states that no agent re-audited the last corrections. The goal doc cites tour 29 too, with the same untraced reference.",
+      "suggested_fix": "Add a 'Tour 29' row (0/0/0/2, path r29/last-edits-findings.json, 2 P3 R29-01/R29-02 status), update the title to 'tours 23 à 29' and row 131 to say that the post-r28 corrections were agent-verified at tour 29 and that only the post-r29 edits (the reformulation) have no later audit."
+    },
+    {
+      "id": "R30-03", "severity": "P3", "category": "inconsistency between the two documents",
+      "where": "docs/FINAL_VALIDATION_REPORT.md:108 '(22, 23 et 25)' versus docs/GOAL_FINAL_MVP.md note '22, 23, 25, 27 et 28'",
+      "what": "The report lists the rounds where document edits gave P2 as 22, 23 and 25; the goal doc (and report rows 129-130) say 22, 23, 25, 27, 28. My recount from the JSON confirms 22=4, 23=2, 25=2, 27=1, 28=1 (24 and 26 = 0; r22 wave-A, r25 wave-V = 0). The report's list is incomplete, not wrong ('plusieurs tours').",
+      "suggested_fix": "Use '22, 23, 25, 27 et 28' in both places."
+    },
+    {
+      "id": "R30-04", "severity": "P3", "category": "wording / strength of 'démontrent'",
+      "where": "docs/GOAL_FINAL_MVP.md note 'les tours 26 (documents) et 29 (dernières modifications) le démontrent'",
+      "what": "Counts are right (r26 0/0/0/4, r29 0/0/0/2, r22 wave-A 0/0/0/2). But r26 was a targeted audit and a full-scope audit one round later (r27) found a documents P2 (R27-D-01), so r26 does not show the documents state was P2-free; r29 audited only the last edits, not the whole state. The last FULL-scope audit (r27) had 1 P2. 'Démontrent' is stronger than 'ont mesuré 0 P2 sur le périmètre audité'. Not false under the reformulated wording ('état audité en dernier'), but the scope of that state should be named.",
+      "suggested_fix": "'... tours 26 (documents, ciblé) et 29 (dernières modifications uniquement) ont mesuré 0 P2 sur leur périmètre ; le dernier audit de portée complète (tour 27) avait 1 P2, corrigé depuis'."
+    }
+  ],
+  "checked": [
+    "P2 recount from JSON (docs): r22 wave-D 4, r23 wave-D 2, r25 wave-D 2, r27 final-state 1, r28 post-r27 1; r24=0, r26=0, r29=0; r22 wave-A=0 P2 (final_state true, 2 P3); r25 wave-V=0. The enumerated rounds 22/23/25/27/28 in the goal doc are exact. Also earlier P2s: r20 (code A-01/02, docs 7, visual 4), r21 (A-01 code, D 2).",
+    "All P2 of rounds 22/23/25/27/28 are in documents (R22-D-01..04, R23-D-01/02, R25-D-01/02, R27-D-01, R28-01); none in code. Note: R22-D-01 is a residual of R21-D-01 and R25-D-01/02 are stale numbers in untouched secondary docs; 'retouches ... ont fait apparaître' is a fair but loose description of them (not counted as an error).",
+    "'tous corrigés ensuite': r23 confirms r22 fixes, r24 confirms r23, r26 confirms r25, r28 handles r27, r29 confirms r28 (0 P2).",
+    "GOAL_FINAL_MVP.md line 21: criterion text consistent with the note; grammar OK.",
+    "FINAL_VALIDATION_REPORT.md:108: sentence is grammatical, no dangling text, the reformulated wording matches the goal doc's quoted phrase 'zéro P2 sur l'état audité en dernier' and its '(tours 26 et 29)'. Inconsistencies are R30-02/03 only.",
+    "User approval ('Reformuler le critère (Recommended)' in AskUserQuestion): could not be verified (transcript not visible); not counted as an error.",
+    "find -newer reports/test-e2e/r29/last-edits-findings.json (excluding node_modules, dist*, playwright-report, ./reports): lists exactly docs/FINAL_VALIDATION_REPORT.md and docs/GOAL_FINAL_MVP.md (both mtime 15:51:11, r29 JSON 13:13:13).",
+    "find -newer scratchpad r23/DONE with same exclusions: only README.md, be/README.md, docs/*.md, .ci-artifacts/local-2026-10-09-round21-22/* logs/manifest, and be/data/escape-lab.db-shm (SQLite runtime shared-memory file, not source, not newer than r29 JSON). No .ts/.tsx/.css/.json source, config, test, openapi or content file is newer: code unchanged since the r23 final chain."
+  ]
+}

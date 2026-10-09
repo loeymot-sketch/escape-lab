@@ -1,0 +1,1796 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Escape Lab API",
+    "version": "0.1.0",
+    "description": "Server-authoritative API for Escape Lab. Answer keys, explanations and hints never leave the server before they are earned. All scoring is computed here from server timestamps."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000"
+    }
+  ],
+  "tags": [
+    {
+      "name": "System"
+    },
+    {
+      "name": "Auth"
+    },
+    {
+      "name": "Student"
+    },
+    {
+      "name": "Labs"
+    },
+    {
+      "name": "Vault"
+    },
+    {
+      "name": "Missions"
+    },
+    {
+      "name": "Social"
+    },
+    {
+      "name": "Profile"
+    },
+    {
+      "name": "Classes"
+    },
+    {
+      "name": "Content"
+    },
+    {
+      "name": "Demo"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Liveness probe.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/rules": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Public scoring rules, published verbatim so the ledger is never a surprise.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Create a student account (teacher with invite code). 409 email_taken or, for a teacher, name_taken.",
+        "description": "Errors: 400 validation_error (invalid body, an empty or invisible name, a name containing \"(teacher #number)\"), 403 invalid_invite, 409 email_taken (e-mail already registered; addresses are compared after Unicode NFC normalisation, trimming and lower-casing, so composed and decomposed spellings are the same account), 409 name_taken (teacher name already used by another teacher account, or the reserved demo teacher name), 429 too many registrations.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "email",
+                  "password"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "pattern": "\\S",
+                    "description": "Display name, 1 to 80 characters with at least one visible character (a name made only of spaces, invisible, private-use or unassigned characters is a 400 validation_error). It cannot contain a \"(teacher #number)\" pattern, which is reserved for content-review records (400 validation_error; digits, brackets and \"#\" are compared after Unicode folding). A teacher name must also be unique among teachers once case, accents, spacing, punctuation, invisible characters, Cyrillic / Greek look-alikes and the Latin look-alikes I / l / 1 / | and O / 0 are folded, and the seeded demo teacher name is reserved: otherwise 409 name_taken. Bidirectional override, embedding and isolate controls (U+202A-U+202E, U+2066-U+2069) are refused (400 validation_error). Students may share names."
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+                    "example": "student@university.edu"
+                  },
+                  "password": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "description": "At least 10 characters, counted after Unicode NFC normalisation (the password is stored as NFC, so a decomposed \"e\" + accent counts once), of which at least 6 are visible: whitespace, zero-width, format and filler characters (U+200B, U+3164, U+2800 ...) do not count. 400 validation_error otherwise (the length floor is checked by the handler, after NFC, not by this schema)."
+                  },
+                  "teacherInviteCode": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "Required to create a teacher account."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Sign in and receive a bearer token (7 days).",
+        "description": "The e-mail is compared after Unicode NFC normalisation, trimming and lower-casing.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 200
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/auth/demo": {
+      "post": {
+        "tags": [
+          "Demo"
+        ],
+        "summary": "One-click demo sign-in (student Alex Martin or teacher Dr. Claire Moreau). Only available when the server runs with DEMO_MODE=1.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "student",
+                      "teacher"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Current user with XP and level.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a signed-in account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "tags": [
+          "Student"
+        ],
+        "summary": "Dashboard: level, XP, streak, progress, continue and recommended mission.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/labs": {
+      "get": {
+        "tags": [
+          "Labs"
+        ],
+        "summary": "Lab map: every lab with its state (completed, current, available, locked, coming_soon).",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/labs/{slug}": {
+      "get": {
+        "tags": [
+          "Labs"
+        ],
+        "summary": "Lab lobby: missions with state, best score and the vault.",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/vault": {
+      "get": {
+        "tags": [
+          "Vault"
+        ],
+        "summary": "Code Vault: fragments found per lab. The code itself is never returned.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/labs/{slug}/unlock": {
+      "post": {
+        "tags": [
+          "Vault"
+        ],
+        "summary": "Enter the exit code to unlock a lab. 422 on a wrong code; 429 after five wrong codes in ten minutes.",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[0-9]{3,4}$",
+                    "example": "000"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/badges": {
+      "get": {
+        "tags": [
+          "Student"
+        ],
+        "summary": "All badges with earned state.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/competencies": {
+      "get": {
+        "tags": [
+          "Student"
+        ],
+        "summary": "Competency percentages, strongest competency and improvement area.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/labs/{slug}/results": {
+      "get": {
+        "tags": [
+          "Labs"
+        ],
+        "summary": "Lab results once the lab is escaped: XP, accuracy, time, hints, ledger, competencies and the mission breakdown. 409 lab_not_escaped before that.",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/leaderboard": {
+      "get": {
+        "tags": [
+          "Social"
+        ],
+        "summary": "Leaderboard by XP. Other students appear as \"Inès M.\"; your own row is always returned in `me`.",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "week",
+                "all"
+              ]
+            },
+            "description": "week = XP earned in the last 7 days; all = all-time (default)."
+          },
+          {
+            "name": "cohort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "class",
+                "all"
+              ]
+            },
+            "description": "class = students sharing a class with you (default); all = every student."
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account. `total` is the number of students in the cohort who have XP in the window (all-time or last 7 days): the same figure for every viewer. Students without XP are not ranked and are not listed; a viewer without XP still gets their own row in `me`, placed below everyone ranked (rank = total + 1).",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Profile: identity, XP and level, accuracy, average mission time, labs, badges and settings (language, sound, reduced motion, notifications).",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a signed-in account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Update settings and identity. Only the fields you send change. A teacher rename can answer 409 name_taken.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a signed-in account. Errors: 400 validation_error (invalid body, an empty or invisible name, a name containing \"(teacher #number)\"), 409 name_taken (another teacher account already uses this name, or it is the reserved demo teacher name), 429 too many writes.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "pattern": "\\S",
+                    "description": "Display name, 1 to 80 characters with at least one visible character (a name made only of spaces, invisible, private-use or unassigned characters is a 400 validation_error). It cannot contain a \"(teacher #number)\" pattern, which is reserved for content-review records (400 validation_error; digits, brackets and \"#\" are compared after Unicode folding). A teacher name must also be unique among teachers once case, accents, spacing, punctuation, invisible characters, Cyrillic / Greek look-alikes and the Latin look-alikes I / l / 1 / | and O / 0 are folded, and the seeded demo teacher name is reserved: otherwise 409 name_taken. Bidirectional override, embedding and isolate controls (U+202A-U+202E, U+2066-U+2069) are refused (400 validation_error). Students may share names. Keeping your own name, even spelled differently, is always allowed."
+                  },
+                  "language": {
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "fr"
+                    ]
+                  },
+                  "sound": {
+                    "type": "boolean"
+                  },
+                  "reduceMotion": {
+                    "type": "boolean"
+                  },
+                  "notifications": {
+                    "type": "boolean"
+                  },
+                  "program": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 120
+                  },
+                  "studyLevel": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 40
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/missions/{id}/start": {
+      "post": {
+        "tags": [
+          "Missions"
+        ],
+        "summary": "Start a mission, or resume the attempt already in progress.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/attempts/{id}": {
+      "get": {
+        "tags": [
+          "Missions"
+        ],
+        "summary": "Current state of an attempt: current step (with the hints already delivered on it, in level order, as step.hintsGiven), revealed values, timer, penalties.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/attempts/{id}/answer": {
+      "post": {
+        "tags": [
+          "Missions"
+        ],
+        "summary": "Submit the answer for the current step. Correct answers return the explanation and may return a code fragment.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "stepId",
+                  "response"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "stepId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "response": {
+                    "type": "object",
+                    "description": "Engine specific. point: {x,y} (0-100). choice: {choice}. decision: {decision}. order: {order:[ids]}. match: {pairs:{leftId:rightId}}."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/attempts/{id}/hint": {
+      "post": {
+        "tags": [
+          "Missions"
+        ],
+        "summary": "Ask the Lab Assistant (BETA) for a hint. Costs 15 XP. Never returns the answer; falls back to the standard hint. The delivered text is stored and listed in attempt.step.hintsGiven from then on.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "stepId"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "stepId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/attempts/{id}/result": {
+      "get": {
+        "tags": [
+          "Missions"
+        ],
+        "summary": "Result screen payload: ledger, stats, badges, competencies.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/classes/join": {
+      "post": {
+        "tags": [
+          "Classes"
+        ],
+        "summary": "Join a class with its code.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "joinCode"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "joinCode": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 6,
+                    "pattern": "^[A-Za-z0-9]{6}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/classes": {
+      "post": {
+        "tags": [
+          "Classes"
+        ],
+        "summary": "Create a class and get its join code.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account. A class name needs at least 2 visible characters (invisible ones do not count). A teacher cannot own two classes with the same name: 409 class_name_taken. Two names are the same when they differ only by case (including ß / SS and final sigma), by whitespace (any whitespace of any length counts as one space), by invisible characters (zero-width, soft hyphen, bidi and format characters, a stray combining U+0345 ypogegrammeni), by compatibility forms (fullwidth letters, ligatures, mathematical alphabets) or by Cyrillic / Greek look-alikes of Latin letters. Punctuation, accents, digits and the shapes I / l / 1 / | and O / 0 are significant, so \"Section 1.2\" / \"Section 12\" and \"Year 1\" / \"Year I\" are different classes. At most 50 classes per teacher: 409 class_limit_reached.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 80,
+                    "pattern": "\\S"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Classes"
+        ],
+        "summary": "Your classes.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/classes/{id}/students": {
+      "get": {
+        "tags": [
+          "Classes"
+        ],
+        "summary": "Roster with progress, accuracy, XP, last activity and the needs-attention flag.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "description": "Name search."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "attention",
+                "active",
+                "inactive"
+              ]
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/classes/{id}/students/{studentId}": {
+      "get": {
+        "tags": [
+          "Classes"
+        ],
+        "summary": "One student: metrics, labs, competencies and mission history.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account. `history` lists the latest 20 completed attempts, newest first; `historyTotal` (integer, always at least `history.length`) is the number of all completed attempts of the student, so a client can say \"latest 20 of N\".",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/classes/{id}/analytics": {
+      "get": {
+        "tags": [
+          "Classes"
+        ],
+        "summary": "Cohort analytics: first-attempt success per mission, weakest mission flagged, roster.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/content/missions": {
+      "get": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Internal: scientific approval status of every mission (draft, reviewed, approved). Never shown to students.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/content/missions/{id}/status": {
+      "put": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Internal: move a mission through Draft, Reviewed, Approved. Approval requires a review first.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "reviewed",
+                      "approved"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/demo/reset": {
+      "post": {
+        "tags": [
+          "Demo"
+        ],
+        "summary": "Restore the demo student (Alex Martin) or the demo teacher (Dr. Claire Moreau: name, classes, content review) to the prepared presentation state. 403 for every other account.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a signed-in account.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "HeaderTooLarge": {
+        "description": "Request Header Fields Too Large (the header block, for example an oversized Authorization value, is above Node's 16 KB limit). Answered by the HTTP server before the application runs: no body and no JSON error envelope. The same applies to the other protocol-level errors Node answers itself on any operation, for example a bare `400 Bad Request` for a malformed request line, header or HTTP version, or for a Content-Length / Transfer-Encoding conflict; these are not declared per operation. The UI never produces them."
+      },
+      "RateLimited": {
+        "description": "Too many requests (error code rate_limited). `error.details.retryAfterSeconds` and the Retry-After header say how long to wait.",
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds to wait before trying again (a whole number, at least 1). When CORS is enabled the API sends Access-Control-Expose-Headers: Retry-After, so a browser script can read it.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

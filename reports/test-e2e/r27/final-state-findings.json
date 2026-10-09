@@ -1,0 +1,124 @@
+{
+  "wave": "D+C",
+  "round": 27,
+  "scope": "Full-scope final audit of the exact final state (documents, code state vs final-r23 chain, screenshots). Read-only; only shasum, sips, grep, stat and one-line node were used. No server, browser or test suite was run.",
+  "counts": { "P0": 0, "P1": 0, "P2": 1, "P3": 10 },
+  "findings": [
+    {
+      "id": "R27-D-01",
+      "severity": "P2",
+      "category": "claimed fix not present / untraceable audit trail",
+      "where": "docs/FINAL_VALIDATION_REPORT.md:126 (Tour 24 row) and :128 ('Non reaudite' row), versus :123 (Tour 21 row)",
+      "what": "Row 126 says: 'les 2 P3 (clause redondante du script, chemin du fichier du P1 visuel) corrigés'. Row 128 repeats '(2 P3 : clause redondante du script, chemin du fichier du P1 visuel)' among the fixes made after tour 24. The fix for R24-D-02 was to cite reports/test-e2e/r21/internal-p1-overlap.json by path. That citation is not in the report: row 123 only says 'un P1 visuel (chevauchement) trouvé par l'agent des captures a été corrigé avant le tour (test de géométrie ajouté)' and cites only the directory `reports/test-e2e/r21/`. The r25 audit saw the citation at 'FINAL:127'. docs/FINAL_VALIDATION_REPORT.md was last written at 12:59:50, after the r25 JSON (12:54) and the r26 JSON (12:59:33), so the citation was lost in a later edit, or the claim was never true in the current file. The report therefore claims a correction that the file does not contain, and the only P1 of the 20-26 series stays untraceable from the documents.",
+      "evidence": "grep -rl 'internal-p1' docs README.md be/README.md .ci-artifacts web/e2e returns nothing; grep -n 'internal-p1' only matches reports/test-e2e/r24, r25, r26 JSON. The file reports/test-e2e/r21/internal-p1-overlap.json exists (12:44:26, severity P1, status fixed).",
+      "suggested_fix": "Add 'reports/test-e2e/r21/internal-p1-overlap.json' to the Tour 21 row (line 123), or delete 'chemin du fichier du P1 visuel' from rows 126 and 128."
+    },
+    {
+      "id": "R27-D-02",
+      "severity": "P3",
+      "category": "carry-over, unresolved for 3 rounds",
+      "where": "be/README.md:72",
+      "what": "'needs the four-digit code (3916) for the Clinical Detective badge' prints the Master Lab exit code in clear text (node check: exitCode('master') = 3916). The same README's Security model (line 87) says tests scan payloads and the public OpenAPI for exit codes. 3916 appears nowhere else in docs, web/src or be/openapi.json. Not false and not a leak of server behaviour; it is a spoiler in a public document. Raised as R25-D-10 and R26-D-02, never fixed or explicitly accepted.",
+      "suggested_fix": "Remove the literal '(3916)', or add an explicit sentence in KNOWN_LIMITATIONS saying the demo Master code is public on purpose."
+    },
+    {
+      "id": "R27-D-03",
+      "severity": "P3",
+      "category": "UI wording, carry-over",
+      "where": "web/src/pages/progress.tsx:237",
+      "what": "eyebrow=\"MASTERY PROGRESS\" above 'Lab results' (the only 'mastery' in web/src). The About page says pedagogical effectiveness is not evaluated. Raised as R21-D-06, R22-D-08, R23-D-07; code deliberately untouched since the final chain. No document claims it was fixed.",
+      "suggested_fix": "Accept explicitly, or change to 'LAB RESULTS' in a future build."
+    },
+    {
+      "id": "R27-D-04",
+      "severity": "P3",
+      "category": "incomplete status",
+      "where": "docs/FINAL_VALIDATION_REPORT.md:106 (title: 'les lignes couvrent aussi les tours 23 à 25') and :128",
+      "what": "Round 26 exists (reports/test-e2e/r26/wave-D-docs-findings.json, 0/0/0/4) and its four P3 fixes were applied (line 108 '22, 23 et 25', KNOWN_LIMITATIONS:3 and :21, archive README 'toutes les 2 s'), but the report has no tour 26 row and row 128 ('Non réaudité...') does not list those edits as unaudited. This audit is the first re-read of them.",
+      "suggested_fix": "Add a one-line tour 26 row (0/0/0/4, corrected) and mention the tour 26 edits in row 128, or state that tour 27 re-read them."
+    },
+    {
+      "id": "R27-D-05",
+      "severity": "P3",
+      "category": "ambiguous banner wording",
+      "where": "line 3 of the 11 banner files (API_CONTRACT_MATRIX x2, AUDIT_EVIDENCE, CLAUDE_CODE_EXECUTION_BRIEF, CODEX_INITIAL_AUDIT, E2E_VALIDATION_REPORT, GATE_TRACEABILITY_MATRIX, HUMAN_REVIEW_HANDOFF, INDEPENDENT_REVIEW_REPORT, RELEASE_GATE_DECISION, ULTRA_STRICT_EXECUTION_PLAN)",
+      "what": "'ses chiffres datent de la passe archivée du 2026-10-09' (EN: 'its figures date from the archived pass of 2026-10-09') could be read as describing the whole report, whose most recent figures are the 12:31 final chain in the Tour section. The section title 'Tour 20 / Tour 21 / Tour 22' now holds tours 20-25. Raised as R25-D-09 (optional). The banners are otherwise correct: 11 present, ESCALATE and no independent human review stated.",
+      "suggested_fix": "Optional: 'les chiffres des blocs Verdict final et Résultats datent de la passe archivée du 03:04'."
+    },
+    {
+      "id": "R27-D-06",
+      "severity": "P3",
+      "category": "stale line reference",
+      "where": "docs/SCIENTIFIC_REVIEW_BACKLOG.md:157 (C-12): '`docs/KNOWN_LIMITATIONS.md:23` affirmait...'",
+      "what": "The sentence is in the past tense and correct as history, but line 23 of KNOWN_LIMITATIONS.md is now the heading '## Content (needs the human education/biomedical reviewer)'; the corrected pointer is at line 25. A reader following the reference lands next to it but not on it. The four other KNOWN_LIMITATIONS refs (:31, :10, :9, :43, plus :7) are correct.",
+      "suggested_fix": "Write 'était au point :20 avant l'ajout des points 10-14, maintenant :25' or drop the number."
+    },
+    {
+      "id": "R27-D-07",
+      "severity": "P3",
+      "category": "incomplete citation",
+      "where": "docs/KNOWN_LIMITATIONS.md:21 (item 14)",
+      "what": "'It did not recur in the 4 full passes run afterwards (rounds 22 and 23; ... logged about every 2 s in `.ci-artifacts/local-2026-10-09-round21-22/watch.log`)'. That file covers 2 of the 4 passes (12:00-12:10); the other two are in final-r23/watch.log (12:21:31-12:31:18). I checked both: the only server gaps are between passes. Half-fixed R23-D-10.",
+      "suggested_fix": "Name both watch.log files."
+    },
+    {
+      "id": "R27-D-08",
+      "severity": "P3",
+      "category": "wording",
+      "where": "docs/GOAL_FINAL_MVP.md:1 and :7",
+      "what": "Title 'MVP fonctionnelle, démontrable, validée localement' uses 'validée' while every other document says 'vérifié techniquement en local'; section 'Périmètre (à corriger)' is in the present tense with no completion marker, although all items are done. A reader of this file alone could take it as an open to-do list or as a validation claim. The file does say 'Jamais « production ready » ni « validé biomédicalement »'.",
+      "suggested_fix": "Title: '... vérifiée techniquement en local'; add a line 'État : atteint pour les critères techniques, voir FINAL_VALIDATION_REPORT'."
+    },
+    {
+      "id": "R27-D-09",
+      "severity": "P3",
+      "category": "label",
+      "where": ".ci-artifacts/local-2026-10-09-round21-22/README.md:1 and FINAL_VALIDATION_REPORT.md:7",
+      "what": "Archive README title 'Preuves des tours 20 à 22' also contains final-r23/ (the final chain). FINAL:7 says '411/411 deux passes consécutives, après les corrections du tour 20', but the state measured is after the tour 21 and R21-A-01 changes too. Both are imprecise rather than false (the Tour section lists the changes).",
+      "suggested_fix": "'Preuves des tours 20 à 23' and 'après les corrections des tours 20 et 21'."
+    },
+    {
+      "id": "R27-D-10",
+      "severity": "P3",
+      "category": "caption vs image, accepted limitation",
+      "where": "docs/FACULTY_DEMO_SCRIPT.md section 5 item 2 and docs/demo-screenshots/README.md row 02: 'Seuls trois laboratoires et le Master Lab sont jouables'",
+      "what": "The image 02 shows the Master Lab as Locked. The README 'what it shows' column says 'locked Master Lab' and KNOWN_LIMITATIONS item 13 documents the mismatch, so it is disclosed. Carry-over V21-06 / V25-02.",
+      "suggested_fix": "Optional: 'le Master Lab s'ouvre après trois labos'."
+    },
+    {
+      "id": "R27-D-11",
+      "severity": "P3",
+      "category": "out-of-scope stale copy",
+      "where": ".mission-input/be/README.md:6 and :10",
+      "what": "Hidden original mission-input folder still says '46 tests pass'. Not referenced by any document and not part of the audited set; noted because the test count differs from the current 265.",
+      "suggested_fix": "None needed, or add a one-line 'original input, superseded' note."
+    }
+  ],
+  "resolved_from_previous": [
+    "No P1 in the series is open. The only P1 in r20-r26 (R21-V-INTERNAL-01, overlap of the approval note on the demonstration-data banner) is fixed: web/src/polish.css:263 '.bar-note.approval-note { margin: 0 0 26px }' and the geometry assertion exists in web/e2e/escape-lab.spec.ts. Its documentation trail is the open R27-D-01.",
+    "Earlier P1s still fixed: r16 'audits indépendants' wording (web/src/lib/demo-guide.ts:194-195 says AI agents, not independent human review); r17 data-not-flagged (FacultyDemoNote at pages/faculty.tsx:56,179,397).",
+    "R20 P2: A-01 e-mail NFC (normalizeEmail routes.ts:77, tests in be/test/r20-fixes.test.ts); A-02 documented as KNOWN_LIMITATIONS item 10; D-01 pointer (KL:25 points to the backlog and says it is not a review); D-02 Node step (README:7, script:20); D-03 state id declared non-reproducible (FINAL:23); D-04/D-05 11 banners + independent precision notes; D-06 approval note (faculty.tsx:398); D-07 'guest demo session' (shell.tsx:26); V-01..V-04 screenshots (README rows, sizes recomputed).",
+    "R21 P2: A-01 login regression on legacy collision rows (findUsersByEmail + candidate loop, routes.ts:83-93,160-168, test R21-A-01); D-01 stale openapi hash (FINAL:24,49,120 now qualified; live sha f1dbd031 matches); D-02 banners.",
+    "R22 P2: D-01..D-04 (hash lines, top pointer split at FINAL:7, 'journal non archivé' at FINAL:119, convergence caveat at FINAL:108).",
+    "R23 P2: D-01 convergence wording (FINAL:108 says tour 22 is the only tour on final code for the API and that 'aucun P2 nouveau' is not met); D-02 '1 paire et 2 triplets' (FINAL:124).",
+    "R25 P2: D-01 be/README.md:6 has no number any more; D-02 KL:12 no longer says '200 end-to-end tests'. R25 P3 D-03..D-08 verified fixed (row order 22/23/24/25, status date 2026-10-09, README links KNOWN_LIMITATIONS and calls CODEX audit historical, 'étape 8 du guide', archive README says validation-manifest.json describes final-r23 and names the old script copy).",
+    "R26 P3: D-01 (KL:3 now '...rounds 10 to 17 and 20 to 23; items 10-14'), D-03 ('about every 2 s'), D-04 ('à plusieurs tours (22, 23 et 25)') fixed. D-02 (3916) not fixed, carried as R27-D-02.",
+    "R24 P3: D-01 redundant parenthesis removed (script:20). D-02 not fixed although claimed fixed, now R27-D-01.",
+    "No regression found in the code, tests or screenshots."
+  ],
+  "checked": [
+    "CODE STATE: no file under be/src, be/test, be/scripts, web/src, web/e2e, web/scripts, nor any config/package file in be/ or web/ is newer than scratchpad r23/DONE (12:31:19). `find . -newer DONE` outside node_modules and sources returns only docs, READMEs, .ci-artifacts docs/logs, reports and be/data/escape-lab.db-shm (SQLite side file, not source; escape-lab.db itself is 8 Oct 21:26). Newest sources: be/src/routes.ts 12:21:04 and be/test/r20-fixes.test.ts 12:20:44, both before the chain start (run.sh 12:21:31, backend-test.log 12:21:46); web/src/polish.css 11:59:13; web/e2e/escape-lab.spec.ts 11:56:55; web/playwright.config.ts 11:53:31. be/openapi.json 12:21:48 was regenerated inside the chain (cmp exit 0).",
+    "final-r23 logs: backend-test.log '# tests 265 / pass 265 / fail 0' and byte-identical to the scratchpad log; fe-unit 'Test Files 17 passed, Tests 322 passed'; e2e1.log '411 passed (4.8m)', e2e2.log '411 passed (4.6m)' (different runs: cmp differs at line 13); exit.log all nine entries 0; be-audit and fe-audit 'found 0 vulnerabilities'; typecheck clean; fe-build budget 'JS 359503 / 400000, CSS 66025 / 120000'; API contract '13 literal and 12 dynamic'; openapi.sha256 f1dbd031...c6c6; identity-sha256.txt same two hashes. All equal FINAL rows 114-121 and validation-manifest.json.",
+    "Recomputed: shasum -a 256 be/openapi.json = f1dbd031f6c1ee65ddec55d9d22bc7c98b86004c4e9abcdf00d4949bec48c6c6; be/src/content.ts = d4bd3b647676886062b914b9b50c50600dc39bba3e63984037f4849badd85a39 (also equals the hash in the backlog header). a10dd1e5... = .ci-artifacts/local-2026-10-09/openapi.json and appears in current-status text only with the 03:04 qualifier. Archive 03:04: 258 backend, 3 x 411, JS 359139 / CSS 65969; root of round21-22: 264 backend, 2 x 411; r21 pass 2: 408 passed, 3 failed production-bundle (ERR_CONNECTION_REFUSED at 4173 x2 and 4174 x1); prod-only.log '3 passed (8.5s)'; r20 e2e.log 1 failed (R5-02/03) 410 passed; misconfigured log '6 workers, 4 failed 20 passed'; first-attempt passes 1/1/2 failures with R17-D-01 in 3 of 3 and R2V-01/02 once.",
+    "Per-round severity recount from JSON by node: rounds 9-19 round-1/*.json = r9 0/5/13/17, r10 0/1/8/17, r11 0/0/4/19, r12 0/1/5/18, r13 0/0/3/21, r14 0/0/5/18, r15 0/0/3/7, r16 0/1/8/14, r17 0/2/2/14, r18 0/0/0/3, r19 0/0/1/6 (all equal FINAL rows 63-73, wave letters equal). r20 A 2/9 + D 7/9 + V 4/6 = 13/24; r21 A 1/3 + D 2/7 + V 0/6 = 3/16; r22 A 0/2 + D 4/7; r23 D 2/8; r24 D 0/2; r25 D 2/8 + V 0/7; r26 D 0/4 (all P0 = P1 = 0). Totals in FINAL rows 122-127 and in the line-108 blockquote match.",
+    "Numbers: backend 265 = 258 + 7 (7 test() in be/test/r20-fixes.test.ts); backlog 25 = 1 blocker (C-01) + 12 (C-02..C-12 + B-01) + 12 (C-13..C-22 + B-02 + B-03), in the backlog, FINAL:17, script:116, KL:25; guide durations 30+30+60+60+60+45+75+30 = 390 s and 5-min table 300 s, +105 s = 405 s; script section 5 sizes and README Format list equal sips pixel sizes halved (2880x2448, 3434, 1800, 1920, 1800, 2014, 2764, 3730, 2356; 750x1624); dev DB 46 users, 0 non-ASCII e-mails, 0 case duplicates (read-only query); KL item 12 '20 ms at 20 000, 270 ms at 200 000' equals r21 measurement (262-306 ms at 200 065 users); 3 s max gap and 237/241 lines in the two watch.log files; content.ts has 11 labs (4 playable, 7 coming soon), 10 missions incl. master, 7 badges.",
+    "SCREENSHOTS: sha256 first-16-hex of all 10 PNG equal the r22 list (abc6e1b195351754, 5808a18f2f1bb26d, bec7be05e66f4342, ec288c126ade1b42, ec047327c1fc7cf7, 46c1bc07321d708b, 31fb33fa474a9c6a, 43cfa944c9695fa3, 93049b87bcb1e4a2, cbb840d572645053); `find docs/demo-screenshots -newer reports/test-e2e/r21/wave-V-visual-findings.json` returns nothing; PNG mtime 12:00:06, newer than the last UI source change (polish.css 11:59:13) and no web/src file is newer than 01-about-student-1440.png. sips sizes equal the README table.",
+    "CODE LOGIC (be/src/routes.ts login/register/findUsersByEmail, be/test/r20-fixes.test.ts): no real defect found. Register and login both key on normalizeEmail (NFC, trim, lower, NFC), so NFC/NFD/UPPER spellings share one rate-limit bucket (loginfail:ip:email) and the demo-domain check runs on the normalised key. Exact-match row first, scan only for non-ASCII keys and excludes the exact row (no duplicates). Candidates with is_demo_account are skipped when DEMO_MODE is off; if none was checked a dummy scrypt hash of valid shape (16-byte salt, 32-byte key) is verified, so existing, missing and demo-off accounts do one scrypt and return the same 401. issue(u) and game.me(u.id) use the verified candidate's own id, so no session mix-up. Failure slots are reserved before the awaited scrypt and given back on success; RateLimiter.release pops the latest hit of the key, which can pop another concurrent request's slot, but the net count is unchanged (pre-existing, not part of round 20). Known and documented residuals: one scrypt per legacy row (KL item 12(c), R22-A-01), non-ASCII scan cost (R21-A-02), zero-width characters accepted in e-mail (R21-A-03). Tests: 7 tests, every assertion consistent with the code (NFC/NFD constants are different strings, guarded by assert.notEqual).",
+    "OVERCLAIM scan (production ready, certified, validated, secure, independent, GDPR, WCAG, conforme) over README.md, be/README.md, FACULTY_DEMO_SCRIPT, GOAL, demo-screenshots/README, archive README + manifest, FINAL top block and Tour section, KNOWN_LIMITATIONS, backlog, web/src strings: every hit is a negation, an ESCALATE statement, a requirement for a future human reviewer, or 'independent' redefined as same-team AI agents. FINAL:16 says 'accessibilité automatisée' (axe tests exist in web/e2e/a11y.spec.ts), no WCAG claim. The 11 old-document hits sit under the banners, two with an explicit precision note.",
+    "File paths: every backticked path in the audited documents exists (checked by script), except relative or runtime names that are explained in the text (webserver-exit.log in the suite temporary folder, historical test-results/.last-run.json at FINAL:255). Line refs: backlog game.ts:413 (recheck), :427 (explanation), scoring.ts:4-5, content.ts:25-26 (scoring profiles), KL :31/:10/:9/:43/:7, c:NN spot checks (44, 54, 62, 68, 100, 196, 199, 209, 217, 218, 222, 253, 277, 286, 297, 302), svg :31 'H' flag, content.test.ts :51 and :67-85 all correct.",
+    "UI labels quoted in the script and README exist in web/src: Server-calculated, Official timer, Open the Hematology lab, Return to mission control, Lab map, Open the Progress vault, Faculty guest, Go to quality, Go to roadmap, Reset guest session, Confirm reset, Guest options, Mark reviewed, Retry, Submit answer, Now draft, No review recorded yet, Coming soon, Demonstration data, About & demo guide, Guest demo · server-side scoring, Milestones with 'N of M earned', 'accuracy NN%', the approval note and the 'Success is the class mean accuracy' sentence.",
+    "Documents: the 11 banners are present and name the heading 'Tour 20 / Tour 21 / Tour 22' (exact heading at FINAL:106). FINAL lines 131+ are under the 'Verdict historique' banner. Node 18 symptom text 'node: bad option: --disable-warning=ExperimentalWarning' is identical in README:7, be/README:7, FINAL:25, script:20. be/README.md:6/11 carry no test number. KL line 3 date 2026-10-09. Verdict sentence in FINAL:129, manifest and archive README identical.",
+    "Not done by design: no Playwright, vitest or server run; no pixel inspection of PNG content (hash identity to the images opened by the r22/r25 visual audits)."
+  ],
+  "verdict_sentence": "No P0 or P1 and no code defect: the code is untouched since before the final 265/322/411x2 chain, the screenshots are byte-identical to the r22 list and every figure recomputed matches; one P2 remains in the documents (FINAL_VALIDATION_REPORT.md:126 and :128 claim a corrected citation of the visual-P1 file that is not in the report), plus 10 P3."
+}

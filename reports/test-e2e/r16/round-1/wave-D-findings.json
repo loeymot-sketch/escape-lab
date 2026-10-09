@@ -1,0 +1,181 @@
+{
+ "wave": "D",
+ "round": 16,
+ "findings": [
+  {
+   "id": "R16-D-01",
+   "severity": "P1",
+   "category": "overclaim",
+   "title": "'Independent audits' can be read as an external/independent audit",
+   "evidence": "demo-guide.ts QUALITY_POINTS: title 'Repeated adversarial audits', text 'Independent audits that try to break the application have been repeated. They also run locally.' (about-student-full.png). docs/INDEPENDENT_REVIEW_REPORT_2026-10-04.md: 'Reviewer : agent independant G0-G8' (an AI agent of the same project); docs/RELEASE_GATE_DECISION_2026-10-05.md: G8 ESCALATE, every independent human signature absent. The next card says 'no independent human security or accessibility review', so the page uses 'independent' in two opposite senses.",
+   "repro": "Open About & demo guide > How quality is assured (any role, any width).",
+   "expected": "No wording a committee could read as an independent/external audit.",
+   "actual": "'Independent audits ... have been repeated' sits next to 'Local validation only'; a reader can take it as audits by independent third parties.",
+   "fix_hint": "Say 'Repeated adversarial test rounds, run by automated agents of the project team, locally' and drop 'Independent' (also in unit/e2e specs asserting the text).",
+   "status": "open"
+  },
+  {
+   "id": "R16-D-02",
+   "severity": "P2",
+   "category": "walkthrough",
+   "title": "Steps 3-4 narrative ('start a mission', 'Fix the Sample opens once Blood Smear Code is completed') conflicts with the shared demo data",
+   "evidence": "Fresh seeded DB and after POST /api/demo/reset: Hematology is CLEARED (3 of 3 missions, exit unlocked); picker shows 'Blood Smear Code ... Completed - best score 168 of 180 XP ... Replay' and 'Fix the Sample ... Completed ... Replay' (probe2.mjs, hem-lab-seeded.png). be/src/demo.ts alexPlan: Alex has 5 missions done. The rule itself is TRUE: a freshly registered account gets 403 mission_locked 'Complete mission 01 to unlock.' and Fix the Sample state 'locked' (curl in this session), but the demo guest can never show it.",
+   "repro": "Reset guest session > About > Open the Hematology lab.",
+   "expected": "Page wording matches what the presenter sees.",
+   "actual": "Buttons say 'Replay', not 'Start'; nothing is locked; the hint under step 4 describes a state that cannot occur for the guest. Step 3 'start one mission' is a replay; a faster replay gives 'New personal best: +12 XP', so XP is no longer 8,240 afterwards.",
+   "fix_hint": "Word steps 3/4 as 'Replay Blood Smear Code' / 'Replay Fix the Sample (the guest already completed them; in a new account Fix the Sample stays locked until Blood Smear Code is completed)'.",
+   "status": "open"
+  },
+  {
+   "id": "R16-D-03",
+   "severity": "P2",
+   "category": "walkthrough",
+   "title": "No 'prepare the demo' step; guest state is shared and persistent, and the Faculty guest has no UI reset (Content review can show Approved next to a page saying nothing is validated)",
+   "evidence": "After my walkthrough Student detail lists my replays ('Fix the Sample 105 XP', 'Blood Smear Code 180 XP', 8,252 XP instead of 8,240) and the leaderboard shows '#4 You 8,252 XP'. Faculty guest: PUT /api/content/missions/hem-01/status reviewed then approved persisted ('approved'); 'Return to student demo' does not reset it; the only UI reset ('Reset guest session') exists for the student only (shell.tsx), while POST /api/demo/reset with a teacher token restores all to draft (tested). Content review has a 'Mark reviewed' button on every row.",
+   "repro": "Walk steps 3-5 and repeat without resetting; or mark a mission Reviewed/Approved as Faculty guest and come back later.",
+   "expected": "Each presentation starts from the same state; Content review shows Draft everywhere.",
+   "actual": "State leaks between presentations; an 'Approved' row left by a visitor contradicts the page's 'Not yet biomedically validated' in front of the committee.",
+   "fix_hint": "Add a visible step 0 'Before you start: Reset guest session (student) and run POST /api/demo/reset as faculty'; ideally let the Faculty side reset teacher state too; tell presenters not to click 'Mark reviewed'.",
+   "status": "open"
+  },
+  {
+   "id": "R16-D-04",
+   "severity": "P2",
+   "category": "overclaim",
+   "title": "'every image is illustrative artwork' is stronger than what the repo can prove (image provenance undocumented)",
+   "evidence": "Page: SCOPE_IS_NOT 'every image is illustrative artwork' and foot 'All images in this prototype are illustrative artwork'. docs/SCIENTIFIC_REVIEW_BACKLOG.md C-07: no source/licence for blood-smear-hero.webp, 'aspect photographique', 'si c'est une photographie ... l'affirmation est inexacte'. The in-app caption is more careful: 'Stylised blood smear, created for training. Illustrative only: not a real specimen, not a validated image' (m1-start.png: the image looks photographic).",
+   "repro": "Replay Blood Smear Code and compare the image with the page claim.",
+   "expected": "Claim only what is documented.",
+   "actual": "'artwork' asserts an origin nobody has documented; a haematologist in the audience may challenge it.",
+   "fix_hint": "Use 'All images are illustrative and not validated for clinical use' (drop 'artwork') until provenance and licence are recorded.",
+   "status": "open"
+  },
+  {
+   "id": "R16-D-05",
+   "severity": "P2",
+   "category": "fact_check",
+   "title": "Roadmap loop assigns roles to Monastir and HEPL/Liege and calls the phases 'planned', but the repo only holds a PROPOSITION to be submitted to ethics bodies",
+   "evidence": "demo-guide.ts ROADMAP_LOOP: Create/Monastir, Observe & Learn/HEPL-Liege, Validate & Transfer/Monastir. grep of docs, README, be/src, web/src finds no source for these roles (only web/e2e/demo-guide.spec.ts). docs/SCIENTIFIC_REVIEW_BACKLOG.md 5.4: 'Pilote propose (PROPOSITION, aucun resultat) ... a soumettre aux instances ethiques et de protection des donnees des deux etablissements avant tout pilote'. Page: 'Five phases are planned', chip PLANNED.",
+   "repro": "Scroll to 'Scientific validation roadmap'.",
+   "expected": "Roles of named institutions are confirmed by their owners; 'planned' does not imply agreed or approved.",
+   "actual": "The audience (Monastir and HEPL staff) sees commitments for their institutions that are not documented as agreed; no mention of ethics/data-protection approval.",
+   "fix_hint": "Confirm the loop with the project owner; label it 'Proposed' and add 'subject to agreement and ethical / data-protection approval'.",
+   "status": "open"
+  },
+  {
+   "id": "R16-D-06",
+   "severity": "P3",
+   "category": "walkthrough",
+   "title": "Step 5 is ambiguous and the presenter is not told the answers; Blood Smear Code cannot host the hint/wrong-answer demo",
+   "evidence": "Step 5 hint: 'This happens inside the mission started in the two previous steps.' Blood Smear Code is a 1-step point mission that ends on the first correct submit (result screen), so only Fix the Sample (3 steps) can host hint, wrong answer and retry. Answers needed to finish it: Reject / Correct the interference (Repeat) / Accept. Verified: hint 'Each hint costs 15 XP', wrong 'XP penalty: -10'; result 'Score 105 of 180 XP, Server-calculated, Time, Official timer'.",
+   "repro": "Follow steps 3-5.",
+   "expected": "Step 5 names Fix the Sample explicitly.",
+   "actual": "'the mission started in the two previous steps' reads as both missions.",
+   "fix_hint": "Say 'In Fix the Sample: ask for the hint on sample 1, answer Accept (wrong), retry with Reject; samples 2 and 3 are Correct the interference and Accept'. Fallback if Fix the Sample fails: Microbe Detective (mic-01) or Anemia Detective (hem-03), both choice steps with a plain re-check message; avoid Gram Stain Challenge and Petri Dish Mystery for the 'does not reveal' claim (they return 'n of m in place'). Master Lab decision step is locked.",
+   "status": "open"
+  },
+  {
+   "id": "R16-D-07",
+   "severity": "P3",
+   "category": "fact_check",
+   "title": "'the feedback explains without revealing the answer' is absolute; order/match steps return a partial signal and the wrong-answer message is a re-check prompt, not an explanation",
+   "evidence": "Fix the Sample wrong answer: 'Not quite. Ask whether any step in the lab can repair this specimen. XP penalty: -10.' (the explanation appears only after a correct answer). Petri Dish Mystery wrong match via API: progress {correct:2,total:4}; docs/KNOWN_LIMITATIONS.md item 1 says repeated tries can narrow the key.",
+   "repro": "Answer mic-03 or mic-02 wrongly.",
+   "expected": "Claim true for every mission.",
+   "actual": "True for decision/choice/point steps; partial progress is shown for order/match.",
+   "fix_hint": "'The feedback guides you without giving the answer directly', or restrict the claim to the missions shown.",
+   "status": "open"
+  },
+  {
+   "id": "R16-D-08",
+   "severity": "P3",
+   "category": "walkthrough",
+   "title": "On a phone, step 7 note says 'Use the Faculty guest button in the sidebar'",
+   "evidence": "At 375x812 there is no sidebar; Faculty guest is only inside 'Guest options' (walk log 'faculty guest via menu'). The intro paragraph says it correctly; the step-7 note (about.tsx line 78) does not.",
+   "repro": "375 px, student guest, About page, step 7.",
+   "expected": "Same instruction everywhere.",
+   "actual": "Sidebar does not exist on phone.",
+   "fix_hint": "'Use the Faculty guest button (sidebar, or Guest options on a phone)'.",
+   "status": "open"
+  },
+  {
+   "id": "R16-D-09",
+   "severity": "P3",
+   "category": "walkthrough",
+   "title": "The guide is not re-entered automatically: each mission result and each guest switch lands on home or the faculty dashboard",
+   "evidence": "'Return to mission control' goes to home; the Faculty guest switch lands on 'Class intelligence'; 'Return to student demo' lands on 'Continue your investigations' (walk logs at both widths). About is always one nav click away in both roles (verified at 1440 and 375) and its h1 receives focus, so nothing is stuck, but about 6 extra navigations are needed per demo.",
+   "repro": "Complete a mission or switch guest.",
+   "expected": "Easy way back to the guide.",
+   "actual": "Presenter must click 'About & demo guide' each time.",
+   "fix_hint": "Say so in the intro, or add a 'Back to the demo guide' link on the result screen.",
+   "status": "open"
+  },
+  {
+   "id": "R16-D-10",
+   "severity": "P3",
+   "category": "walkthrough",
+   "title": "Step 6 only shows an already-unlocked vault; the 'full code opens the exit' moment is not visible live",
+   "evidence": "Progress vault: Hematology 'ESCAPED, Fragment 1: 7, 2: 4, 3: 2, Exit unlocked'; Microbiology 2 of 3 fragments. Optional live finale verified by API on the reset DB: finish Petri Dish Mystery (pink-mac=ecoli, beta-hemo=spyo, swarm=proteus, green=pseudo), then enter 385 in the Microbiology lab gives unlocked:true. Not mentioned on the page.",
+   "repro": "Step 6.",
+   "expected": "Claim demonstrable.",
+   "actual": "Claim is true (be/src/game.ts unlockLab) but shown statically only.",
+   "fix_hint": "Optional: add 'extra +45 s: finish Petri Dish Mystery and enter 385'. Reset afterwards.",
+   "status": "open"
+  }
+ ],
+ "summary": {
+  "P0": 0,
+  "P1": 1,
+  "P2": 4,
+  "P3": 5
+ },
+ "verdict": "AMBER",
+ "walkthrough": {
+  "steps": [
+   {
+    "n": 1,
+    "seconds": 30,
+    "notes": "Concept read on the page; opening via nav 'About & demo guide' 0.35 s machine time. Page budget 30 s OK."
+   },
+   {
+    "n": 2,
+    "seconds": 30,
+    "notes": "'Open the lab map' 0.15 s; map = 3 open disciplines + Master + 7 coming soon (matches 'organised by discipline'). Back to About via nav 0.3 s."
+   },
+   {
+    "n": 3,
+    "seconds": 65,
+    "notes": "About > Open Hematology lab > Replay Blood Smear Code > click schistocyte + Submit, 0.9 s. Result screen; 'Return to mission control' lands on home (R16-D-02/09)."
+   },
+   {
+    "n": 4,
+    "seconds": 55,
+    "notes": "Home > About > Open Hematology lab > Replay Fix the Sample, 0.28 s. Opens (already unlocked; lock only reproducible with a new account)."
+   },
+   {
+    "n": 5,
+    "seconds": 70,
+    "notes": "Hint (-15 XP) 'Hint 1. Inspect the tube...', wrong answer 'Not quite... XP penalty -10', retry Reject, Repeat, Accept: result 105 of 180 XP, server-calculated, official timer. About 1.2 s of clicks plus 2 s to finish."
+   },
+   {
+    "n": 6,
+    "seconds": 40,
+    "notes": "About > Open the Progress vault: fragments 7/4/2 + 'Exit unlocked' for Hematology, badges, leaderboard. 0.9 s."
+   },
+   {
+    "n": 7,
+    "seconds": 85,
+    "notes": "Faculty guest switch 1.25 s (sidebar; on phone via Guest options); lands on Class intelligence. Roster row opens Student detail; Content review lists 10 missions all Draft with 'Mark reviewed' buttons. 2.3 s of clicks."
+   },
+   {
+    "n": 8,
+    "seconds": 35,
+    "notes": "About nav in faculty, 'Go to quality' / 'Go to roadmap' move focus to the headings; 'Return to student demo' 1 s lands on home."
+   }
+  ],
+  "total_seconds": 410,
+  "fits_5_7_minutes": true,
+  "database_preparation": "1) Student guest in the browser: sidebar 'Reset guest session' > 'Confirm reset' (phone: Guest options > Reset guest session > Confirm reset); ~0.6 s, lands on home; then click 'About & demo guide'. API equivalent: T=$(curl -s -XPOST http://HOST/api/auth/demo -H 'content-type: application/json' -d '{\"role\":\"student\"}' | jq -r .token); curl -XPOST http://HOST/api/demo/reset -H \"authorization: Bearer $T\". 2) Faculty guest (no UI control): same with {\"role\":\"teacher\"}; restores Dr. Claire Moreau, 2 classes and all Content review rows to Draft. 3) Tested result after reset: Alex Martin level 6, 8,240 XP, best scores 168/180/87, Hematology cleared, Microbiology 2/3 (Petri Dish Mystery current), no in-progress attempt, Content review all Draft. Fresh-DB alternative: delete the DB file and run be/scripts/seed-demo.ts (same state). A nothing-completed state is NOT reachable from the guest, so 'Fix the Sample is locked' cannot be shown live. Reset between rehearsal and the real session; do not click 'Mark reviewed'."
+ },
+ "notes": "Verified OK: mission names/order/unlock rule (hem-01 then hem-02; be/src/game.ts startMission 403 mission_locked, tested with a new account); hint 15 XP; wrong answer -10 XP; wrong feedback does not state the key on Fix the Sample; server score/time on result screen ('Server-calculated', 'Official timer'); Code Vault/fragments/exit (Progress vault; unlock tested with code 385); faculty analytics, roster, student detail (row click) and Content review exist and work at 1440 and 375; guest switch instruction at 1440 (sidebar) and 375 (Guest options); About reachable in both roles after every switch with focus on its h1; Return to student demo and Reset guest session work at both widths; step estimates sum to 390 s (6 min 30 s), consistent with 'about 5 to 7 minutes'; no stale test counts or other volatile numbers on the page; no claim of production readiness, clinical validation, diagnostic use, accreditation, proven effectiveness or remote CI (page says the opposite: 'Local validation only', 'Not yet biomedically validated', 'Planned, not done'); 'Automated tests cover the server and the interface' true (be/test, web unit tests, web/e2e). axe (wcag2a/aa, 21, 22aa, best-practice) 0 violations at 320/375/768/1440 in both roles (axe-results.json; color-contrast 'incomplete' only due to the page gradient, text is #41595e-#173344 on cream, visually fine); no horizontal scroll at 320; keyboard: Tab order is the 6 action buttons in step order, 3 px visible outline, Enter on 'Go to quality' focuses the heading; title 'About & demo guide'; zero network requests while opening About and using its buttons (both roles, all widths). Timing: pure click/load time of the whole demo is about 12 s; with narration the 8 steps need about 6.5-7 min (410 s estimated incl. navigation), so it fits 5-7 minutes only if the presenter keeps to the page budget (stopping after the retry in Fix the Sample saves ~30 s). Scripts and screenshots: /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-D (walk.mjs, axe.mjs, kbd.mjs, resetui.mjs, walk-*-s*.png). A stray user 'R16 Fresh' exists only in my throwaway DB."
+}

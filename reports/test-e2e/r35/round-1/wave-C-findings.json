@@ -1,0 +1,129 @@
+{
+ "wave": "C",
+ "round": 35,
+ "states_reviewed": 42,
+ "findings": [
+  {
+   "id": "C35-001",
+   "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:108 ; docs/GOAL_FINAL_MVP.md:21,31 ; docs/KNOWN_LIMITATIONS.md:135-143",
+   "category": "doc_claim",
+   "severity": "P1",
+   "evidence": "FINAL_VALIDATION_REPORT.md:108 (the report's current-state block, verdict 'DEMO-READY ACADEMIC MVP') states in the present tense: 'Le code n'a plus de P2 connu non traité, hors le choix de conception A-02' and that the exit criteria are met, with the exit criterion being 'zéro P2 sur l'état audité en dernier' (GOAL_FINAL_MVP.md:21,31). The report's round table stops at tour 30 and never mentions rounds 31-34 (grep 'tour 34|r34|r31' in the report = no hit). But docs/KNOWN_LIMITATIONS.md:135-143 ('Round 34 notes') says the last audited state (round 34, code unchanged since 12:21) has P2 = 7 and 'All items below are open and unfixed', among them code defects: B-001 (last correct step's explanation not rendered), A-001/C-004 (two competency definitions), A-002 (hint double charge, no idempotency key), A-003 (seed-demo guard case-sensitive), C-001, C-002, C-003. reports/test-e2e/r34/round-1/wave-{A,B,C}-findings.json sum to 0/0/7/19 (recomputed). So the report's 'no known untreated P2 in the code' and 'zero P2 on the last audited state' are false for the last audited state, and a committee reading the report/README (which says nothing about round 34) would not learn it.",
+   "fix_hint": "Add rounds 31-35 to the report's table with the real counts, replace line 108's sentence by 'last audited state (round 34): 0 P0, 0 P1, 7 P2 open, see KNOWN_LIMITATIONS', and state that the GOAL exit criterion 'zero P2 on the last audited state' is NOT met.",
+   "status": "open",
+   "first_seen_round": 35,
+   "rounds_open": 1
+  },
+  {
+   "id": "C35-002",
+   "state_artifact": "docs/EXTERNAL_REVIEW_REQUEST.md:24 ; .ci-artifacts/local-2026-10-09-round21-22/README.md",
+   "category": "doc_claim",
+   "severity": "P2",
+   "evidence": "EXTERNAL_REVIEW_REQUEST.md:24: 'Les 411 tests e2e, le backend et le frontend ont passé sur cinq passes complètes consécutives sur le code final'. Evidence on disk: backend and frontend unit logs of the final code exist twice only (final-r23/backend-test.log + fe-unit.log, and local-2026-10-09-verify-r34/backend-test.log + frontend-test.log); the 5 e2e passes are 2 (final-r23/e2e1,e2e2) + 3 (extra-passes-r32/e2e1..3) from different sessions (plus stress-r33 and verify-r34 pw1/pw2 = 4 more that the sentence ignores), i.e. 'five consecutive complete passes' is true for neither backend/frontend nor for a single consecutive chain. FINAL_VALIDATION_REPORT.md:117 says 'deux passes consécutives'. Moreover extra-passes-r32/, stress-r33/ and local-2026-10-09-verify-r34/ are cited by no document (grep in docs, README.md, be/README.md = 0 hits) and the archive README.md (title 'tours 20 à 23') does not index them, so the 'five' figure is untraceable from the documents.",
+   "fix_hint": "Say what is archived: 'e2e 411/411 on 5 runs (final-r23 x2, extra-passes-r32 x3); backend 265 and frontend 322 on 2 runs', index the three folders in the archive README and in the report, and align with the report's 'two passes'.",
+   "status": "open",
+   "first_seen_round": 35,
+   "rounds_open": 1
+  },
+  {
+   "id": "C35-003",
+   "state_artifact": "be/README.md:68 vs be/src/rules.ts:17, be/src/game.ts:1044-1048",
+   "category": "doc_claim",
+   "severity": "P2",
+   "evidence": "be/README.md:68: 'Teacher \"success\" of a mission is the class mean of that accuracy (missions under 70% are flagged, the lowest is the hardest)'. Code and the published rule say otherwise: game.ts:1047-1048 flags only `hardest` and only if < 70, rules.ts:17 'The server flags only the hardest mission (the lowest success), and only when it falls under 70%'. Live (class 1, 50 students, scratch API :3701): Acid-Base Emergency 62% shows 'Needs attention'; Gram Stain Challenge 66% (also under 70) has no flag in the UI (main text lists 'Gram Stain Challenge / 30 of 50 students completed / accuracy 66%' with no badge) and the API has needsAttention false for it.",
+   "fix_hint": "Reword be/README.md:68 to 'only the lowest mission is flagged, and only below 70%'.",
+   "status": "open",
+   "first_seen_round": 35,
+   "rounds_open": 1
+  },
+  {
+   "id": "C35-004",
+   "state_artifact": "scratch class 'Round Two' (id 7) and 'Acc Two'; shot C35-rounding-completion-34pct.png",
+   "category": "numeric_integrity",
+   "severity": "P3",
+   "evidence": "Class aggregates are means of already-rounded per-student values (game.ts:1065-1066 `mean(roster.map(r=>r.progressPct))`, `mean(withAcc.map(r=>r.accuracyPct))`) while per-lab/per-mission figures are rounded once. Recomputed from raw SQLite tables with exact fractions: class of 2 students (0 missions, 6 missions): API cohort.avgCompletionPct = 34 (rows show 0% and 67%), raw 6 of 18 missions = 33.3% -> 33; avgMissionsCompleted printed by the same payload = 3 (= 33%). The 'Completion 34%' tile therefore contradicts 'average 3 of 9 missions'. Class of 2 students with accuracy 100% and 1/6 (hem-01 with 5 wrong): API cohort.avgAccuracyPct = 59 vs exact (1+1/6)/2 = 58.33 -> 58, whereas the same payload's labs[hematology].accuracyPct is 58 (single rounding). Brute force: 12 of 55 two-student completion pairs and 26 three-student triples differ by 1 point.",
+   "fix_hint": "Compute cohort percentages from raw sums (sum of missions / (9 x students); mean of unrounded accuracies) and round once.",
+   "status": "open",
+   "first_seen_round": 35,
+   "rounds_open": 1
+  },
+  {
+   "id": "C35-005",
+   "state_artifact": "scratch class 'Half Three' (id 8); shot C35-rounding-half-12pct.png",
+   "category": "numeric_integrity",
+   "severity": "P3",
+   "evidence": "Float artefact on an exact .5: three students on Blood Smear Code with 5, 7 and 11 wrong answers have accuracies 1/6, 1/8, 1/12 whose exact mean is 12.5%. API missions[hem-01].successPct = 12, labs[hematology].accuracyPct = 12, hardestMission.successPct = 12 (Math.round(100*sum/n) with sum = 0.37499999..). Round-half-up of the exact value (and of the displayed row values 17/13/8 -> 12.67 -> 13) gives 13. Found by exhaustive search (Math.round vs exact rational half-up: 101 mismatching combinations of 2-4 missions, 4 for equal-mission classes of up to 3 students) and confirmed live; independent recompute of the 50-student class and 4 other classes: 0 other differences.",
+   "fix_hint": "Compute with integer arithmetic (n*100*den) or add an epsilon / use toFixed-free exact rational before rounding.",
+   "status": "open",
+   "first_seen_round": 35,
+   "rounds_open": 1
+  },
+  {
+   "id": "C35-006",
+   "state_artifact": "docs/FACULTY_DEMO_SCRIPT.md section 3 row 3 and section 2.3 ; web/src/lib/demo-guide.ts PREPARED_NOTE",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "Script section 2.3 fixes the canonical state at 8,240 XP and row 3 has the presenter replay Blood Smear Code and click the schistocyte. Alex's best on that mission is 168 (GET /labs/hematology after reset: hem-01 bestScore 168), so a normal quick replay scores 178 and the result screen reads 'New personal best: +10 XP added to your total' (observed live, UI run on :5701); total XP becomes 8,250 and the dashboard changes. Neither the script nor the 'Before you present' box tells the presenter that step 3 itself will change the figures they just verified (the note only says a replay adds XP when it beats the best). Fix the Sample (best 180) cannot be beaten, which is why screenshot 05 says 'did not beat your best score'.",
+   "fix_hint": "Add one sentence to row 3: 'the first replay of Blood Smear Code beats Alex's best (168): expect +10 XP (8,250) and a New personal best message'.",
+   "status": "open",
+   "first_seen_round": 35,
+   "rounds_open": 1
+  },
+  {
+   "id": "C35-007",
+   "state_artifact": "be/src/routes.ts (POST /api/auth/demo limiter 60 per 10 min per IP) vs be/.env.example, docs/KNOWN_LIMITATIONS.md, be/README.md",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "POST /api/auth/demo is limited to 60 calls per 10 minutes per IP (routes.ts: limiter.hit(`demo:${c.ip}`, ... 60, 600_000) outside NODE_ENV=test). The browser calls it once per new tab/session and once per guest switch (verified: load=1, reload=0, Faculty guest=+1). It is listed nowhere: .env.example 'Rate limits (defaults in parentheses)' omits it, KNOWN_LIMITATIONS items 9/11 (shared NAT) omit it, and the demo script never mentions it. Live: after ~60 calls the next page load shows 'Demo laboratory unavailable ... Too many attempts. Try again in 1 second.' (shot C35-demo-signin-429.png). A class behind one NAT opening the demo link (>60 sessions in 10 minutes) is blocked.",
+   "fix_hint": "Document the demo budget (and that RATE_* does not tune it) in KNOWN_LIMITATIONS and the demo script's 'multi-visitor' warning, or make it configurable.",
+   "status": "open",
+   "first_seen_round": 35,
+   "rounds_open": 1
+  },
+  {
+   "id": "C35-008",
+   "state_artifact": "Content review, 401 during a status change; shot C35-401-midaction-lands-on-analytics.png",
+   "category": "silent_error",
+   "severity": "P3",
+   "evidence": "Two tabs; in tab B the stored token is invalidated, then 'Approve' is clicked on Content review. The app silently opens a new faculty guest session, drops the click and lands on 'Class intelligence' (Faculty analytics), with the blue notice 'Your faculty guest session expired, so a new faculty guest session was opened.' It does not say that the status change was NOT applied (server confirms: content_audit has no row for it) and does not return to Content review, so a reviewer may believe the approval went through. 409 (stale tab), lost response (route.fetch then abort), lost response + offline + Retry, Enter/Space/double-Enter paths were all correct (row refreshed from the server, 'Could not confirm...' alert, one audit row per real transition, focus kept on the next action).",
+   "fix_hint": "Append 'Your last action was not saved' to the session-renewed notice when a mutation was in flight, and keep the user on the current view.",
+   "status": "open",
+   "first_seen_round": 35,
+   "rounds_open": 1
+  },
+  {
+   "id": "C35-009",
+   "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:525 (and file name docs/INDEPENDENT_REVIEW_REPORT_2026-10-04.md)",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "FINAL_VALIDATION_REPORT.md:525 (section 'Boucle adversariale E2E + backend') describes 'superviseurs adversariaux indépendants' with no qualifier at that place; the same file says at line 77 and 549 that the agents are same-team AI and not independent, and two other old documents (AUDIT_EVIDENCE_2026-10-04.md, INDEPENDENT_REVIEW_REPORT_2026-10-04.md) carry a 'Précision' banner, but this section and the file name INDEPENDENT_REVIEW_REPORT_2026-10-04.md (banner present inside) still headline 'indépendant'. Grep of README.md, be/README.md, KNOWN_LIMITATIONS, demo script, About page: 'independent' occurs only negated (demo-guide.ts:194-195 and its unit test enforce it); 'production ready' occurs only negated (README.md:41, report line 166, GOAL, plan).",
+   "fix_hint": "Replace 'indépendants' by 'de la même équipe (agents IA)' at line 525.",
+   "status": "open",
+   "first_seen_round": 35,
+   "rounds_open": 1
+  },
+  {
+   "id": "C35-010",
+   "state_artifact": "web/src/pages/faculty.tsx PageIntro lede (Class intelligence), visible in screenshot 07",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "The Faculty home lede reads 'Monitor cohort progress, identify difficult missions and focus support where it changes outcomes.' next to a banner saying the data is generated demo data; elsewhere the product says pedagogical effectiveness is not evaluated (About: 'the pedagogical effectiveness of the game' is listed as not validated). 'changes outcomes' presents an outcome effect as a feature of the tool. Not a clinical or scientific-validation claim, wording only.",
+   "fix_hint": "Use 'focus support where learners get stuck'.",
+   "status": "open",
+   "first_seen_round": 35,
+   "rounds_open": 1
+  }
+ ],
+ "summary": {
+  "P0": 0,
+  "P1": 1,
+  "P2": 2,
+  "P3": 7,
+  "open_P0": 0,
+  "open_P1": 1,
+  "open_P2": 2,
+  "open_P3": 7
+ },
+ "verdict": "AMBER",
+ "notes": "READ-ONLY audit; own API :3701 (fresh copy of be/ without data, `cp .env.example .env; DB_PATH=./data/demo.db npm run seed:demo; DEMO_MODE=1 npm start` exactly as demo script 2.1 -> works on a fresh dir, data/ is created by the seed, AUTH_SECRET empty is fine) and Vite dev :5701; servers stopped by PID (48090,48043,48196,48153). be/data/*.db never opened. Side effect to disclose: `npx playwright test --list` rewrote web/playwright-report/index.html (HTML reporter); nothing else under be/web/docs/sources changed.\nDOCUMENT TRUTH VERIFIED OK: shasum be/openapi.json f1dbd031...c6c6 and be/src/content.ts d4bd3b64...5a39 equal the report; archived a10dd1e5...951eb equals .ci-artifacts/local-2026-10-09/openapi.json; backend 265/265 (re-run now) and 258 (archive), Vitest 322/322 in 17 files (re-run), Playwright --list = 411 in 14 files, API contract 13 literal + 12 dynamic (re-run), JS 359,503/400,000 and CSS 66,025/120,000 (fresh build to scratch outDir without VITE_API_URL; with a URL it is 359,543), 359,139 / 65,969 in the 03:04 archive, npm 10.9.8, Node v22.23.2, Darwin 25.4.0; every .ci-artifacts and reports/test-e2e path cited in the report/README/KNOWN_LIMITATIONS exists (final-r23 logs, r21-failed-pass/prod-only.log, watch.log x3, internal-p1-overlap.json, r22-r31 files); severity totals of rounds 9-30 and 34 in the report and KNOWN_LIMITATIONS recomputed from reports/test-e2e JSON: all equal (incl. A 3/5, B 1/7, C 3/7); final-r23 e2e1/e2e2 411 passed; 408/411 failed pass real; Node-18 failure text of seed:demo/npm test exact; demo script 2.2 curl commands work (teacher and student reset 200); canonical state 2.3 confirmed on fresh DB (Alex Martin level 6, 8,240 XP, 5 of 9, Hematology 3/3 exited, Microbiology 2/3, Master locked 'Clear 3 labs (1 of 3 cleared)', 10 missions Draft, 38 students, class 81%/73%/5 attention/hardest Acid-Base 59%, 31 active, Alex hem lab XP 435/92%/09:08, 87%, 02:43, 4 badges); 'Now draft · date' behaviour after Approve->Return to draft and its survival of the teacher reset confirmed; 390 s step total, 7 'Coming soon' labs, 11 labs/9+1 missions, 7 badges, 3916, 570/180 max, 5-wrong-code 429 lockout, 64 KB body, 50 classes all true; backlog '25 constats / 1 blocker' (1+12+12) and its file:line citations (engines.ts, game.ts, scoring.ts, content.ts, assets.ts, content.test.ts, svg line 6, three asset sha256) all match; screenshot pixel sizes equal the README table; screenshots 02/05/06/07/08/10 content matches captions. No UI/doc string presents illustrations as clinical/diagnostic reference or tests as scientific validation (engines.tsx:128, mission.tsx:425, demo-guide.ts, ABOUT_FOOT, index.html meta all negate). The 8 demo views are all reachable as the script says (About concept; 'Open the lab map'; 'Open the Hematology lab' -> Replay Blood Smear Code (click schistocyte, Submit answer, result 'Server-calculated'/'Official timer', 'Return to mission control' -> dashboard); Replay Fix the Sample (3 decision steps); hint -15 then wrong answer 'Not quite.' + 'XP penalty: -10'; 'Open the Progress vault'; 'Faculty guest' -> Class intelligence, roster row, Content review; 'Go to quality'/'Go to roadmap').\nFACULTY DATA: created 25 new students (abandoned, mid-mission, expired timer, replay with lower score, hints on every step, all 9 + Master Lab, tied 180 XP pair, RTL and 30-char/unicode names, duplicate names, no-class student, single-student class, empty class, 3 x.5/double-rounding classes) and recomputed roster, student detail (history, historyTotal, lab accuracies), cohort, per-mission (started/completed/success/clean-first-try/avgHints/avgSec), per-lab, hardest mission, needs-attention (idle 6.99d vs 7.01d, complete-but-idle, low accuracy), roster order, level, leaderboard (class/all x all/week, ties = competition ranking, me.rank for unranked viewer, total) from raw SQLite with exact fractions: 0 differences except C35-004/005. Student profile/dashboard/lab-results agree with the teacher view for 12 states; best-attempt tie rule keeps the first attempt (design).\nUI: 4 viewports (1440/1024/768/390) x light and dark+reduced-motion x analytics, full roster, long-name detail, RTL detail, content review, empty class, plus 720x450 and 360x225 zoom emulation: no horizontal overflow, no clipped text, no touch target <44 px at <=768; the app has no dark theme (no prefers-color-scheme rule, emulation shows the light UI) - not a defect, but 'dark mode' cannot be a claim. Content review: two-tab stale clicks are idempotent (no duplicate audit row), 409 illegal_transition shows an alert and refreshes, lost response and lost response+offline+Retry end consistent with the server, keyboard Enter/Space/double Enter OK, status after reload correct. Console: only the expected 401/409/ERR_CONNECTION_RESET resources. Not verified: be/data dev DB claims ('46 users, no collision') because be/data/*.db must not be touched; real screen reader; WebKit; multi-process contention."
+}

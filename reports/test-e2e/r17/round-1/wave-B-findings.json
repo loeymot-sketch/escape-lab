@@ -1,0 +1,88 @@
+{
+  "wave": "B",
+  "round": 17,
+  "states_reviewed": 1900,
+  "findings": [
+    {
+      "id": "R17-B-01",
+      "severity": "P1",
+      "category": "dead_control",
+      "area": "sticky sidebar (web/src/refine.css:190 .app>aside{overscroll-behavior:contain})",
+      "viewport": "every width >= 601 (checked 1440x900, 1024x600, 768x1024 touch, 667x375, 844x390), mouse wheel, touch swipe and PageDown",
+      "title": "Scrolling with the mouse wheel, a touch swipe or PageDown while the pointer/focus is over the sticky sidebar does not scroll the page",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r17-B/wheel.mjs output: 1440x900 About page, wheel 500 over main -> scrollY 500; over aside nav button / blank aside / Reset button / aside top -> scrollY 0 (4 of 4 aside points); the same page with `aside{overscroll-behavior:auto}` injected -> 500. touchscroll.mjs: 768x1024 and 1024x768 touch swipe on the aside -> scrollY 0 (on main 301); pgdn.mjs: PageDown with a sidebar button focused -> scrollY 0 as shipped, 817 with overscroll-behavior:auto. Screenshots of the layout: shots/st-student-about-1440x900.png",
+      "repro": "node wheel.mjs 1440 900 (also node touchscroll.mjs, node pgdn.mjs). Manual: open About & demo guide (or any long page: Progress, Lab results, analytics) at >= 601 px wide, click a sidebar item (the pointer now rests on the sidebar), scroll with the wheel or trackpad: nothing moves until the pointer is moved over the content.",
+      "expected": "The page scrolls wherever the pointer is; the sidebar only scrolls itself when it is shorter than its content",
+      "actual": "overscroll-behavior:contain on the aside (a scroll container because of overflow-y:auto) stops scroll chaining even when the aside has nothing to scroll (desktop and tablet: aside height == viewport). The sidebar is a 190-245 px dead zone for wheel, trackpad, touch drag and keyboard paging. Landscape phones: when the aside is scrollable, scrolling past its end also never reaches the page. Every click on a nav item leaves the pointer exactly in that zone, so the very first scroll after navigating does nothing.",
+      "fix_hint": "web/src/refine.css:190 delete `overscroll-behavior:contain` (default auto chains correctly); keep overflow-y:auto for the short-screen case",
+      "status": "open"
+    },
+    {
+      "id": "R17-B-02",
+      "severity": "P2",
+      "category": "state",
+      "area": "web/src/pages/shell.tsx (menuOpen outside-press/focusin handlers + effect that clears confirmReset when the menu closes)",
+      "viewport": "375 portrait -> >= 601 (phone rotated to landscape or a window resized past 600/601) while the Reset confirmation is showing",
+      "title": "Rotating/resizing across 601 px with the phone menu open: the first real click on 'Confirm reset' is swallowed and the panel silently reverts to 'Reset guest session'",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r17-B/resize.mjs (scenario A, click delay 250 ms): at 375 Guest options > Reset guest session shows the confirm group; setViewportSize 700x700; the sidebar shows the confirm panel (screenshot shots/resize-A1.png); a human-speed click (mousedown..mouseup 250 ms) on Confirm reset -> POST /demo/reset count 0, panel back to the Reset button, focus on body (shots/resize-A2.png). With a 0 ms click the reset does go through (race), so automation hides it.",
+      "repro": "node resize.mjs (first two lines of output: 'A after confirm click: resets 0')",
+      "expected": "Confirm reset works on the first click after the layout changes, or the pending confirmation is closed cleanly with focus kept",
+      "actual": "menuOpen stays true although the popover is display:none above 600 px. The document pointerdown/focusin handler (menu 'outside press') then calls setMenuOpen(false) on the pointerdown that targets the sidebar button, and the effect `if (!menuOpen) setConfirmReset(false)` re-renders the panel away before the click completes. The user must press Reset again. No data is lost and nothing is reset by accident.",
+      "fix_hint": "shell.tsx: close the menu on a (min-width:601px) matchMedia change, or ignore onPress/onFocusIn while popoverRef is not rendered visible (getClientRects().length===0), or do not clear confirmReset from the menu effect when the sidebar copy is on screen",
+      "status": "open"
+    },
+    {
+      "id": "R17-B-03",
+      "severity": "P3",
+      "category": "state",
+      "area": "web/src/pages/shell.tsx confirmReset state shared by the sidebar and the phone popover",
+      "viewport": "900x700 -> 375x812",
+      "title": "A pending reset confirmation made in the sidebar re-appears inside Guest options after the window shrinks below 601 px",
+      "evidence": "resize.mjs scenario B: at 900 click Reset guest session (confirm panel in sidebar), resize to 375x812, open Guest options -> the popover opens directly on 'Reset the guest session? ... Confirm reset' with focus on the Guest options button (shots/resize-B.png). confirmReset is only cleared when menuOpen becomes false.",
+      "repro": "node resize.mjs (scenario B line: 'B phone menu' shows reset-confirm:visible inside guest-popover)",
+      "expected": "A confirmation does not survive a layout change, or the popover opens on its normal buttons",
+      "actual": "Opening the menu shows a destructive confirmation the user did not just ask for (still needs a deliberate click on Confirm reset)",
+      "fix_hint": "shell.tsx: reset confirmReset on viewport-class change (same matchMedia as B-02)",
+      "status": "open"
+    },
+    {
+      "id": "R17-B-04",
+      "severity": "P3",
+      "category": "focus",
+      "area": "web/src/polish.css:336 html:has(.player){scroll-padding-top:104px} vs sticky .player>header",
+      "viewport": "<= 600 px wide (header is 108 px tall at 320/360/375/414/480/600; 75 px from 601)",
+      "title": "Shift+Tab (backwards) in the mission player lands the focused option 4 px under the sticky header on phones, so the top of its focus ring is hidden",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r17-B/mtab.mjs (header-aware run: hem-02 option A, mic-02, mic-03 select, bio-02 hotspot at 375x568 and 375x812: element top 104 px, header bottom 108 px); hdr.mjs measures header 108 px at every width <= 600 for all nine missions; screenshot shots/hdr-focus-under-sticky.png shows the 3 px ring cut along the top edge. Forward Tab and all widths >= 601 are clear. Pre-existing since round 7; not caused by round 16.",
+      "repro": "node hdrshot.mjs (or mtab.mjs)",
+      "expected": "Focused control and its full ring stay below the sticky header (WCAG 2.4.11 spirit)",
+      "actual": "Control fully visible, ring top edge (outline 3 + offset 2 + halo 5) hidden",
+      "fix_hint": "polish.css:336 use scroll-padding-top >= 120px (header 108 + ring), ideally a media rule: 120px for <=600, 90px otherwise",
+      "status": "open"
+    },
+    {
+      "id": "R17-B-05",
+      "severity": "P3",
+      "category": "copy",
+      "area": "About & demo guide step 5 hint (web/src/lib/demo-guide.ts, step 'feedback')",
+      "viewport": "any",
+      "title": "Step 5 says Blood Smear Code 'cannot host a retry', but a wrong click there gives feedback, costs 10 XP and the learner retries the same step",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r17-B/claims.mjs (API as the demo guest: wrong point on hem-01 -> correct:false, 'Not quite. Look for fragments...', penaltyXp -10, attempt stays in_progress; second try at the key -> correct:true) and shots/about-student-1440.png. Also 'A replay adds XP to the shared demo student' (Before you present) is true only when the replay beats the best score: claims2.mjs fast clean replay +12 XP, a replay with wrong answers +0.",
+      "repro": "node claims.mjs ; node claims2.mjs (run reset afterwards)",
+      "expected": "Presenter guidance matches behaviour: any mission step can host a wrong answer and retry; replay XP depends on beating the best score",
+      "actual": "Misleading hint; a presenter may skip the simplest mission for the retry demonstration, and may promise visible XP growth on replay",
+      "fix_hint": "demo-guide.ts: drop 'Blood Smear Code ends on its first correct answer, so it cannot host a retry' (or say 'it has one step'), and write 'A replay can add XP only if it beats the best score'",
+      "status": "open"
+    }
+  ],
+  "summary": { "P0": 0, "P1": 1, "P2": 1, "P3": 3 },
+  "verdict": "AMBER",
+  "round16_fix_verification": {
+    "R16-B-01 (sticky sidebar)": "PARTIAL (position, sizing, own scroll, no overlap, no h-scroll, focus walk, print, forced-colors, reduced motion all hold in 1,900+ states; but overscroll-behavior:contain makes the sidebar a dead scroll zone: R17-B-01)",
+    "R16-B-02 (POST /demo/reset reply validation)": "HOLDS (empty200/null/{}/string/array/reset:'true'/no profile/profile null each give exactly one alert, session usable, axe clean, phone and desktop; real reset, double click = 1 request, slow 4 s reset, navigation during reset, external reset with mission open all fine)",
+    "R16-B-03 (plain Error wording)": "HOLDS (demo login, unlock, reset: 'The server sent an unexpected response. Invalid server ... payload: x.' one alert)",
+    "R16-B-04 (spokenWait)": "NOT RETESTED (known, unreachable)",
+    "R16-C-01 / R16-C-02 (About copy)": "HOLDS (step 7 note names the sidebar and Guest options; Faculty guest sees 'You are in the Faculty guest'). New copy issue R17-B-05",
+    "R16-A-02 (hint persisted at charge time)": "HOLDS (hem-02 x3 steps, hem-03 s2 two hints, mic-01: text, penalty and count identical to the API before and after a reload at every moment, phone and desktop; AI path not testable without a provider key)"
+  },
+  "notes": "Own stack API 6901 / Vite 6902, scratch dir /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r17-B. (1) STICKY: sticky.mjs and sticky2.mjs, widths 320..1920 (13 and 18 values incl. 600/601, 900/901) x heights 225..900 (4 and 8 values), student views Investigations/Lab map/lab lobby/Progress/Lab results/Learning settings/About and faculty Faculty/Student detail/Content review/About, each with scroll-to-bottom check, hit-test of every main control against the aside, aside overflow/horizontal-scroll check, and a full Tab walk checking the focused control is inside the viewport and not covered: 0 issues in 1,300+ walks (aside position sticky >= 601 and static <= 600, y stays 0 at page bottom, no overlap, no double scrollbar, aside scrolls internally at short heights: scrollHeight 560-636 vs 375). Mission player with the shell hidden, result screen (no aside rendered), guest gate (gate.mjs 9 viewports, one alert, axe 0), Guest options popover at 320x256..600x900 (popover.mjs: inside viewport horizontally, Cancel/Close reachable, Escape works), dark scheme, forced-colors, reduced motion, print (aside static, auto height) all fine (misc.mjs screenshots). Focus rings inside the aside are not clipped (18 px padding). (2) RESET: reset.mjs 14 reply variants x phone and desktop, reset2.mjs, reset3.mjs. (3) wording in faults.mjs phone 19-22 and desktop 12-18 (about 200 injected faults; 401 -> documented expiry notice + fresh guest, dropped unused keys -> no alert by design, answer/hint dropped keys -> documented resync note). (4) About: about.mjs both roles at 320/375/768/1440: title, one h1 focused, 8 steps, 'Before you present' block with 4 items, aria-current, role chips, Open buttons land on Laboratory map / Hematology Lab / Progress vault / Class intelligence / Content review with focus on h1, anchors put the h2 at 24-40 px, zero API requests (click and 3 s idle), works with every API call aborted, axe 0, no horizontal scroll. (5) Hints: hints.mjs desktop and phone; double tap = 1 POST, slow 4 s, abort before send (not charged, one alert, retry charges once), lost reply (charged once, resync note, standard hint after reload, button 'No more hints'), 500, 503 empty, 200 {} after server charge, two tabs concurrent (charged once, the stale tab gets one 'No more hints are available for this step' alert while already showing the hint: acceptable, not filed). Max hints per step is 1-2 in the content, so '3 hints' was tested as 3 steps of Fix the Sample. (6) PLAY: t11.mjs full 9 missions + 3 unlocks + Master + master unlock at phone 375 touch, desktop 1440 and landscape 667x375: 77 states each, axe/overflow/off-screen/tap-target/raw-id checks 0 issues, XP 1155 after 3 labs, 1725 after Master, vault fragments 742/385/916/3916, all four exits, 7 badges, console clean. Faculty sweep fac.mjs at 375 and 1440: analytics, both classes, roster -> student detail, Content review draft->reviewed->approved->draft with focus kept on the row action: axe 0, no alert, no NaN. Not done: real keyboard-only completion of every engine (r16 did it; here only the Tab walk in the player for 4 engines at 9 viewports), no screen reader, AI hint provider path (needs a key), WebKit. Servers started by me were stopped at the end."
+}

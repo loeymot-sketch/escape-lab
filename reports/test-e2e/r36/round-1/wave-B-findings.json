@@ -1,0 +1,109 @@
+{
+ "wave": "B",
+ "round": 36,
+ "states_reviewed": 760,
+ "findings": [
+  {
+   "id": "B36-001",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r36/round-1/wave-B-shots/b36-a11y-bio02-step.txt (+ b36-bio02-initial.png)",
+   "category": "accessibility / core interaction (re-rating of B35-002)",
+   "severity": "P1",
+   "evidence": "Reproduced in Chromium (dev + AX tree via CDP Accessibility.getFullAXTree and ariaSnapshot). Lab Value Hacker (bio-02) step: the stimulus is <img alt=\"\" src=chemistry-panel.svg> inside <button aria-label=\"Select a point on the scientific image\">. The accessibility tree of the whole step has NO image node, NO table, NO cell: the 8 analytes, their results, units, reference ranges and the H flag exist only as pixels (body innerText does not contain \"Potassium\" or \"6.4\"). The only text a screen-reader user gets is the context line (hemolysis index 3+, one discordant result) and the button description. Hints do not name any value either. Blood Smear Code (hem-01) is the same (alt=\"\", no description of the field). Keyboard operation works, but a user who cannot see the image cannot choose where to put the marker: Enter puts it at 50/50, arrows move in 5% steps (21x21 grid) with no announcement of what is under the marker (point-help is not a live region). Only blind guessing completes the step: for hem-01 4 of 441 grid positions are inside the accepted radius, so ~110 wrong Submits (-10 XP each) on average. Why P1 under the stated rule (inaccessible core interaction; a user of a core feature cannot complete the core flow): the two point missions are the FIRST mission of Hematology and the SECOND of Clinical Biochemistry, and the later missions of the lab stay locked (\"Complete mission 01/02 to unlock\", seen in the lobby and via 403 mission_locked), so a blind or screen-reader student cannot deliberately progress through two of the three standard labs, hence not to the Master Lab (which needs all 3 labs). For bio-02 there is no exemption argument: the exercise is a TEXT TABLE of lab values; presenting it as text would not invalidate the exercise (WCAG 1.1.1 test/exercise exception does not apply). For hem-01 an inherently visual task is arguable, but it still gates the lab and offers no alternative path. I disagree with the P2 classification of round 35 for bio-02 at least.",
+   "fix_hint": "bio-02: render the panel as a real table (the server already sends step values for other missions; a role=list/table of the same 8 rows) next to or instead of the SVG, and make the point choice a listbox/radio group of rows (the answer is a row); hem-01: give the image a long description and offer a text alternative (e.g. a numbered region list). Announce marker moves in a live region. If neither is possible before the committee, state in the demo page and KNOWN_LIMITATIONS that two missions are not usable with a screen reader and that the labs are therefore not accessible end to end.",
+   "status": "open",
+   "first_seen_round": 36,
+   "rounds_open": 1,
+   "relates_to": "B35-002"
+  },
+  {
+   "id": "B36-002",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r36/round-1/wave-B-shots/b36-wrong-answer-live-region.txt (+ b36-wrong-feedback-order.png)",
+   "category": "accessibility / repeated wrong answers not announced (B35-001 re-judged)",
+   "severity": "P2",
+   "evidence": "Reproduced with a MutationObserver on .case-panel (hem-02 step 1): first wrong answer inserts the role=alert block (1 childList mutation). Second wrong answer (same option) and third (other option): 2 mutations each, both only the Submit button text Checking... -> Submit answer; the alert node is not touched (identical text), focus returns to Submit. Status card goes 1 -> 2 -> 3 and XP penalty keeps growing silently. Judged P2, not P1: the flow remains completable (the first failure is announced, Wrong answers count is readable, a correct answer moves to a new step whose heading takes focus). It is worse than described for a screen-reader user only in that every blind retry is charged -10 XP with no confirmation that anything happened; for order/match the alert text changes when the in-place count changes, so those are announced when progress changes.",
+   "fix_hint": "Give the alert a changing key (attempt number) or write \"Wrong answer N: ...\" into a polite live region on every reply, as the order engine already does with its nonce.",
+   "status": "open",
+   "first_seen_round": 36,
+   "rounds_open": 1,
+   "relates_to": "B35-001"
+  },
+  {
+   "id": "B36-003",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r36/round-1/wave-B-shots/b36-ledger-no-hint-used-row.png; b36-lab-results.png",
+   "category": "text / misleading wording",
+   "severity": "P3",
+   "evidence": "Result screen ledger after a mission with 2 hints and 1 wrong answer shows the row title \"No hint used\" with sub-text \"2 hints used\" and value 0, and \"First attempt\" with \"At least one step needed a second try\" and 0. The row titles are the names of bonuses that were NOT earned but read as statements, so a row contradicts its own sub-text. Same on Lab results (\"No hint used - 0 of 3 missions without a hint\", \"First attempt - First-try points on 0 of 3 missions\").",
+   "fix_hint": "Title unearned bonus rows as \"No-hint bonus (not earned)\" / \"First-attempt bonus (not earned)\" or use kind=unearned styling with a label.",
+   "status": "open",
+   "first_seen_round": 36,
+   "rounds_open": 1
+  },
+  {
+   "id": "B36-004",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r36/round-1/wave-B-shots/(rootfuzz.json in scratch; reproduced by route.fulfill)",
+   "category": "failure isolation / error text",
+   "severity": "P3",
+   "evidence": "Error bodies with a non-string message are rendered raw: HTTP 400 {\"error\":{\"message\":{\"a\":1}}} shows \"[object Object]\" in the alert (Dismiss/Retry panels on every screen), and a 50,000-character message is printed in full in the alert with no truncation. No crash, no blank page, no unhandled rejection in 557 malformed-payload renders (417 field-level mutants accepted by the normalizers and 140 root-level shapes null/[]/string/{}/HTML 200/truncated JSON/204/huge error/odd error body on 14 endpoints), error boundaries never triggered. Only reachable through a broken proxy, hence P3.",
+   "fix_hint": "In errorFrom() accept root.message / nested.message only when typeof string and cap length (for example 300 chars).",
+   "status": "open",
+   "first_seen_round": 36,
+   "rounds_open": 1
+  },
+  {
+   "id": "B36-005",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r36/round-1/wave-B-shots/b36-ledger-no-hint-used-row.png",
+   "category": "i18n / terminology",
+   "severity": "P3",
+   "evidence": "One result screen mixes: eyebrow \"CASE COMPLETE\", h1 \"Investigation complete.\", document title \"Mission complete\", and student-facing jargon \"The backend has recorded your result\" (10 occurrences of \"backend\" across the sweep). Lab map: nav \"Lab map\" vs h1 \"Laboratory map\"; nav \"Investigations\" vs page crumb \"Mission control\"; XP vs points (\"First-try points on 0 of 3 missions\" while every other amount is XP). Lab names differ between cards (\"Hematology\") and vault/lobby (\"Hematology Lab\"), already known (item 13).",
+   "fix_hint": "Pick one noun for the unit of play (mission) and one for the unit of score (XP); replace \"The backend\" by \"The server\" or nothing.",
+   "status": "open",
+   "first_seen_round": 36,
+   "rounds_open": 1
+  },
+  {
+   "id": "B36-006",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r36/round-1/wave-B-shots/b36-home-tablet-820.png; b36-home-tablet-1180.png",
+   "category": "visual / tablet layout",
+   "severity": "P3",
+   "evidence": "iPad-like 820x1180 and 1180x820 (touch): the dashboard hero image is a fixed ~445 px card left-aligned under the CTA with an empty right column (both widths), and at 1180 the \"How LabEscape works\" steps wrap 3 + 1 (a lone fourth card). No overflow, no overlap; purely unbalanced.",
+   "fix_hint": "Let .hero-science span the content width below ~1280 px and use 2x2 / 4x1 for the four steps.",
+   "status": "open",
+   "first_seen_round": 36,
+   "rounds_open": 1
+  },
+  {
+   "id": "B36-007",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r36/round-1/wave-B-shots/b36-session-expired.png (state after resync)",
+   "category": "long session / sleep-wake",
+   "severity": "P3",
+   "evidence": "Emulated sleep: with the tab visible, the attempt start was moved 300 s back in the server database (as after a laptop sleep, where performance.now does not advance). After 5 s the countdown still showed 07:55 while the server had 175 s left (GET attempt remainingSec 175); no request was made and nothing signalled the difference. A visibilitychange (hidden then visible) re-synced it to 02:54 at once, and a later submit on an expired attempt gave the correct Time is up panel with focus on Restart. So the display is only wrong while no focus/visibility event arrives (sync happens only on focus, visibilitychange or when the local countdown reaches 0). page.clock fast-forward of 10 min did not make the client declare expiry (server stayed authoritative). Server-side enforcement is correct.",
+   "fix_hint": "Optional: re-sync every 60 s while a mission is open, or when document.timeline/Date.now() jumps by more than a few seconds.",
+   "status": "open",
+   "first_seen_round": 36,
+   "rounds_open": 1
+  },
+  {
+   "id": "B36-008",
+   "state_artifact": "/Users/1millnonstop/Downloads/escape-lab/reports/test-e2e/r36/round-1/wave-B-shots/b36-hem02-sample-labels.png",
+   "category": "text / inconsistency",
+   "severity": "P3",
+   "evidence": "Fix the Sample step 1 shows two different identifiers for the same specimen on one screen: the context line starts \"Sample 1. EDTA tube, adult female outpatient...\" while the chip below reads \"Sample S1: EDTA tube with visible clot\" (same for steps 2 and 3: \"Sample 2.\" / \"Sample S2:\"). Content, not code.",
+   "fix_hint": "Drop the numeric prefix from the context or the S-prefix from the chip.",
+   "status": "open",
+   "first_seen_round": 36,
+   "rounds_open": 1
+  }
+ ],
+ "summary": {
+  "P0": 0,
+  "P1": 1,
+  "P2": 1,
+  "P3": 6,
+  "open_P0": 0,
+  "open_P1": 1,
+  "open_P2": 1,
+  "open_P3": 6
+ },
+ "verdict": "AMBER",
+ "notes": "Own servers: API 3901 (CORS 5901) + dev Vite 5901; API 3902 (CORS 5902) + prod preview 5902 built to a scratch outDir; throw-away seeded DBs; no kill by pattern. (d) Failure isolation: seeded 113 real payloads (all endpoints the student UI calls: me, demo login, labs, dashboard, lab lobby, vault, badges, leaderboard, profile, rules, unlock, mission start, attempt, answer wrong/correct/final, hint, result, lab results), ran 20k field mutations through the real normalizers in the browser (delete/null/wrong type/huge 200k string/1e300/negative/float/empty array/duplicate first element) - 0 raw TypeErrors, every rejected mutant is a PayloadError; then rendered 417 accepted-and-changing mutants in the real UI (restore, answer, hint, completed result, dashboard, labs, lobby, lab results, progress) plus 140 root-level shapes (null, [], string, {}, HTML 200, truncated JSON, 204, 50k error, odd error bodies) on 14 endpoints: 0 white screens, 0 error-boundary hits, 0 pageerror, 0 unhandled rejection; 8 huge-string cases overflow horizontally only in absurd 200k-char fields. Error boundaries exist at three levels (root, per view, around Mission) but were never triggered so their UI was not observed. (a) Prod bundle, cold cache, 4x CPU: LCP 236 ms, 9 requests, 292 KB transferred (CLS 0.013, 2 long tasks max 65 ms); 4x CPU + Slow 3G (400 ms): LCP 3.45 s, 125 KB, 0 long tasks. Played hem-02, hem-01, mic-02, mic-03, hem-03 at 6x CPU + Slow 3G: timer within 1 s of server, double-click on hint = 1 POST, double-click on Submit = 1 POST, CLS <= 0.055, no long tasks; one 290 s stall in a looped run did not reproduce in 3 isolated reruns (machine load). (b) Touch 820x1180 and 1180x820 hasTouch/isMobile iPad UA: point tap lands exactly, long-press places a marker like a click, pinch to scale 5 works with no h-scroll, order move buttons and selects 44 px, touch drag on the order grip does nothing (known B35-003), orientation change keeps marker, order, match choices, hint text, feedback, timer; keyboard-shrink of viewport while typing vault code keeps focus and value (no auto scroll in emulation). (c) Long session: server clock shift, visibilitychange, focus, page.clock jump, offline/online events, stale hint/score after a hint+wrong made elsewhere (resync on focus correct). (e) Storage: nothing in localStorage/IndexedDB/cookies, no Set-Cookie, token only in sessionStorage and Authorization header (not in URL, title, DOM, console, Referer), 0 requests leaving 127.0.0.1 over the whole sweep and the prod load, no external URL in the bundle; getters that throw and null storage work; Storage.setItem throwing still ends in Demo laboratory unavailable (B35-011, not worse than described). (f) Full text sweep of 162 states (all 10 missions with hint 1..n, wrong answer, correct, result, vault wrong/right code, lab map, lobbies, progress, lab results, settings, About): no typos or raw keys; items B36-003/005/008. (g) about 25 screenshots read with the Read tool (the rest inspected by DOM dumps). Verdict AMBER because one open P1 (accessibility re-rating); no P0."
+}

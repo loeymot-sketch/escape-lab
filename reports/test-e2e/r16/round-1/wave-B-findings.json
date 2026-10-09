@@ -1,0 +1,76 @@
+{
+  "wave": "B",
+  "round": 16,
+  "states_reviewed": 950,
+  "findings": [
+    {
+      "id": "R16-B-01",
+      "severity": "P2",
+      "category": "layout",
+      "area": "sidebar / About & demo guide step 7 (web/src/styles.css .app>aside, web/src/pages/about.tsx)",
+      "viewport": "1440x900 desktop (also 667x375 landscape phone: About nav item at y=402 of 375)",
+      "title": "The sidebar is not sticky, so on the 3434 px tall About page the 'Faculty guest' button that step 7 tells the presenter to use sits 3330 px down, and the nav is gone once the page is scrolled",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-B/shots/about-desktop-scrolled.png (blank left column at scrollY 1500); /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-B/t3.mjs output: Faculty guest top = 1406 (Investigations), 1613 (Lab map), 2008 (Progress), 3330 (About) px at 1440x900; /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-B/t18.mjs (landscape 667x375: nav buttons Learning settings @y340, About @y402)",
+      "repro": "node /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-B/t3.mjs ; open About & demo guide at 1440x900 and read step 7 ('Use the Faculty guest button in the sidebar'); the button is not on screen until the page end",
+      "expected": "The guest controls and the nav stay reachable while reading a long page (sidebar sticky/ max-height 100vh with its own scroll), at least on desktop where it is a side column",
+      "actual": "aside is position:static and as tall as the page; guest actions are pinned to the bottom of that tall column. The new, longest page in the app makes the step-7 instruction point to a control 3.3k px away. Extends the known landscape-phone item R15-B-03 to desktop and to the sixth nav item; keyboard users reach it through Tab (aside is first in DOM)",
+      "fix_hint": "web/src/styles.css .app>aside: position:sticky; top:0; align-self:start; max-height:100vh; overflow-y:auto (desktop and landscape)",
+      "status": "open"
+    },
+    {
+      "id": "R16-B-02",
+      "severity": "P2",
+      "category": "silent_error",
+      "area": "resetGuest (web/src/app.tsx:282 api('/demo/reset'), student guest)",
+      "viewport": "375x812 touch",
+      "title": "The reply of POST /demo/reset is never validated: a 200 with an empty body, null or {} is treated as a completed reset",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-B/faults.mjs scenario 'POST /demo/reset' (run: node faults.mjs phone all 20-20; output /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-B/faults-phone-19-20.json rows empty200/null200/emptyobj/dropkey:*), screenshot /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-B/shots/fault-phone-19-14.png",
+      "repro": "Guest options > Reset guest session > Confirm reset while the reply is replaced by status 200 with an empty body (route.fulfill). Compare: invalid JSON, 429, 500, 503 all show a role=alert with Dismiss",
+      "expected": "An unreadable/incomplete success reply raises the same alert as the other malformed replies (invariant 7), or at least the app does not claim/act as if the reset happened",
+      "actual": "No alert and no message: attempt cleared, view sent to the dashboard, settings reloaded as if the reset had worked. Not P0: nothing from the reply is displayed, every following screen re-reads the server, and it needs a broken proxy that answers 200 without a body",
+      "fix_hint": "web/src/app.tsx:282: normalize the reset reply (rec(reply,'reset') plus the one boolean the server returns, see be/src/routes.ts /demo/reset) before clearing the attempt",
+      "status": "open"
+    },
+    {
+      "id": "R16-B-03",
+      "severity": "P3",
+      "category": "copy",
+      "area": "normalizers that throw a plain Error (web/src/lib/student.ts:19,91,172,191; web/src/lib/attempt.ts:63,88,119,142,148,149,202,281,292,295,298)",
+      "viewport": "any",
+      "title": "Some malformed-payload errors show the raw 'Invalid server ... payload: field.' text without the sentence 'The server sent an unexpected response.' that every other payload error carries",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-B/fq4.out and /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-B/fq3.out: POST /auth/demo emptyobj -> 'Invalid server demo login payload: demo.' (shots/fault-phone-22-8.png), POST unlock emptyobj -> 'Invalid server unlock payload: unlocked.' (shots/fault-phone-19-8.png); same calls with null/{token missing} read 'The server sent an unexpected response. Invalid server ... payload: token.'",
+      "repro": "node faults.mjs phone all 19-19 / 22-22 (or fulfil POST /auth/demo with {} )",
+      "expected": "One consistent wording for every strict-normalizer failure",
+      "actual": "Two wordings (guard.ts PayloadError gets a friendly prefix in describeError; plain Error does not). Still an alert and still honest",
+      "fix_hint": "throw new PayloadError(...) (from lib/guard.ts) at the listed lines instead of new Error",
+      "status": "open"
+    },
+    {
+      "id": "R16-B-04",
+      "severity": "P3",
+      "category": "copy",
+      "area": "spokenWait (web/src/ui/state.tsx:35-42)",
+      "viewport": "any",
+      "title": "A wait of 2 h 0 min 1 s up to 3 h reads '3 hours' (7201 s -> 3 hours, 10801 s -> 4 hours) while 61 minutes reads 61 minutes",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-B/t6b.mjs (bundle of state.tsx via bundle.mjs): 7200 -> 2 hours, 7201 -> 3 hours, 3601 -> 61 minutes, 3600 -> 1 hour, 7141 -> 2 hours",
+      "repro": "node bundle.mjs && node t6b.mjs",
+      "expected": "Round to the nearest/ceil minute or show hours and minutes past 2 h",
+      "actual": "Hours are rounded up a whole hour (overstates by up to 59 min). Not reachable today: the server's longest wait is 10 minutes, so only a proxy could send it",
+      "fix_hint": "state.tsx:40 use Math.ceil(minutes/60) only when minutes%60===0 else show minutes up to 180",
+      "status": "open"
+    }
+  ],
+  "summary": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 2,
+    "P3": 2
+  },
+  "verdict": "GREEN",
+  "round15_fix_verification": {
+    "R15-B-01": "HOLDS (3600 -> 1 hour, 7141-7200 -> 2 hours, 119 s/120 s boundary reads 119 seconds / 2 minutes; only the new P3 R16-B-04 above remains beyond 2 h)",
+    "R15-B-02": "HOLDS (Cyrillic \u0439/\u0457/\u045e vs \u0438/\u0456/\u0443 are not tagged as namesakes, decomposed \u0438+U+0306 equals \u0439, \u0451=\u0435 still folds; Latin diacritics still fold)",
+    "R15-B-03": "PARTIAL (known, not fixed on purpose; now also affects the sixth nav item About, see R16-B-01)"
+  },
+  "notes": "Stack: own API 6201 (DEMO_MODE, NODE_ENV=test, seeded scratch b.db), Vite 6202, scratch /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-B. Scripts t1..t20, faults.mjs, play.mjs, lib.mjs, t11.mjs (full sweep) live there. (1) About & demo guide as student guest: reachable from sidebar (desktop/tablet/landscape) and as the 6th item of the 3x2 phone grid (320/375); focus lands on the h1, document.title 'About & demo guide \u00b7 Escape Lab', crumb and aria-current right; zero API requests on click, on anchors and during 8 s idle, no storage writes besides the session; works with all API calls aborted (anchors, nav, About again; the Open buttons land on real views that show their own 'could not be loaded' alert with Retry); Open the lab map / Hematology lab (x2) / Progress vault / Go to quality / Go to roadmap all land correctly, nav active state ('Lab map' for the lab page) right; anchor jump puts focus on the h2 and the h2 is at the top (~24 px); reload on About returns to the dashboard (no URL routing, known); Faculty guest switch, Return to student demo and Reset while on About all land on the new guest's page with focus on the h1; expiry (garbage token then Open the lab map) shows the expiry notice and a fresh guest; teacher About: step 7 buttons open Faculty analytics and Content review. axe (wcag2a/aa, 21/22, best-practice) 0 violations at 320/375/768/1440, 667x375, 844x390, forced-colors, reduced motion, 200%/400% zoom emulation, WCAG text-spacing override; no horizontal scroll, no clipped or off-screen element, every control >= 44 px on touch (min measured 44), keyboard Tab/Enter walk works, no trap. The app has no dark theme (prefers-color-scheme ignored). (2) Adding the nav item broke nothing found: mission player keeps the shell hidden (aside not rendered in mission), Exit mission from a lab opened via About returns to that lab page, 'Return to mission control' from result, expired panel and gone panel goes to the dashboard with focus on its h1, leaderboard and vault unchanged. (3) Round-15 fixes verified above. (4) Student sweep: fresh learner per viewport (375x812 touch, 320x568, 768x1024, 1440x900, 375 with reduced motion), 77 axe/overflow/off-screen/tap-target/raw-id checks per run, all 9 standard missions with wrong first answer, hint (mic-02/hem-03/bio-02), reload mid-mission, correct completion, result screen, 3 vault unlocks through the UI, Lab results, Master Lab through the UI, Master unlock: 0 issues in all five runs; UI figures equal the API at every step (after 3 labs xp 1155 = 3 x 385, master +570 -> 1725, vault fragments 742/385/916/3916, all four exits true, 7 badges); hem-01..hem-03 journey on a fresh learner: 140+105+180=425 XP = API = Lab results (385-style ledger lines match); hint persists across reload (text and -15 penalty); double tap on Submit/Hint costs once; offline submit shows an alert and the retry after reconnect works; slow answer (4 s) shows Checking... with the button disabled; rotation 375x812 <-> 667x375/844x390/568x320/1024x768 keeps selection, hint and penalties with no overflow; expiry: Time is up alert with focus on Restart mission (submit on expired attempt and reload on expired attempt), near-expiry countdown reaches 'Time is up'; two tabs on one attempt: stale tab gets 'This is not the current step' and resyncs, stale hint/answer after completion lands on the result screen; attempt deleted server side: 'This case is no longer available' + Restart. Keyboard-only completion (Tab/Enter/Space/arrows, typeahead on the selects) of every engine: point (hem-01, bio-02), decision, choice, order (Move up buttons keep focus), match; submit enabled after keyboard input. Fault injection on every student endpoint (GET /me, /dashboard, /labs x2 views, /labs/:slug, /vault, /badges, /leaderboard, /labs/:slug/results, /profile at boot, PUT /profile, /rules, POST start, GET attempt on resume, POST answer wrong/mid/last, POST hint, GET result on reload, POST unlock, POST /demo/reset, POST /auth/demo at boot and on switch) with 401/429/500/503-empty/invalid JSON/200-empty/null/{} and every top-level key dropped one at a time (about 420 runs, phone): every failure shows an alert or the documented recovery (401 -> expiry notice + fresh guest, with the loop guard halting after 3), no plausible default; unused fields may be absent without effect (name/email/language on /me etc.) and an unreadable answer/hint reply triggers the 'refreshed from the server' resync note; PUT /profile with an unreadable reply re-reads GET /profile before saying saved. Only exception: R16-B-02 (reset reply unvalidated). Console: only expected 4xx/ERR_INTERNET_DISCONNECTED lines from injected faults, no page errors or warnings in any clean run. Not repeated for fault injection at 320/768/1440 (code is not viewport dependent). No real-screen-reader testing (known)."
+}

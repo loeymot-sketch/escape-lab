@@ -1,0 +1,3 @@
+Dashboard 1440x900: added  html{font-size:200% !important}. Of the 15 visible text-bearing elements in main/aside/header measured, 0 changed computed font-size by >=1.5x.
+CSS audit: of the font-size declarations in web/src/*.css, about 170 are in px and 6 in rem (grep -o 'font-size:[^;}]*').
+=> A browser setting "larger default font size" (as opposed to page zoom, which works: 720x450/360x225 checks hold) changes nothing in the app.

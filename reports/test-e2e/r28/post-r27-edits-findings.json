@@ -1,0 +1,40 @@
+{
+  "round": 28,
+  "scope": "Post-r27 edits verification, read-only (find, shasum, grep, python json recount). No server/browser/tests.",
+  "counts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 1,
+    "P3": 1
+  },
+  "findings": [
+    {
+      "id": "R28-01",
+      "severity": "P2",
+      "category": "claimed edit not present",
+      "where": "docs/FINAL_VALIDATION_REPORT.md:130 ('Non réaudité' row, '... mention des deux `watch.log` ...') versus docs/KNOWN_LIMITATIONS.md:21 (item 14)",
+      "what": "The row lists among the post-r27 corrections a 'mention des deux watch.log'. Item 14 still names exactly one watch.log: '.ci-artifacts/local-2026-10-09-round21-22/watch.log' (grep -o 'watch.log' counts 1; 'final-r23' does not appear in KNOWN_LIMITATIONS.md). That file covers only passes 1-2 (12:00-12:10); the other two passes of the '4 full passes' are in final-r23/watch.log (exists, 13425 bytes). So R27-D-07 is not fixed and the report says a two-file mention was made. (The brief expected three watch.log names; the file has one. The three files exist: root, final-r23/, r21-failed-pass/. The archive README names two of them.)",
+      "suggested_fix": "In KNOWN_LIMITATIONS item 14 add '.ci-artifacts/local-2026-10-09-round21-22/final-r23/watch.log' (passes 3-4), or delete 'mention des deux watch.log' from row 130."
+    },
+    {
+      "id": "R28-02",
+      "severity": "P3",
+      "category": "stale section subtitle",
+      "where": "docs/FINAL_VALIDATION_REPORT.md:106",
+      "what": "Heading says 'les lignes couvrent aussi les tours 23 à 25' but the table now also has tour 26 (line 128) and tour 27 (line 129).",
+      "suggested_fix": "'tours 23 à 27'."
+    }
+  ],
+  "checked": [
+    "(1) Tour 21 row (l.123) cites reports/test-e2e/r21/internal-p1-overlap.json; file exists, parses, severity P1, status 'fixed and re-captured before the round-21 visual audit'.",
+    "Rows in order: l.122 Tour 20, 123 T21, 124 T22, 125 T23, 126 T24, 127 T25, 128 T26, 129 T27, 130 'Non réaudité', 131 'Verdict'.",
+    "Own recount from JSON: r20 = 13 P2/24 P3 (2+7+4, 9+9+6); r21 = 3/16 (docs 2/7, backend 1/3, visual 0/6) matches; r22 backend 0/2, docs 4/7; r23 2/8; r24 0/2; r25 docs 2/8 + visual 0/7; r26 0/0/0/4; r27 0/0/1/10. All equal the report. No P0/P1 in any round JSON (internal-p1 file is the only P1, not counted in r21 totals, consistent with the row text).",
+    "Tour 24 claim 'chemin du fichier du P1 visuel corrigé' is now true (path present in l.123). Tour 27 row claim 'corrigé dans la ligne du tour 21' is true.",
+    "Archive README title is 'tours 20 à 23' (matches folder contents r20-supervisor-pass, r21-failed-pass, root=r22, final-r23). Files exist: .ci-artifacts/local-2026-10-09-round21-22/watch.log, r21-failed-pass/watch.log, final-r23/watch.log, plus prod-only.log referenced.",
+    "SCIENTIFIC_REVIEW_BACKLOG C-12 now reads 'ancienne ligne 20, corrigée depuis' (no stale :23). The old line number 20 cannot be verified without the earlier version; KNOWN_LIMITATIONS.md has no current statement at line 20 (item 12 area), the corrected text is at l.25.",
+    "(2) find -newer r27 JSON (excluding node_modules, dist, playwright-report, ./reports): exactly 4 files: docs/FINAL_VALIDATION_REPORT.md, docs/KNOWN_LIMITATIONS.md, docs/SCIENTIFIC_REVIEW_BACKLOG.md, .ci-artifacts/local-2026-10-09-round21-22/README.md (all mtime 13:10:05; r27 JSON 13:09:34).",
+    "'Aucun code n'a changé depuis la chaîne finale': find be/src be/test be/openapi.json web/src web/e2e + configs newer than final-r23/backend-test.log returns nothing; true.",
+    "(3) shasum -a 256: be/openapi.json = f1dbd031f6c1ee65ddec55d9d22bc7c98b86004c4e9abcdf00d4949bec48c6c6; be/src/content.ts = d4bd3b647676886062b914b9b50c50600dc39bba3e63984037f4849badd85a39. Both equal the r27 report and FINAL_VALIDATION_REPORT.md:24.",
+    "(4) Overclaim grep in the 4 edited files: no P1-type overclaim found. Row 130 correctly states relecture only, no independent human review; R28-01 is the only claim not matching the file. Open carry-over P3s of r27 (D-02 3916, D-03 MASTERY PROGRESS at progress.tsx:237, D-08, D-10, D-11) were not part of the post-r27 edit set and are not re-raised."
+  ]
+}

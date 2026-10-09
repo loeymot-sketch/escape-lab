@@ -1,0 +1,63 @@
+{
+  "wave": "A",
+  "round": 35,
+  "states_reviewed": 16,
+  "findings": [
+    {
+      "id": "A35-001",
+      "category": "crash durability / backup tooling",
+      "severity": "P2",
+      "evidence": "be/scripts/db-backup.ts writes VACUUM INTO straight to the final path (line 26) and only verifies afterwards (lines 35-37). Nothing removes the output when the run is interrupted or fails: the catch (lines 28-32) calls fail() without rmSync(out). Reproduced on a 253 MB copy of the seeded DB: `db-backup.ts $S/bk_out.db` killed with SIGKILL at ~350 ms left a 127-145 MB bk_out.db plus a 1024-byte bk_out.db-journal at the FINAL name. (1) A re-run to the same target answers `Refusing to overwrite ...` exit 2, as if a good backup existed. (2) `db:check` on it prints a raw stack trace (`attempt to write a readonly database`, errcode 776), no verdict. (3) Copying bk_out.db WITH its -journal and starting the API on it boots silently: GET /api/health 200, `select count(*) from users` = 0, user_version 7 (the hot journal rolls the file back to an empty database and the server migrates it as a fresh DB). Copying bk_out.db alone gives `cannot start: file is not a database`. Same leftover on SIGINT/SIGTERM (default handlers, no cleanup) and on disk-full (generic catch). Line 31 also reports a genuine 'locked/busy' VACUUM failure as 'Refusing to overwrite' whenever the partial file exists. No finding in the live-DB path: VACUUM INTO taken every ~2.4 s during a 45 s chaos run with 10 SIGKILLs produced 7 snapshots that all passed the full invariant suite.",
+      "fix_hint": "VACUUM INTO `${out}.partial`, verify integrity, chmod, then rename to `out` (atomic); on any failure or SIGINT/SIGTERM rmSync the partial and its -journal; keep the 'Refusing to overwrite' message only for an existing final file.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "A35-002",
+      "category": "multi-process write contention / availability (challenges R13-A-06 as documented)",
+      "severity": "P2",
+      "evidence": "KNOWN_LIMITATIONS R13-A-06 says only that 'requests that need the lock answer 500 after 5-10 s'. Two facts it omits, both reproduced: (a) GET read endpoints need the write lock: Game.badges() (game.ts:269) runs tx(BEGIN IMMEDIATE) on every call and is reached from GET /api/dashboard (game.ts:651), GET /api/profile (game.ts:738) and GET /api/badges. (b) node:sqlite busy-waits synchronously, so the whole event loop is blocked, not just the request. Repro: second connection runs BEGIN IMMEDIATE on the DB file; as a student, concurrently GET /api/health, /api/me, /api/dashboard, /api/badges, /api/leaderboard, /api/profile, /api/labs. Result: health 200 in 5 ms (before the first lock wait), dashboard 500 at 5499 ms, badges 500 at 10964 ms, profile 500 at 16443 ms, and a GET /api/health sent at t=300 ms was answered only at 16448 ms (a liveness probe would fail and restart the pod). Also reproduced the paid-hint variant: with a 2 s assistant call, lock taken by another connection right after the charge commit -> POST /hint answers `500 internal_error` after 7.5 s while the attempt shows hintsUsed 1, penaltyXp -15 and hintsGiven [standard text]; the learner is charged and gets an error body (a retry buys level 2 for another -15). Needs a second writer that holds the lock > 5 s (second API process running a long reset, manual sqlite session), so multi-process only.",
+      "fix_hint": "Make GET paths read-only (move the badge catch-up to the write paths or a one-time migration; HEAD already skips it), answer 503 + Retry-After on SQLITE_BUSY, and keep health independent of the DB (or SELECT 1 only). Optionally return the stored standard hint in the 500 path of /hint tx2.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "A35-003",
+      "category": "audit chain integrity (defence in depth, not API reachable)",
+      "severity": "P3",
+      "evidence": "content_audit 'append-only' is enforced by BEFORE UPDATE / BEFORE DELETE triggers only (db.ts migrations 4 and 5). `INSERT OR REPLACE INTO content_audit (id, ..., actor_name) VALUES (1, ..., 'FORGED')` on a migrated DB succeeded and `select actor_name from content_audit where id=1` returned 'FORGED': REPLACE deletes the conflicting row without firing DELETE triggers because recursive_triggers is OFF (not set anywhere in db.ts). UPDATE and DELETE were correctly refused. Also a teacher user row can be deleted without touching audit rows (by design, no FK). No HTTP route can reach this (31 routes enumerated, no SQL surface; 16 concurrent reviewers x 2 missions x 30 racing transitions across 2 processes left an unbroken from/to chain equal to content_status), so only someone with file access can forge a row.",
+      "fix_hint": "PRAGMA recursive_triggers = ON in openDb (or a BEFORE INSERT trigger that aborts when NEW.id already exists); optionally store a hash of the previous row for a verifiable chain.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "A35-004",
+      "category": "misleading critical state (extends known 'competency latest-vs-best')",
+      "severity": "P3",
+      "evidence": "Game.competencies() (game.ts:575-582) takes the latest solved result per step from ANY attempt, including in-progress and expired ones that were never completed. Repro as a fresh student: complete hem-01 and hem-02 with no mistakes -> GET /api/competencies Pre-analytical quality 100%. Start a replay of hem-02, answer step 1 wrong x3 then correct, leave the attempt open -> Pre-analytical quality 67% while profile xp.total stays 360 and accuracyPct 100. The drop appears before the replay is finished (or if it expires) and is shown in result payloads and strongest/improvement advice. The doc lists 'latest attempt per step' but not that unfinished attempts count.",
+      "fix_hint": "Restrict competencies() to step_results of attempts with status = 'completed' (join attempts a ... AND a.status = 'completed').",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "A35-005",
+      "category": "documentation contradicts verified behaviour",
+      "severity": "P3",
+      "evidence": "docs/KNOWN_LIMITATIONS.md line 40 (Technical limits) still says that stopping the server while an AI hint is generated 'keeps the hint penalty without delivering the text ... such a hint is counted but has no stored text, so it never appears in the list of earlier hints'. Round 16 (R16-A-02) made the charge and the standard text one commit. Verified: SIGKILL 500 ms into a 1.5 s assistant call, restart -> hint_log row (level 1, source 'standard', text 'Ignore the round cells with central pallor.') and hints_total 1; the attempt lists it in step.hintsGiven. The stale sentence is not marked superseded (unlike R10-A-10).",
+      "fix_hint": "Rewrite or delete the line; point to R16-A-02.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    }
+  ],
+  "summary": {
+    "P0": 0, "P1": 0, "P2": 2, "P3": 3,
+    "open_P0": 0, "open_P1": 0, "open_P2": 2, "open_P3": 3
+  },
+  "verdict": "GREEN",
+  "notes": "READ-ONLY audit, own API on ports 3501-3518 with throw-away DBs in the scratchpad, every process stopped by PID. (a) Crash durability: harness with 2-3 API processes on ONE db file, 14-24 students playing hem/mic/bio/master with double-submitted answers, concurrent hints (assistant faked with a 0.4-1.5 s delay via NODE_OPTIONS --import to widen the in-flight window), teacher review races and class creation, a killer SIGKILLing a random process every 1.2-3.5 s and restarting it (10+6 kills), plus an external process doing wal_checkpoint(PASSIVE/RESTART/FULL/TRUNCATE) and VACUUM INTO every 2.4 s: 0 5xx, 0 invariant violations over ~35 checks (hints_total = step hints = hint_log rows with no gaps/dups/null text, wrong_total = step wrong = answer_log, completed attempt has score+result_json and recomputed score == stored == ledger sum, mission_best/xp_events/best_attempt exact, fragments only with solved source, exits only with full vault, master only after 3 exits, audit from/to chain unbroken = content_status, badges have causes, integrity_check/foreign_key_check, db:check clean); 3-process hint race (40 users, hint x3 + wrong + correct at once): 168 hint 200s == 168 new hint_log rows, 0 mismatch. SIGKILL inside a hint call leaves charge + standard text. DEMO_MODE chaos (6 workers on the shared Alex token + 2 teacher workers, resets, kills): Alex ends identical to the pristine seed in every counter. (b) 24 concurrent registers of one e-mail in 4 case/unicode variants across 2 processes: 1x201; 20 teacher registrations of 4 spellings of one name: 1x201; 70 class creations: exactly 50 and distinct codes; rename race: 1x200; content transitions 30-way: all legal. (c) Migrations: v1 DB with data (users, attempts, step/answer/hint logs, best, fragments, exits, badges with legacy names) -> v7 with all rows preserved, legacy badges renamed/purged, xp_events backfilled, FK check clean, idempotent on 2 more boots; 4 processes booting one v1/v3/v5 DB at once -> all start, v7, no loss; v4->v7 audit rows preserved and still append-only; demo flag backfill correct; truncated / garbage-mid-file / garbage WAL / 0-byte / externally locked DB boot behaviour (clean one-line errors; corrupt payload bytes pass quick_check but db:check reports them; lock -> 'database is locked' after 5 s, known R15-A-05). (d) Master lock: start/unlock Master with 0 exits -> 403 lab_locked; other student's attempt -> 404 for get/answer/hint; other mission's step id -> 409 wrong_step; replay on finished attempt -> 409; out-of-order missions -> 403 mission_locked; unlock before vault complete -> 409; code lockout exactly 5 wrong then 429 with Retry-After, concurrent wrong codes record one, correct code refused during lockout; code format fuzz (unicode digits, whitespace, newline) all 400; XFF rotation: TRUST_PROXY off -> 60 then 429 (login) and 100 then 429 (invite code), TRUST_PROXY=1 without proxy bypasses (documented). Tokens: expired, exp==now, wrong secret, alg-none, 3-part, padded, null payload, sub string/neg/array, role claim teacher on student -> 401/403 (role is read from the DB; string exp/float sub are only accepted when validly signed). (e) Timers with real clock: answer at 239 s -> 200 (03:59, 150 pts); answer at 240.15 s -> 409 time_expired; hint after expiry -> 409; GET marks expired, result -> 409 time_expired, restart -> new attempt, old attempt answer -> 409, XP unchanged; forged elapsed fields -> 400. (f) Teacher B reading/analytics/student-detail of teacher A's class -> 404; cross-class student id -> 404; student on teacher routes -> 403; content cycle draft->reviewed->approved->draft enforced, review_required/illegal_transition codes, reviewers attributed with id. (g) 64 KB cap (413), nesting to 32000 levels, duplicate keys (last wins), BOM, null/array bodies, __proto__ keys, content-type variants, numeric/overlong/traversal/percent ids, lone surrogates; 1,443 fuzzed registrations with NFC/NFD/Kelvin/dotless/ZWJ/RTL/emoji names and e-mails + renames + class names: 0 5xx, 0 echo mismatches, login after register always works; ReDoS probe of name keys and AI-hint guard (100 KB inputs, 20 000 random strings): <= 5 ms, 0 throws; raw socket abuse (bad chunking, CL+TE, short body, 3000 headers, 20 KB URL, pipeline x200, Upgrade, Expect): server alive after each. (h) OpenAPI: static file == live document; all 31 routes + /api/openapi.json enumerated; OPTIONS Allow per path equals the declared methods; DELETE/PATCH -> 405. Scale probe (5,000 students in one class): roster 137 ms, analytics 501 ms (known scale item). Challenged known items: R13-A-06 is understated (A35-002); competency definition has an extra wrinkle (A35-004). Not found: any lost paid hint, hint delivered without charge, XP without ledger, fragment without step, completed attempt without result, double award, cross-user write, Master unlock without 3 exits."
+}

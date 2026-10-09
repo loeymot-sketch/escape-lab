@@ -1,0 +1,43 @@
+{
+  "wave": "V",
+  "round": 25,
+  "summary": {"P0": 0, "P1": 0, "P2": 0, "P3": 7},
+  "findings": [
+    {"id": "V25-01", "severity": "P3", "category": "inconsistent-wording (carry-over V21-01)", "where": "02 vs 06 vs 08 vs 09",
+     "what": "Lab names and states still differ: 02 card titles 'Hematology' / 'Master', 06 and 08 'Hematology Lab' / 'Master Lab', 09 'Hematology' / 'Master Lab'. 02 shows Hematology CLEARED, Microbiology ACTIVE, Clinical Biochemistry ACTIVE (0 of 3 missions); 06 shows the same labs ESCAPED, IN PROGRESS, NOT STARTED.",
+     "evidence": "02 cards 01-03 top-right tags; 06 Code Vault card status tags.", "suggested_fix": "Cosmetic, accept."},
+    {"id": "V25-02", "severity": "P3", "category": "caption wording (carry-over V21-06)", "where": "02-lab-map-1440.png vs README caption 02 and script section 5 item 2",
+     "what": "Caption says three labs 'and the Master Lab are playable', the image shows the Master card Locked ('Clear 3 labs (1 of 3 cleared)'). The README 'what it shows' column and the on-page hero text ('Three open disciplines and a Master Lab') make it defensible. Related: script 2.4 says the demo account 'a tout deja debloque', while 02 shows a locked Master Lab and Clinical Biochemistry at 0 of 3.",
+     "evidence": "02 card 04 lock icon and 'Locked'; docs/FACULTY_DEMO_SCRIPT.md:68.", "suggested_fix": "Optional: 'the Master Lab opens after three labs'."},
+    {"id": "V25-03", "severity": "P3", "category": "number-definition (carry-over V21-04)", "where": "08-faculty-student-detail-1440.png",
+     "what": "Clinical Biochemistry Lab '100% accuracy' (Laboratories card) vs 'Clinical biochemistry 3 steps 95%' (Strengths and gaps); Hematology 92% vs competencies 100/100/89%. Competency score is hint-weighted, nothing on screen says so. Also the header says '9,120 XP' while the seven 'Recent mission record' rows sum to 944 XP; not labelled as a seeded total.",
+     "evidence": "08 rows Laboratories, Strengths and gaps, Attempt history; be/src/game.ts:683 (per r21).", "suggested_fix": "Optional one-line definition; no image change needed for the portfolio."},
+    {"id": "V25-04", "severity": "P3", "category": "ambiguous-label", "where": "07-faculty-class-intelligence-1440.png",
+     "what": "Tile 'Needs attention 5 / Follow-up recommended' (count of students) sits above a list where only one mission, Acid-Base Emergency, carries a 'Needs attention' pill. Two different meanings share one label with no definition on the image. Tile icons (trophy for Students, sparkle for Completion) are also odd.",
+     "evidence": "07 stat tiles at y~745 and pill at y~1084 of 1919.", "suggested_fix": "Cosmetic; the tile caption 'Follow-up recommended' partly disambiguates."},
+    {"id": "V25-05", "severity": "P3", "category": "wording leftover", "where": "06-progress-code-vault-1440.png",
+     "what": "Right card is titled 'Milestones' but its eyebrow still reads 'BADGES' and the page intro says 'Every fragment and badge below comes from the server record'.",
+     "evidence": "06 eyebrow at (1298,517) and intro text at y~350 of 1399.", "suggested_fix": "Cosmetic; align the noun or accept."},
+    {"id": "V25-06", "severity": "P3", "category": "clipped-text (carry-over V21-05)", "where": "10-about-quality-roadmap-375.png",
+     "what": "Bottom edge cuts the roadmap paragraph mid-line ('students would require ethics and data protection' half visible). 'These have not been reviewed...' has no visible referent in frame but reads as a negation. README row 10 states exactly what is shown, so the caption stays truthful.",
+     "evidence": "Last line at y~1615 of 1624.", "suggested_fix": "Optional: scroll about 40 px less."},
+    {"id": "V25-07", "severity": "P3", "category": "ux/contrast (carry-over V21-02, V21-03)", "where": "03, 04, sidebar footers on 01/02/06-09, sidebar sub-page chevrons on 06-09",
+     "what": "03 Submit is a faded pink disabled button with white text. 04 primary Submit is the same crimson as the 'Not quite.' box right above it (about 12 CSS px gap) and the wrong option A keeps the teal selected style. Sidebar footer links ('Faculty guest', 'Reset guest session', 'Return to student demo') are small grey text. Sub-pages show a chevron instead of an icon. 09 shows the 'Demonstration data: students, classes and results' banner on a page that lists only missions.",
+     "evidence": "03 button (445,1108); 04 button (445,1221) under error box ending y~1175.", "suggested_fix": "None required."}
+  ],
+  "resolved": [
+    "r21 V21-01..V21-06 are all still only P3 and unchanged; no P1/P2 existed in r21 and none appears now.",
+    "r20 items resolved in r21 stay resolved: V-01 caption 10 (README/script describe what is shown), V-02 07 'N of 38 students completed' + 'accuracy NN%' + defining sentence visible, V-03 06 card 'Milestones' with '4 of 7 earned', V-04 01 whole 'Before you present' box, V-05 sizes (README single source), V-07 05 'The backend has recorded your result' + replay sentence, V-10 sidebar footer 'Guest demo · server-side scoring'.",
+    "r22 wave-D screenshot points: sizes and hashes quoted in r22 (sips + shasum 16 hex) are identical today; 09 overlap pattern re-verified as absent (banner, 'Approved is a faculty workflow flag' note, table and footer are separate, 10 Draft rows complete)."
+  ],
+  "checked": [
+    "Opened all 10 PNGs with Read at full size. Files unchanged: `find docs/demo-screenshots -newer reports/test-e2e/r21/wave-V-visual-findings.json` returns nothing (PNG mtime 12:00:06, README 12:00:22, r21 JSON 12:02:32), and sha256 prefixes equal the r22 list (abc6e1b1 5808a18f bec7be05 ec288c12 ec047327 46c1bc07 31fb33fa 43cfa944 93049b87 cbb840d5).",
+    "Sizes via sips: 01 2880x2448, 02 2880x3434, 03 2880x1800, 04 2880x1920, 05 2880x1800, 06 2880x2014, 07 2880x2764, 08 2880x3730, 09 2880x2356, 10 750x1624. Equal to the README Format list and to script section 5 (1224, 1717, 900, 960, 900, 1007, 1382, 1865, 1178, 375x812).",
+    "Overlap, clipping, truncation, cramped spacing: none on 01-09 (06 and 01 cards end with closed borders; 01 bottom margin tight but intact; 09 note and table separated). Only 10 bottom crop (V25-06).",
+    "Sidebar footer: 'Guest demo · server-side scoring' with green dot on 01, 02, 06, 07, 08, 09. 03, 04, 05 are focus-mode screens without sidebar; 10 is a phone scroll crop. No 'server verified', 'secure', 'certified', 'production ready'; only negations ('not a validated image', 'not a biomedical or scientific validation', 'Not yet biomedically validated', 'Planned, not done').",
+    "Raw keys, undefined/null/NaN, spinners, error banners: none. UI English throughout, no unintended language mix (French only in README/script captions).",
+    "Numbers: 02 3/3 + 2/3 + 0/3 = 5 of 9 missions, fragments 3+2+0, match 06 (7-4-2, 3-8-., 0 of 3, Master 0 of 4); 02 Master '0 of 1 mission'. 05 ledger +100, 0, +30, +20, -10 = 140 of 180, accuracy 75% = 3 of 4 answers, 'Wrong attempt 1 x -10'; 04 shows XP penalty -10, wrong 1, hints 0 of 1; 03 hints 0 of 2, hint cost 15 XP on 03 and 04; 08 Fix the Sample '4 answers, 1 wrong' also 75% (120 XP for Sana vs 140 for Alex differs by time bonus, different students). 07: 38 students in tile and selector, 08 selector also (38); 17..36 of 38 on 07; mean of the 8 visible completions plus one hidden near-full mission is consistent with Completion 73%; 09 lists 3+3+3+1 = 10 missions = 'Show all 10' on 07; 08 7 missions, 3 hints = 1+1+1 in history rows. 56% (5/9) does not appear on any image, so no conflict. XP 140/180 appears only on 05.",
+    "Captions vs images: README rows 01-10 and script section 5 items 1-10 match what is visible (01 complete box, 02 seven Coming soon labs counted, 03 'Illustrative training image' + 'Educational scenario', 04 'Not quite.' / 'XP penalty: -10' / hint 0 of 1, 05 'Server-calculated' / 'Official timer' 00:19 with replay sentence, 06 cropped above leaderboard, 07 note + defining sentence + 'Showing 8 of 10', 08 Sana Benali, 09 all Draft + Approved note, 10 Local only -> Not yet biomedically validated -> start of roadmap). Timer notes 04:00 (03) and 06:00 (04) match. README honesty notes contain no overclaim ('no external human review', 'not validated by experts').",
+    "Not run: servers and browsers, as instructed."
+  ]
+}

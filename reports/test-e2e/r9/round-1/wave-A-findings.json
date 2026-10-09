@@ -1,0 +1,101 @@
+{
+  "wave": "A",
+  "round": 9,
+  "states_reviewed": 9800,
+  "findings": [
+    {
+      "id": "R9-A-01",
+      "severity": "P2",
+      "category": "audit integrity / identity",
+      "area": "content review (PUT /api/content/missions/:id/status, GET /api/content/missions, content_audit)",
+      "title": "Content reviewer identity is the editable, non-unique display name: any teacher can rename themselves to a colleague and approve content under that name",
+      "evidence": "Server on :4104 (TEACHER_INVITE_CODE set), teacher 'Teacher Two' (id 48, t2@x.test). 1) PUT /api/profile {\"name\":\"Dr. Claire Moreau\"} -> 200 user.name='Dr. Claire Moreau'. 2) PUT /api/content/missions/mic-01/status {\"status\":\"reviewed\"} -> 200 {\"missionId\":\"mic-01\",\"status\":\"reviewed\",\"reviewedBy\":\"Dr. Claire Moreau\"}. 3) PUT ... {\"status\":\"approved\"} -> 200 reviewedBy 'Dr. Claire Moreau'. 4) GET /api/content/missions shows reviewedBy 'Dr. Claire Moreau' to every teacher. content_audit rows: (actor_id 48, actor_name 'Dr. Claire Moreau', draft->reviewed) and (actor_id 48, actor_name 'Dr. Claire Moreau', reviewed->approved). The only human-readable identity in the audit trail and in the API is attacker-controlled; names are not unique and the API never exposes actor_id/email for reviews.",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r9-A/spoof.mjs (BASE=http://localhost:4104 node --disable-warning=ExperimentalWarning spoof.mjs). Manual: register a teacher with the invite code, PUT /api/profile {\"name\":\"<other teacher>\"}, then PUT the status twice (reviewed, approved) and GET /api/content/missions.",
+      "expected": "Approval attribution that cannot be forged by editing a profile field (stable id/email, or an immutable snapshot that also shows the account id), because the release gate depends on 'who approved the scientific content'.",
+      "actual": "reviewed_by / content_audit.actor_name are copied from users.name at transition time (game.ts:897, 906, 907). Name is freely editable (S.profile.name, routes.ts:53) and not unique.",
+      "fix_hint": "game.ts:897-907: store and return a stable identity next to the name (actor_id + email or 'Name <email>') in content_status.reviewed_by and in GET /content/missions; and/or forbid renaming teacher accounts to a name already used by another user (case/accent-folded uniqueness check in updateProfile, game.ts:670).",
+      "status": "open"
+    },
+    {
+      "id": "R9-A-02",
+      "severity": "P2",
+      "category": "state integrity / demo",
+      "area": "DEMO_MODE shared faculty guest (POST /api/auth/demo role=teacher, PUT /api/profile, POST /api/classes, POST /api/demo/reset)",
+      "title": "Shared demo teacher can be defaced and flooded by any visitor and nothing restores it: POST /api/demo/reset only repairs the student Alex (KNOWN_LIMITATIONS #5 covers only the student side)",
+      "evidence": "DEMO_MODE=1 server :4101. Visitor 1: POST /api/auth/demo {role:teacher} -> token; PUT /api/profile {\"name\":\"DEFACED by visitor 1\"} -> 200. Visitor 2: POST /api/auth/demo {role:teacher} -> user.name='DEFACED by visitor 1'. Visitor 1 then POST /api/classes x300 -> '201':300 (no 429). GET /api/classes -> 305 classes (20,552 bytes), including the real join code of the seeded class, for any visitor. Student guest: POST /api/demo/reset -> 200; teacher token POST /api/demo/reset -> 403 (not_demo). After reset the teacher name is still 'DEFACED by visitor 1' and the class count still 305. Content approval states flipped by a visitor also persist and are recorded in content_audit under the (renamed) teacher.",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r9-A/teacherdemo.mjs (BASE=http://localhost:4101)",
+      "expected": "A presentation guest session must be recoverable: the faculty guest should have a reset (or immutable demo identity, capped writes), as the student guest has.",
+      "actual": "Reset path exists only for is_demo student (demo.ts:268-272, routes.ts:205-208). The teacher guest has no reset, no cap on classes, and a rewritable name that is also written into content_audit (see R9-A-01).",
+      "fix_hint": "routes.ts:172 / game.ts:670: reject name changes for the seeded demo accounts when d.demo, or extend POST /api/demo/reset to teachers (restore name, delete classes not created by seedDemo, reset content_status); add a per-teacher class cap (see R9-A-03).",
+      "status": "open"
+    },
+    {
+      "id": "R9-A-03",
+      "severity": "P3",
+      "category": "rate limits / resource bounds",
+      "area": "POST /api/classes (also PUT /api/profile, PUT /api/content/missions/:id/status)",
+      "title": "Teacher write routes have no cap and no rate limit: 300 classes created in well under a second",
+      "evidence": "POST /api/classes {name:'Spam class N'} x300 sequential with one teacher token -> 300 x HTTP 201, no 429, GET /api/classes then returns all 305 rows. Only answer/hint/start/join/register/login are limited (routes.ts:86,120,136,175,179,183,188).",
+      "repro": "scratchpad/r9-A/teacherdemo.mjs (class-creation loop)",
+      "expected": "Bounded class count per teacher and a limiter on authenticated write routes.",
+      "actual": "Unbounded rows and unbounded response size of GET /api/classes (no pagination).",
+      "fix_hint": "routes.ts:189 / game.ts:718: reject with 409/429 above e.g. 50 classes per teacher, and add limiter.hit(`write:${uid}`, ...) on the teacher PUT/POST routes.",
+      "status": "open"
+    },
+    {
+      "id": "R9-A-04",
+      "severity": "P3",
+      "category": "contract / consistency",
+      "area": "GET /api/dashboard vs GET /api/profile vs GET /api/leaderboard vs class roster/analytics",
+      "title": "'Labs completed' means 4 on the dashboard, leaderboard and Faculty views but 3 of 3 on the profile for the same student once the Master Lab is escaped",
+      "evidence": "Fresh student plays all 10 missions and unlocks hematology, microbiology, biochemistry and master. GET /api/dashboard -> labsCompleted:4, overall {completedMissions:10,totalMissions:10,pct:100}; GET /api/profile -> stats.labsCompleted:3, labsTotal:3; GET /api/leaderboard?cohort=all -> me.labs:4. Roster/analytics 'labsEscaped' also uses exits.size (includes master) while the roster 'progressPct' and per-lab figures exclude the Master Lab, so a teacher can see labsEscaped 4 against 3 labs.",
+      "repro": "scratchpad/r9-A/journey.mjs (node --disable-warning=ExperimentalWarning --import ./reg.mjs journey.mjs); last lines print 'DASH labsCompleted 4' and 'PROFILE labsCompleted 3 of 3'.",
+      "expected": "One definition of 'labs completed' (with an explicit denominator) across the server's views.",
+      "actual": "game.ts:565 labsCompleted: exits.size and game.ts:699/770 (exits.size) count Master; game.ts:654 counts the 3 standard labs only.",
+      "fix_hint": "Pick one rule and apply it in dashboard (game.ts:565), leaderboard (game.ts:699), studentRow (game.ts:770) and analytics cohort.labsEscaped (game.ts:876); document it in /api/rules.",
+      "status": "open"
+    },
+    {
+      "id": "R9-A-05",
+      "severity": "P3",
+      "category": "data protection",
+      "area": "SQLite files (be/src/db.ts openDb)",
+      "title": "Database and WAL files are created world-readable (0644) although they hold e-mail addresses and scrypt hashes",
+      "evidence": "ls -la on the DB created by openDb: '-rw-r--r--  a.db' and '-rw-r--r--  a.db-wal' (umask 022); same for be/data/escape-lab.db. Any local account on a shared host can copy the file and attack the password hashes offline.",
+      "repro": "cd be && DB_PATH=/tmp/x.db node --disable-warning=ExperimentalWarning scripts/seed-demo.ts; ls -la /tmp/x.db*",
+      "expected": "Mode 0600 (owner only) for the database and its -wal/-shm sidecars.",
+      "actual": "Default umask permissions.",
+      "fix_hint": "db.ts:274 after new DatabaseSync(path): chmodSync(path, 0o600) (and for -wal/-shm after the first write), or process.umask(0o077) in server.ts before openDb.",
+      "status": "open"
+    },
+    {
+      "id": "R9-A-06",
+      "severity": "P3",
+      "category": "exposure",
+      "area": "src/server.ts listen()",
+      "title": "The API binds every network interface; with DEMO_MODE=1 (the documented local run) anyone on the LAN can mint a teacher token",
+      "evidence": "lsof -iTCP:4101 -sTCP:LISTEN -> 'TCP *:4101 (LISTEN)'. From the LAN address: curl -X POST http://192.168.1.69:4101/api/auth/demo -H 'content-type: application/json' -d '{\"role\":\"teacher\"}' -> 200 {\"token\":\"eyJzdWIiOjEs...\",\"user\":...}. README 'Run locally' tells the user to start with DEMO_MODE=1 and there is no HOST setting.",
+      "repro": "AUTH_SECRET=... DEMO_MODE=1 PORT=4101 DB_PATH=./x.db node --disable-warning=ExperimentalWarning src/server.ts, then curl the machine's LAN IP.",
+      "expected": "Loopback by default for local/demo runs, explicit opt-in to bind publicly.",
+      "actual": "server.listen(port) with no host (server.ts:5).",
+      "fix_hint": "server.ts:5: app.server.listen(port, process.env.HOST || (cfg.demo ? '127.0.0.1' : '0.0.0.0'), ...). Dockerfile sets HOST=0.0.0.0.",
+      "status": "open"
+    },
+    {
+      "id": "R9-A-07",
+      "severity": "P3",
+      "category": "authz / demo hygiene",
+      "area": "POST /api/auth/login with DEMO_MODE off",
+      "title": "Turning DEMO_MODE off hides /auth/demo but all 39 seeded accounts (incl. the teacher) still accept the published password 'demo-password-1'",
+      "evidence": "Server :4104 started WITHOUT DEMO_MODE on a seeded DB: POST /api/auth/demo -> 404 'Demo mode is not enabled', but POST /api/auth/login {\"email\":\"claire.moreau@demo.escape-lab.app\",\"password\":\"demo-password-1\"} -> 200 with a teacher token for the seeded 38-student class (roster, analytics, content review all readable). The password is printed by scripts/seed-demo.ts and committed in src/demo.ts:17.",
+      "repro": "seed a DB, start without DEMO_MODE, curl -X POST /api/auth/login with the demo teacher e-mail and demo-password-1.",
+      "expected": "An operator who disables demo mode (or reuses a seeded DB) should not be left with 39 accounts that share a public password.",
+      "actual": "login (routes.ts:109-128) has no notion of demo accounts; only the seed refuses NODE_ENV=production.",
+      "fix_hint": "routes.ts:121: when !d.demo reject logins for users with is_demo=1 or the @demo.escape-lab.app domain (mark all seeded users), or have seedDemo generate a random per-run password unless DEMO_MODE is on.",
+      "status": "open"
+    }
+  ],
+  "summary": { "P0": 0, "P1": 0, "P2": 2, "P3": 5 },
+  "verdict": "AMBER",
+  "notes": "No P0/P1 found. Core authority is intact. Method: ~9,800 real HTTP requests against my own instances (:4101 NODE_ENV=test+DEMO, :4102 default limits, :4103 killed -9 mid-load, :4104 invite code/DEMO off, :4105 injected-clock harness importing createApp, :4106+:4107 two processes on one DB, :4108 NODE_ENV=production+CORS+TRUST_PROXY). COULD NOT BREAK: (1) Answer-leak: scanned every response key of start/get/hint/wrong/invalid/wrong_step/good/result/vault/unlock/lobby for all engines (choice, decision, stepper, order, match, point) plus explanation/recheck placement and hint texts; no key, order, pairs, coordinates, radius or digit before authorization; hints and rechecks never contain the correct option label (leakscan.mjs, keyscan.mjs). (2) State machine: 20 parallel correct answers -> exactly 1x200 + 19x409; double submit, answer/hint after completion, wrong_step, out-of-order step, IDOR (get/answer/hint/result of another student's attempt all 404), start locked mission (403 mission_locked), master before 3 exits (403 lab_locked), premature unlock (409 vault_incomplete), unlock replay, parallel start across 2 processes (1 distinct attempt), parallel answers/hints/unlocks split over 2 processes on one DB (single winner, counters and invariants consistent). (3) Scoring: independent oracle over 26 random students x up to 9 missions with random wrongs (up to 25 per step), hints and elapsed time: ledger sum == score, 0 floor, newBest, xpAwarded, totalXp, /me == /profile == /dashboard == leaderboard XP, lab-results ledger == XP: 0 violations; analytics (success %, clean first try, avg time, hints, started, roster XP/progress/accuracy) recomputed from raw SQL for the 38-student class: 0 diffs. (4) Timer: real 240 s expiry (answer accepted up to 239.997 s, 409 time_expired at 240.101 s, hint/result/answer all 409, restart creates a new attempt, XP unchanged); injected clock for edge, stepped-back clock (timer clamps, no negative values). (5) Authz matrix: all 31 operations x anonymous/student/teacher match openapi (401/403/200); teacher B cannot read teacher A class/roster/detail/analytics (404); forged tokens (other secret, alg none, truncated, past exp, string/float/huge/negative sub, null exp) all 401; DEMO off -> /auth/demo and /demo/reset 404; illegal content transitions 409 and content_audit is append-only (UPDATE/DELETE trigger-blocked) with a correct from/to chain. (6) Input: 1,252 fuzz requests (path/query/body type confusion, __proto__, NUL, 70 KB strings, SQLi strings, path traversal) -> 0 5xx; deep JSON nesting (30k arrays, 10k objects) -> no 500; duplicate keys, 1e999, BOM, wrong content types (415), 413 at 64 KB, lowercase method (400), TRACE/PATCH/DELETE (405), CL+TE conflict (400). (7) Rate limits on :4102 with real defaults: login 8/account then 429 with Retry-After 600 and body retryAfterSeconds, IP limit 60 then 429 (correct login also blocked, documented), answers 120/min -> 429 at #121, hints 30/min, start 60/min, register 100/h; X-Forwarded-For ignored without TRUST_PROXY (still locked), spoofable only when TRUST_PROXY=1 and the port is reached directly (documented); email case/space variants share the bucket; login timing equal for existing/non-existing account (34.2 vs 34.1 ms median). (8) Data: db:check clean, backup (incl. quote in path) verified while server under load, WAL+foreign_keys ON, kill -9 mid-load and restart -> integrity_check ok and 13 cross-table invariants clean (best score == max completed, xp_events sum, counters vs step_results/hint_log, fragments vs exits, no duplicate badges/in-progress), migration v4->v5 of a copy of be/data DB clean, seed idempotent, concurrent demo resets (6 parallel) end in the identical state. (9) Contract: regenerated openapi == be/openapi.json (and == live /api/openapi.json); all web normalizers (attempt, answer, hint, result, lab result, lobby, dashboard, vault, badges, leaderboard, faculty roster/analytics/detail, content, classes) run unchanged against real payloads of a full 10-mission journey incl. expired/completed/master states and an empty class: 0 failures. A 2,000-action stateful random fuzz over 8 users produced 0 5xx. Static: no unhandled-rejection path found (handler fully wrapped), `any` limited to a SQL-param alias, logs contain no tokens/passwords. Observed but NOT filed (documented or trivial): unlock replay accepts any code (ADV-09), exp type coercion with valid signature (ADV-10), HEAD 405, TRUST_PROXY caveat, 20 MB upload surfaces as client EPIPE instead of 413 (server answers 413 then resets), no token revocation/logout endpoint (7-day bearer cannot be invalidated), synchronous=NORMAL in WAL (last commits can be lost on power failure), no request/access logging, `GET /attempts/:id/result` for master lists the code as `fragments` while `masterCode` stays null until exit (cosmetic), program/studyLevel stored as '' not null after clearing, name of 80 chars + padding rejected before trim. Test side effect: db:check was run once against be/data (read-only open) before I realised the path default; no write was made. All my servers are stopped at the end."
+}

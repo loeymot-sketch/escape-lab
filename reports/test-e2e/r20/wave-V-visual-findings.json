@@ -1,0 +1,93 @@
+{
+  "wave": "V",
+  "round": 20,
+  "findings": [
+    {
+      "id": "V-01", "severity": "P2", "category": "caption-mismatch",
+      "where": "docs/demo-screenshots/10-about-quality-roadmap-375.png vs README.md row 10 and FACULTY_DEMO_SCRIPT.md section 5 item 10",
+      "what": "The caption (FR and EN) says 'Verified technically locally only. Content not biomedically validated. Roadmap: proposals, not agreements.' and the README says the shot is 'scrolled to the end of How quality is assured'. The image does not show the heading 'How quality is assured' (only the bottom edge of a previous card at the very top) and does not show any 'technically verified locally only' sentence. It shows the amber 'Not yet biomedically validated' card, 'Scientific validation roadmap / Planned, not done', and the first two roadmap cards (Create Monastir, Observe & Learn HEPL / Liège). The 'verified locally only' claim in the caption is therefore not supported by what is on the image.",
+      "evidence": "Visual read of the 750x1624 PNG (375x812 @2x). Top of image: sliver of a teal card, then the amber card. Heading 'How quality is assured' (web/src/pages/about.tsx:98) is not in frame.",
+      "suggested_fix": "Either re-crop/scroll 10 so the 'How quality is assured' heading and its 'verified locally only' line are visible, or reword the caption to only describe what is visible (not yet validated; roadmap planned, not done; proposals not agreements)."
+    },
+    {
+      "id": "V-02", "severity": "P2", "category": "truncated-or-misleading-number",
+      "where": "07-faculty-class-intelligence-1440.png (Mission signal list)",
+      "what": "Each mission row shows '17 of 38 students completed' next to a bar and '59%'. 17/38 = 45%, and Gram Stain shows '29 of 38' (76%) next to 65%. The data is correct (seed COMPLETED=[...,29,...,17] and COL_TARGET 59/64; the % is class mean accuracy on best attempts, per web/src/pages/faculty.tsx:134 bar-note), but the sentence that defines the percentage ('Success is the class mean accuracy...') sits below the fold and is cut off in this 900px viewport capture. On the image alone, 59% looks inconsistent with 17 of 38. The list itself is also cut mid-row at the bottom (third mission 'Anemia Detective' half visible).",
+      "evidence": "Rows 'Acid-Base Emergency 17 of 38 students completed ... 59%' and 'Gram Stain Challenge 29 of 38 students completed ... 65%'. be/src/demo.ts COMPLETED and COL_TARGET confirm 17/59 and 29/64(65 after rounding). faculty.tsx:134 holds the definition.",
+      "suggested_fix": "Retake 07 taller (about 1100 px) so the bar-note is visible, or add an inline 'success = class mean accuracy' label next to the percentage in the UI (UX fix, not screenshot-only)."
+    },
+    {
+      "id": "V-03", "severity": "P2", "category": "label-mismatch",
+      "where": "06-progress-code-vault-1440.png (Badges card)",
+      "what": "The card is titled 'Earned milestones' but lists 7 badges of which 3 are LOCKED (Microbiology Investigator, Biochemistry Analyst, Clinical Detective) and 4 EARNED. A viewer reads 'earned' for the whole list. Not an overclaim of validation, but the heading contradicts the content.",
+      "evidence": "Heading 'Earned milestones'; rows with gold 'EARNED' (Hematology Detective, First Escape, Perfect Mission, No Hint) and grey 'LOCKED' (3 rows).",
+      "suggested_fix": "Rename the heading to 'Milestones' or 'Badges (4 of 7 earned)'."
+    },
+    {
+      "id": "V-04", "severity": "P2", "category": "cut-off-text / presenter-notes",
+      "where": "01-about-student-1440.png (bottom edge)",
+      "what": "The viewport crop cuts the 'Before you present' amber box mid-sentence ('...A replay adds XP only when it beats the best score of that' with the next line half visible). That box is presenter-facing guidance ('You are in the student guest. Steps 1 to 6 and 8 work here; for step 7, choose Faculty guest', 'Before you present') and would appear in an external Erasmus portfolio image, where it reads as internal operating notes. The caption describes only 'principle and is/is not'.",
+      "evidence": "Bottom of image: 'Before you present' box with text clipped at y=1250 (display), paragraph 'You are in the student guest. Steps 1 to 6 and 8 work here...' above it.",
+      "suggested_fix": "Crop/scroll so the shot ends after the 'is / is not' cards, or accept and mention in README that the lower part is presenter guidance."
+    },
+    {
+      "id": "V-05", "severity": "P3", "category": "doc-mismatch",
+      "where": "docs/FACULTY_DEMO_SCRIPT.md section 5 vs actual PNG sizes and README Format",
+      "what": "Script section 5 states every capture is 1440 x 900 (items 1-9). Real sizes are 1440x1740 (02), 1440x1010 (06), 1440x1810 (08), 1440x1160 (09); only 01,03,04,05,07 are 1440x900. README 'Format' is correct; the script is not. The script's captions for 02, 08 are also shorter than README captions (script 08 lacks 'précision', script 02 lacks 'les autres sont annoncés bientôt'; 01 lacks 'Prototype local; capture illustrative'), so there are two non-identical caption sets.",
+      "evidence": "PIL sizes: 01 2880x1800, 02 2880x3480, 06 2880x2020, 08 2880x3620, 09 2880x2320, 10 750x1624. Script text '1440 x 900' on items 2, 6, 8, 9.",
+      "suggested_fix": "Make the script point to README captions as the single source and fix the sizes."
+    },
+    {
+      "id": "V-06", "severity": "P3", "category": "inconsistent-wording",
+      "where": "02 vs 06 vs 08 vs 09",
+      "what": "Lab names and states differ between screens. Names: 'Hematology' / 'Master' (02) vs 'Hematology Lab' / 'Master Lab' (06, 08) vs 'Hematology' / 'Master Lab' (09). States: map shows Clinical Biochemistry 'ACTIVE' (02) while the vault shows the same lab 'NOT STARTED' (06); map says 'CLEARED' where vault says 'ESCAPED' for Hematology. The README caption for 02 says 'Master Lab' but the card title reads 'Master'.",
+      "evidence": "02: card 04 title 'Master'; 06: 'Clinical Biochemistry Lab NOT STARTED' vs 02 '03 ... ACTIVE ... 0 of 3 missions'; 02 'CLEARED' vs 06 'ESCAPED'.",
+      "suggested_fix": "Align vocabulary (Cleared/Escaped, Active/Not started) or note it is intentional."
+    },
+    {
+      "id": "V-07", "severity": "P3", "category": "contradictory-microcopy",
+      "where": "05-mission-result-1440.png",
+      "what": "Intro line says 'The backend has recorded your result ... and updated your progression.' while the next line says 'This replay did not beat your best score, so your total XP is unchanged.' Both are true (progress vs XP) but read as contradictory on one screen. Also the '+30 time bonus' for a 00:23 run is a 23 s automated replay; honest in README, but the image alone looks implausibly fast for a 3-step case, and the screen itself carries no demo-data label although the caption says 'demonstration data'.",
+      "evidence": "Text lines at y=442 and y=706 (display coords); ledger +100, 0, +30, +20, -10 sums to 140 (matches 'Score 140 of 180 XP').",
+      "suggested_fix": "Reword intro to 'recorded your result'; keep README replay note when reusing the image."
+    },
+    {
+      "id": "V-08", "severity": "P3", "category": "ux/contrast",
+      "where": "03 and 04 (primary button), 01/02/06 sidebar footer",
+      "what": "03: 'Submit answer' is a faded pink disabled button with white text (about 2:1 contrast); legible only because disabled and no point is marked on the image yet, so the screenshot shows no selection state. 04: the primary Submit button is the same crimson as the error box, so the call to action looks like part of the error. Sidebar footer links 'Faculty guest' / 'Reset guest session' are small low-contrast grey text. Timer reads 03:59 in 03 and 05:59 in 04 (after a wrong answer was already submitted), i.e. the timer is at its start value in both; README explains this only for 03.",
+      "evidence": "Visual inspection of 03 (button at x~445,y~1108), 04 (button red), sidebar bottom of 01/02/06.",
+      "suggested_fix": "Extend README note 'timer shows start value' to 04; optionally darken disabled-button text."
+    },
+    {
+      "id": "V-09", "severity": "P3", "category": "cosmetic",
+      "where": "06, 07, 08, 09 layout and icons",
+      "what": "Sidebar items 'Lab results', 'Learning settings', 'Student detail', 'Content review' show a chevron where the others show icons (they are contextual/sub-pages). 07 stat tiles use semantically odd icons (trophy for Students, sparkle for Completion, clock for Needs attention). 08: header card is wider than the three cards under it (right column gap). 09: Content review page shows the 'Demonstration data: the students, classes and results...' banner although the page lists missions only. 08 timestamps such as 'Oct 5, 12:00 AM' and '5:00 AM' look synthetic.",
+      "evidence": "Visual inspection.",
+      "suggested_fix": "Cosmetic; no action needed for the demo."
+    },
+    {
+      "id": "V-10", "severity": "P3", "category": "tone",
+      "where": "All app screenshots (sidebar footer)",
+      "what": "'Guest demo . server verified' is shown with a green dot on every app screen. It means the session is validated by the server, but next to a portfolio claiming 'not validated', an external reader could read 'verified' as quality assurance. No 'validated', 'certified', 'production ready' or similar claim exists anywhere in the 10 images except negations ('not a validated image', 'Not yet biomedically validated').",
+      "evidence": "Sidebar footer in 01, 02, 06, 07, 08, 09.",
+      "suggested_fix": "Optionally mention in README that 'server verified' refers to the guest session only."
+    }
+  ],
+  "checked": [
+    "No P0 found: no image claims validated / certified / production-ready / clinically approved; the only 'validated' strings are negations (03 'not a validated image', 10 'Not yet biomedically validated', 'Planned, not done'). 09 shows all 10 missions as 'Draft'.",
+    "No raw i18n keys, no 'undefined'/'null'/NaN, no spinners, no error banners, no empty states in any of the 10 images; UI text is uniformly English (French only in fictitious person names).",
+    "Mission counts: 02 lab map shows 3/3 + 2/3 + 0/3 = 5 of 9 (56%, matches script 2.3 and web fixture dashboard 5/9=56) ; Master 0 of 1 excluded from the 9; 09 lists 3+3+3+1 = 10 missions.",
+    "Fragments: 02 (Hematology 3 of 3, Microbiology 2 of 3, Biochem 0 of 3, Master 0 of 4) equals 06 (7-4-2 complete, 3-8-. = 2 of 3, 0 of 3, 0 of 4). Hematology exit unlocked consistent.",
+    "05 ledger arithmetic: +100 +0 +30 +20 -10 = 140 of 180; accuracy 75% with 1 wrong over 3 steps (3/4); matches 04 '-10 XP penalty' and 'Wrong answers 1, Hints 0', and matches Sana's Fix the Sample row in 08 (3 steps + 1 wrong).",
+    "Hint cost 15 XP shown in 03 and 04 equals the script (-15 XP hint, -10 XP wrong).",
+    "07 numbers against be/src/demo.ts: 38 students, completion 73% (sum COMPLETED 251 / (38*9) = 73.4%), Acid-Base 17 completed and 59% (COL_TARGET), Gram Stain 29 completed; Needs attention 5 consistent with 2 named (Karim 12 days / 61%, Marie 15 days / 55%) plus 3 inactive unfinished generated students.",
+    "08 numbers against be/src/demo.ts: Sana Benali 9120 XP, 7 missions (3+3+1 in lab bars), level 6 correct under levelStart(n)=250*n*(n-1) (7500 <= 9120 < 10500); hints 3 = 1+1+1 in history; lab accuracies 92% (hem) and 83% (micro) recomputed from the history rows; 7 history rows; the 'Master Lab not part of class analytics' note explains 9 vs 10.",
+    "Alex Martin XP 8240 / level 6 (script 2.3) is not visible in any screenshot, so no cross-image contradiction is possible; fixtures.ts values (nextLevelAt 9000, needsAttention 4, avgCompletion 62) are unit-test fixtures, not seed data, and were not used as ground truth.",
+    "Image sizes match README Format: 01/03/04/05/07 = 2880x1800, 02 = 2880x3480, 06 = 2880x2020, 08 = 2880x3620, 09 = 2880x2320, 10 = 750x1624 (375x812 @2x).",
+    "375px shot (10): no horizontal clipping or overflow; cards have about 16 CSS px gutters on both sides (left edge x~33/750, right edge x~717/750), headings and the 'Planned, not done' pill fit; only vertical crop at top and bottom (arrow glyph cut at the bottom).",
+    "03: 'Illustrative training image' bar, 'Educational scenario - not clinical guidance', 'not a real specimen, not a validated image and not for clinical use' all visible and match the caption; Step 1/1 matches script. 04: 'Not quite.' feedback does not reveal the answer, hint still available (0 of 1), caption matches.",
+    "01 caption/script match: principle sentence, 'Escape Lab is / is not' cards, 'does not replace teachers, placements or experts' visible. 02: three open labs + Master locked ('Clear 3 labs (1 of 3 cleared)') + 7 Coming soon cards (05-11), caption 'seven Coming soon' correct.",
+    "07 and 09 show the 'Demonstration data' banner; 08 shows it too; 06/02 rely on the README honesty notes. No 'Mark reviewed' click state (all Draft) in 09.",
+    "No overlapping or layered elements found; decorative circles on lab-map cards are clipped by design; no tooltip-less truncated labels (titles like 'Blood Bank / Immunohematology' fit)."
+  ]
+}

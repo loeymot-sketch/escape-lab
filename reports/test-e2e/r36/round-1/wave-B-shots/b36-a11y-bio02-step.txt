@@ -1,0 +1,65 @@
+AriaSnapshot of Lab Value Hacker (bio-02) step 1, Chromium, dev server
+
+- banner:
+  - button "← Exit mission"
+  - text: CASE FILE · Clinical Biochemistry Lab Value Hacker
+  - timer "Time left 04:00"
+- main:
+  - region "Click the result most likely affected by the specimen problem.":
+    - text: STEP 1 / 1 Spot the finding
+    - paragraph: Educational scenario — not clinical guidance
+    - heading "Click the result most likely affected by the specimen problem." [level=1]
+    - paragraph: Panel from a morning draw. Hemolysis index 3+ (illustrative scale). Apart from the one discordant result, the panel is consistent with the patient.
+    - button "Select a point on the scientific image"
+    - text: Illustrative training image
+    - paragraph: Click the image, or focus it and use the arrow keys (Shift for larger steps) to mark the suspected finding.
+    - paragraph: "Stylised chemistry panel: illustrative training material, not a real specimen, not a validated image and not for clinical use."
+    - button "Submit answer" [disabled]
+  - complementary "Lab assistant and case status":
+    - text: LAB ASSISTANT · BETA
+    - heading "Observe before you decide." [level=2]
+    - paragraph: Request a contextual hint when you need a new angle. Each hint costs 15 XP.
+    - button "Ask Lab Assistant"
+    - paragraph: "Hints used on this step: 0 of 2."
+    - text: CASE STATUS
+    - term: Wrong answers
+    - definition: "0"
+    - term: Hints used
+    - definition: "0"
+    - term: XP penalty so far
+    - definition: "0"
+
+AX tree image/img nodes: []
+body text mentions any lab value (6.4/Potassium): false
+image-frame HTML: <div class="image-frame"><button type="button" class="image-placeholder scientific" aria-label="Select a point on the scientific image" aria-describedby="point-help" style="aspect-ratio: 1600 / 900;"><img class="scientific-image" alt="" width="1600" height="900" decoding="async" draggable="false" src="/src/assets/chemistry-panel.svg"></button><span class="image-watermark">Illustrative training image</span></div>
+
+--- hem-01 ---
+- banner:
+  - button "← Exit mission"
+  - text: CASE FILE · Hematology Blood Smear Code
+  - timer "Time left 04:00"
+- main:
+  - region "Click the schistocyte (fragmented red cell).":
+    - text: STEP 1 / 1 Spot the finding
+    - paragraph: Educational scenario — not clinical guidance
+    - heading "Click the schistocyte (fragmented red cell)." [level=1]
+    - paragraph: Peripheral blood smear, 100x oil. Hemolytic anemia work-up, post-mechanical valve.
+    - button "Select a point on the scientific image"
+    - text: Illustrative training image
+    - paragraph: Click the image, or focus it and use the arrow keys (Shift for larger steps) to mark the suspected finding.
+    - paragraph: "Stylised blood smear: illustrative training material, not a real specimen, not a validated image and not for clinical use."
+    - button "Submit answer" [disabled]
+  - complementary "Lab assistant and case status":
+    - text: LAB ASSISTANT · BETA
+    - heading "Observe before you decide." [level=2]
+    - paragraph: Request a contextual hint when you need a new angle. Each hint costs 15 XP.
+    - button "Ask Lab Assistant"
+    - paragraph: "Hints used on this step: 0 of 2."
+    - text: CASE STATUS
+    - term: Wrong answers
+    - definition: "0"
+    - term: Hints used
+    - definition: "0"
+    - term: XP penalty so far
+    - definition: "0"
+image-frame HTML: <div class="image-frame"><button type="button" class="image-placeholder scientific" aria-label="Select a point on the scientific image" aria-describedby="point-help" style="aspect-ratio: 1672 / 941;"><img class="scientific-image" alt="" width="1672" height="941" decoding="async" draggable="false" src="/src/assets/blood-smear-hero.webp"></button><span class="image-watermark">Illustrative training image</span></div>

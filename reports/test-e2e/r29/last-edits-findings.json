@@ -1,0 +1,38 @@
+{
+  "round": 29,
+  "scope": "Verification of the last edits after the r28 findings JSON (read-only: find, shasum, grep, python json recount). No server, browser or test run.",
+  "counts": {"P0": 0, "P1": 0, "P2": 0, "P3": 2},
+  "findings": [
+    {
+      "id": "R29-01",
+      "severity": "P3",
+      "category": "wording",
+      "where": "docs/KNOWN_LIMITATIONS.md:21 (item 14), 'logged about every 2 s in .../watch.log, r21-failed-pass/watch.log and final-r23/watch.log'",
+      "what": "All three paths exist, but the three files do not play the same role. Root watch.log (237 lines, 12:00:23-12:10:00) and final-r23/watch.log (241 lines, 12:21:31-12:31:18) each cover two full passes with the ports up between a short gap, which supports 'the 4 full passes'. r21-failed-pass/watch.log is only 4 lines (144 bytes, 11:52:52-11:52:59, servers still starting) from the prod-only observer, so it does not show servers 'staying up' during rounds 22-23. The sentence groups it with the other two as evidence of the same thing.",
+      "suggested_fix": "Optional: say that r21-failed-pass/watch.log is the short observer trace of the prod-only run, and that the 4 passes are in the other two."
+    },
+    {
+      "id": "R29-02",
+      "severity": "P3",
+      "category": "wording",
+      "where": "docs/FINAL_VALIDATION_REPORT.md:130 (Tour 28 row), 'le troisième `watch.log` n'était pas nommé ... alors que la ligne ci-dessous disait le contraire'",
+      "what": "R28-01 found that item 14 named only ONE watch.log (two of three missing) while the 'Non réaudité' row spoke of 'deux' watch.log. 'Le troisième n'était pas nommé' understates it, and 'disait le contraire' is loose (the row said two, not three). The counts 0/0/1/1 and the P2/P3 pairing are correct; only the description is imprecise.",
+      "suggested_fix": "'item 14 ne nommait qu'un seul watch.log sur trois alors que la ligne du tour 27 en annonçait deux'."
+    }
+  ],
+  "facts": [
+    "The 'Non réaudité' row says the last three edits were checked by script, not by an agent. This round (r29) is an agent check of those edits; noted as a fact, not an error."
+  ],
+  "checked": [
+    "(1) docs/KNOWN_LIMITATIONS.md:21 item 14 names three paths: .ci-artifacts/local-2026-10-09-round21-22/watch.log, .../r21-failed-pass/watch.log, .../final-r23/watch.log. All three exist (13173 B, 144 B, 13425 B). The archive README (l.6, l.9) names the same files. See R29-01 for the role of the second file.",
+    "(2) FINAL_VALIDATION_REPORT.md:106 heading reads 'les lignes couvrent aussi les tours 23 à 28'.",
+    "Table order is Tour 20, 21, 22, 23, 24, 25, 26, 27, 28, 'Non réaudité par un agent adversarial après coup', Verdict (lines 122-132).",
+    "My recount from reports/test-e2e JSON (findings[] severities, plus the counts blocks where present): r20 = A 0/0/2/9, D 0/0/7/9, V 0/0/4/6, total 13/24 (report 0/0/13/24: OK). r21 = A 1/3, D 2/7, V 0/6, total 3/16 (OK; internal-p1-overlap.json holds no findings[] and is cited as the trace of the pre-round P1, consistent with the row). r22 = A 0/0/0/2 and D 0/0/4/7 (OK). r23 = 0/0/2/8 (OK). r24 = 0/0/0/2 (OK). r25 = D 0/0/2/8 and V 0/0/0/7 (OK). r26 = 0/0/0/4 (OK). r27 = 0/0/1/10 (OK). r28 = 0/0/1/1 (OK). No P0 or P1 appears in any findings[] r20-r28.",
+    "Tour 28 row counts 0/0/1/1 equal the recount of reports/test-e2e/r28/*.json (one file). Its content is true: item 14 now names the three watch.log, and the heading now says 'tours 23 à 28'. Only the description wording is imprecise (R29-02).",
+    "'Non réaudité' row: the three listed edits (item 14 mention, section heading, tour 28 row) exist in the files. Only the files KNOWN_LIMITATIONS.md (13:11:30) and FINAL_VALIDATION_REPORT.md (13:11:43) are newer than the r28 JSON (13:11:13), which matches the claim. 'Aucun code n'a changé depuis la chaîne finale': find over be/src, be/test, be/openapi.json, web/src, web/e2e, both package.json and playwright.config.ts newer than final-r23/backend-test.log returns nothing. The claim 'recomptage de r20 à r28' and 'empreintes SHA-256' matches what I redid.",
+    "(3) find . -newer reports/test-e2e/r28/post-r27-edits-findings.json (excluding node_modules, dist*, playwright-report, ./reports) lists exactly: ./docs/FINAL_VALIDATION_REPORT.md and ./docs/KNOWN_LIMITATIONS.md. Nothing else.",
+    "No file in be/src, be/test, web/src, web/e2e is newer than scratchpad/r23/DONE (12:31): find returns empty.",
+    "(4) shasum -a 256: be/openapi.json = f1dbd031f6c1ee65ddec55d9d22bc7c98b86004c4e9abcdf00d4949bec48c6c6; be/src/content.ts = d4bd3b647676886062b914b9b50c50600dc39bba3e63984037f4849badd85a39. Both equal FINAL_VALIDATION_REPORT.md lines 120-121 (and 'f1dbd031…c6c6' at l.49).",
+    "Limit: no earlier copy of the two docs exists, so I could not diff them; the 'only these edits' claim rests on mtimes and on the content present now."
+  ]
+}

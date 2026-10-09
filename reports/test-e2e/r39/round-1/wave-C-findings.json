@@ -1,0 +1,140 @@
+{
+ "wave": "C",
+ "round": 39,
+ "states_reviewed": 75,
+ "findings": [
+  {
+   "id": "C39-001",
+   "state_artifact": "docs/FACULTY_DEMO_SCRIPT.md:76 vs :168",
+   "category": "doc_claim",
+   "severity": "P2",
+   "evidence": "Script line 76 (section 2.4) says of Blood Smear Code having no non-visual path: \"Dites-le si on vous le demande; ne présentez pas l'application comme accessible\". Line 168 (section 6, new) says \"Le dire à l'ouverture plutôt que d'attendre la question\". Two opposite presenter instructions in one document. docs/KNOWN_LIMITATIONS.md:231 (Round 38 notes) says C38-003 (disclosure of S-1) is \"corrected above or in the report, the script\"; only section 6 was changed.",
+   "fix_hint": "Make line 76 say \"à annoncer à l'ouverture (section 6)\".",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "C39-002",
+   "state_artifact": "web/src/lib/demo-guide.ts (QUALITY_POINTS line 195, ABOUT_FOOT) / in-app About page",
+   "category": "doc_claim",
+   "severity": "P2",
+   "evidence": "C38-003 reported that the in-app About & demo guide never states that Blood Smear Code has no non-visual path nor that no screen-reader test was done. Code is unchanged (snapshot 96233cf7 identical), grep of web/src for accessib|screen reader finds only demo-guide.ts:195 \"no independent human security or accessibility review\". The script now tells the presenter to disclose S-1 at the opening, but the page the committee reads (and which the script says to start from) does not. KNOWN_LIMITATIONS.md:231 lists C38-003 as corrected.",
+   "fix_hint": "Either add one sentence to the About quality block (code change, resets the two-clean-rounds count) or record in KNOWN_LIMITATIONS that the About page does not disclose S-1 and that C38-003 is only half corrected.",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "C39-003",
+   "state_artifact": "docs/FACULTY_DEMO_SCRIPT.md:93 and :162-169",
+   "category": "doc_claim",
+   "severity": "P2",
+   "evidence": "Line 93: \"Dites d'abord l'ouverture de la section 6 (30 secondes, comprise dans la première ligne)\". Section 6 now has 6 bullets, 152 words by wc (the S-1 bullet added this round is the longest), plus the 32-word row-1 line = about 177 words, i.e. 70-80 s at 130-150 wpm, in a 0:00-0:30 row. B38-004 (r38) already flagged the earlier 88+32 words as not fitting; the added S-1 bullet made it worse while the sentence was kept. The 5-minute budget in the table is therefore understated by about 45 s.",
+   "fix_hint": "Say the opening takes about 1 min 15 s and shorten another row, or state the table is a 5:45 budget.",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "C39-004",
+   "state_artifact": "docs/KNOWN_LIMITATIONS.md:3",
+   "category": "numeric_integrity",
+   "severity": "P2",
+   "evidence": "Header says \"notes added after adversarial rounds 10 to 17, 20 to 23 and 34 to 37 (the last four are the sections 'Round 34 notes' to 'Round 37 notes' at the end)\". The file now ends with \"Round 38 notes\" (line 224); the last five sections are Round 34 to 38. Stale text presented as current in the header (the same kind of header drift was already corrected at C36-xx).",
+   "fix_hint": "Change to \"34 to 38 (the last five ...)\".",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "C39-005",
+   "state_artifact": "docs/GOAL_FINAL_MVP.md:31-36",
+   "category": "doc_claim",
+   "severity": "P2",
+   "evidence": "(a) Heading \"Mise à jour du 2026-10-09, tours 34 à 37\" while the body counts rounds 34 to 38 (7, 6, 5, 7, 6 P2: sums verified). (b) It states convergence needs \"deux tours consécutifs P0 = P1 = 0 sur le code courant\" without \"hors S-1\"; the report (line 56-58) and manifest define the working criterion as P0=P1=0 excluding S-1, and S-1 is a P1 that cannot be closed by engineering, so the goal file as written is unsatisfiable and contradicts the report. (c) S-1 is never named or rated P1 there and is pointed to \"Round 36 notes\", whereas its P1 rating and owner-decision status are in Round 37 notes (B37-001). C38-009 asked for the S-1 label; not done.",
+   "fix_hint": "Fix the heading; add \"S-1 (P1 permanent, B37-001) ... critère de travail hors S-1\" and point to Round 37 notes / report line 56.",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "C39-006",
+   "state_artifact": "docs/CONTENT_VALIDATION_CHECKLIST_2026-10-05.md:3-4",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "Header says \"Statut : NON SIGNÉ — préparation du reviewer uniquement\" but never says it was prepared by an AI assistant (grep for IA|assistant|agent|AI finds nothing). SCIENTIFIC_REVIEW_BACKLOG.md does say it (\"rédigé par un assistant d'IA (Claude)\", unsigned, 25 findings = 1+12+12 verified). The owner asked that both scientific-limitation documents say AI-prepared and unsigned.",
+   "fix_hint": "Add \"préparé par un assistant IA, non signé, pas une revue\" to the checklist header.",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "C39-007",
+   "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:34 and manifest results.bundle",
+   "category": "numeric_integrity",
+   "severity": "P3",
+   "evidence": "Bundle \"JS 362 040 / 400 000\" is measured on dist/ built WITHOUT VITE_API_URL (frontend-build.log: \"this bundle will refuse to start\"). The configured production bundle built by Playwright with VITE_API_URL has index-n4mKxVX9.js = 362080 bytes (dist-e2e/assets), the unconfigured one 362055. Under budget either way (+40 bytes); the number is true for a bundle that cannot run.",
+   "fix_hint": "State \"build without API address\" next to the figure, or measure the configured build.",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "C39-008",
+   "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:7,16 and validation-manifest.json",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "The required explicit sentence \"Local validation only.\" appears nowhere in the report or the manifest in that form (report: \"Validation locale uniquement.\" line 7/73, \"LOCAL UNIQUEMENT\" line 16; manifest scope: \"LOCAL ONLY. No remote Git...\"). Equivalent meaning, wrong language/wording for a literal check. All other required elements are present and verified: snapshot id (reproduced at start and end: 143 files, 96233cf7caabeb02b0d9cf871892151627ae48bf3bbc20b7cd2974def258c81d), environment, Node v22.23.2/npm 10.9.8, commands, backend 269/269, frontend 328/328 (18 files), Playwright 415/415 x2 (4.6 min each), OpenAPI hash, npm audit 0, bundle, P0/P1 status, P2/P3, scientific limits, ESCALATE verdict, technically verified vs biomedically validated, no \"production ready\" (only negated).",
+   "fix_hint": "Add the literal English sentence \"Local validation only.\" to the top box and manifest.",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "C39-009",
+   "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:62",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "The \"liste unique\" headed \"P2 qui touchent la démonstration\" includes A36-002 (IPv6 limiter) which the same line calls \"hors démonstration locale\", and omits C38-005 (P2, Round 38 notes): the student demo reset (the step the script prescribes before every demo, section 2.2) also deletes the demo student from other teachers' classes (class average XP 4190 to 140 in the auditor's repro). The list is neither \"demo-affecting only\" nor complete for that scope.",
+   "fix_hint": "Drop A36-002 or rename the list; add C38-005 to the demo-relevant items and to script section 2.2.",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "C39-010",
+   "state_artifact": "docs/FACULTY_DEMO_SCRIPT.md:116",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "\"environ 6 min 45 s avec les déplacements (405 s dans le rapport du round 17)\". reports/test-e2e/r17/round-1/wave-D-findings.json says \"6:45-7:15 desktop, 7:15-7:45 at 375 px\"; no \"405 s\" appears. The script quotes the lower bound as the estimate and recommends 15 s margin, while the report range upper bound is 7:15 (7:45 on phone).",
+   "fix_hint": "Quote the range 6:45-7:15 (7:45 at 375 px).",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  },
+  {
+   "id": "C39-011",
+   "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:45; .ci-artifacts/local-2026-10-09-verify-r34/SUPERSEDED.md; validation-manifest.json commandsExact",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "Line 45 locates audit copies only for rounds 34/35 (verify-r34); the r36 copy is in verify-r36-final/audit-r36 and r37/r38 in verify-r37-final (all byte-identical to reports/, checked with cmp). SUPERSEDED.md in verify-r34 says \"Its logs are kept unchanged\" yet that folder also hosts the live snapshot-id.sh that every document tells readers to run. manifest commandsExact chains steps with && while run-gate.sh runs them independently with separate exit codes (all 0).",
+   "fix_hint": "Add the three copy locations; move snapshot-id.sh to the newest folder or say it is the live tool.",
+   "status": "open",
+   "first_seen_round": 39,
+   "rounds_open": 1
+  }
+ ],
+ "summary": {
+  "P0": 0,
+  "P1": 0,
+  "P2": 5,
+  "P3": 6,
+  "open_P0": 0,
+  "open_P1": 0,
+  "open_P2": 5,
+  "open_P3": 6
+ },
+ "verdict": "GREEN",
+ "notes": "Snapshot seen at start AND end: 143 files, 96233cf7caabeb02b0d9cf871892151627ae48bf3bbc20b7cd2974def258c81d (matches report, manifest, snapshot-id.txt). VERIFIED TRUE: P sums recomputed from JSON r34 0/0/7/19, r35 0/1/6/22, r36 0/2/5/24, r37 0/3/7/11, r38 0/0/6/16 (A 1/6, B 0/6, C 5/4) and the audit copies are byte-identical; logs: backend 269/269 (13.8 s), typecheck clean, frontend 328/328 18 files, Playwright 415/415 twice 4.6 min, exit-codes all 0, openapi f1dbd031 equal, content.ts d4bd3b64 equal, npm audit 0 both, node v22.23.2 npm 10.9.8, budget JS 362040 CSS 67448, 2 raster images; earlier folders 265/267/322/328/411/413 match their own logs and each carries SUPERSEDED.md; r37-final correctly has none; no snapshot source file newer than started.txt 19:38:36 (only be/openapi.json regenerated by the gate, identical hash); 11 historical banners present and point to the top section; 25 backlog findings = 1+12+12; backlog hashes of content.ts and the 3 images reproduce; screenshot README sizes match file output for all 10 PNG; demo-script live checks on own server: Alex level 6 8240 XP 5/9, Hematology 3/3, Microbiology 2/3, Master Lab locked \"Clear 3 labs (1 of 3 cleared)\", 10 missions draft, class of 38, time limits 240/360, hint -15, wrong -10, demo sign-in limit 60/10 min per IP, student reset clears an open attempt and restores 8240, teacher reset 200; in-app About strings consistent with script except S-1 disclosure (C39-002). FACULTY: built 12 classes / 223 memberships incl. 60 students in a long-named class, 10 classes for one teacher, empty class, one-student class, 50-student class, never-active students, renames (student and teacher), look-alike teacher names (Prof  Zeno Quarry, prof zéno quarry, Cyrillic е, trailing dot all 409 name_taken; Zenon 201; (teacher #5) 400); independently recomputed from raw SQLite (my own SQL) roster, analytics, per-mission, per-lab, hardest mission and leaderboard (class/all x week/all): 3654 checks x 9 clock positions (+1 d, 3 d, 7 d, 10 d, 30 d, and exact ms boundaries last_active+7d-1/+0/+1 and event+7d-1/0/+1) and 208 leaderboard checks: 0 differences; time logic is pure epoch-ms (rolling 7 days, floor(ms/DAY)), not calendar week and not local time zone, so Sunday 23:59/Monday 00:00 and DST do not matter; the UI never uses the weekly scope; streak uses UTC days (documented in KNOWN_LIMITATIONS:37). UI at 1440/768/390 for all 10 classes: stats, Showing N of M, Show all 60 rows, attention counts equal API; no horizontal overflow, no console errors; long 80-char class name truncated only inside the select, full in the tag. Not checked: real screen reader, WebKit. The only unreproduced items are timings quoted from earlier rounds. Processes started (API, Vite npm+node) stopped by exact PID; ports 3951/5951 free."
+}

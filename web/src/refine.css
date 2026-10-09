@@ -1,0 +1,225 @@
+/* Round 3 visual polish. Imported last, so it refines every earlier layer.
+   Contents: option chips, illustrative-image frame, hotspot marker, mission layout on narrow screens, phone navigation,
+   guest popover, tap targets (>= 44px on touch / narrow screens), minimum type size (11px), result and data bars. */
+
+/* ---------------------------------------------------------------- type floor: nothing the learner reads is under 11px */
+.eyebrow,.case-meta,.tag,.side-status,.landing-note,.landing-kicker,.lab-card-top,.lab-state,.lab-card-foot,.stat span,.stat small,.value span,.value em,.value small,.vault-card-head span,.vault-card small,.badge-state,.badge-row small,.leaderboard-head,.content-head,.status-pill,.illustrative-tag,.hero-science span,.visual-caption span,.visual-caption small,.orbit-label small,.image-caption,.lab-card p,.aside-card p,.hint,.status-row,.status-row b,.content-actions button,.timer,.hint-result,.list-count,.fragment-reveal p,.saved-note,.logout,.text-button{font-size:11px}
+.badge-row b,.leaderboard-row,.content-row{font-size:12px}
+.status-pill,.badge-state,.vault-card-head span{font-weight:700;letter-spacing:.04em}
+.stat span,.stat small,.badge-row small,.lab-card p,.aside-card p,.hint-result,.status-row,.image-caption{font-size:12px}
+.eyebrow{letter-spacing:.14em}
+
+/* ---------------------------------------------------------------- option chips: A, B, C... never the raw option id */
+.answer-options button{min-height:48px;line-height:1.4;overflow-wrap:anywhere;font-size:13px}
+.answer-options button .chip{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;border:1px solid var(--control-border);background:#fff;color:#056563;font:700 12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.answer-options button.selected .chip{background:#0c8884;border-color:#0c8884;color:#fff}
+.answer-options button .opt-label{flex:1;min-width:0;width:auto;font:inherit;color:inherit}
+
+/* ---------------------------------------------------------------- illustrative image: the label sits OUTSIDE the clickable image */
+.image-frame{margin:20px 0 0}
+.image-frame .scientific{margin:0;border-radius:10px 10px 0 0}
+.image-frame .image-watermark{position:static;display:flex;align-items:center;justify-content:center;gap:6px;margin:0;padding:7px 12px;border:0;border-radius:0 0 10px 10px;background:#0f3031;color:#fff;font:700 11px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;pointer-events:none}
+.marker{box-sizing:border-box;width:28px;height:28px;font-size:0;text-shadow:none;background:transparent;border:3px solid #fff;box-shadow:0 0 0 2px #a8323c,0 2px 8px rgba(23,51,68,.4);position:absolute}
+@media (max-width:600px){.marker{width:24px;height:24px;border-width:2px}}
+
+/* ---------------------------------------------------------------- mission layout */
+.assistant-inline{margin:18px 0 4px;padding:14px 16px;border:1px solid #e8c77f;border-radius:10px;background:#fffaf0}
+.assistant-inline .assistant-row{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+.assistant-inline .assistant-note{flex:1 1 180px;margin:0;font-size:12px;line-height:1.5;color:#41595e}
+.assistant-inline .hint-budget{margin:8px 0 0!important}
+.case-status-card .status-list{margin:6px 0 0}
+.result-screen{padding:40px 16px 0}
+.result-screen>.eyebrow{margin-top:8px}
+.badge-chips{list-style:none;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px auto;padding:0;max-width:560px}
+.badge-chips li{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;background:#fff0d0;border:1px solid #e6c47e;color:#5c3d00;font-size:13px;font-weight:700}
+.badge-chips-label{margin:14px 0 0;font-size:11px;letter-spacing:.14em;color:#41595e;text-transform:uppercase}
+
+/* ---------------------------------------------------------------- bars (competencies, labs, mission success): the number is always printed beside the bar */
+.bar-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.bar-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr) auto;gap:12px;align-items:center;font-size:13px;color:#29484e}
+.bar-row small{display:block;color:#41595e;font-size:12px}
+.bar-row b{font:700 12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#056563;min-width:3.2em;text-align:right}
+.bar{display:block;height:10px;border-radius:999px;background:#e4ebe8;overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:999px;background:#2f9a94}
+.bar.alert>i{background:#b3424d}
+.bar-note{margin:12px 0 0;font-size:12px;color:#41595e}
+.flag-pill{display:inline-block;padding:3px 9px;border-radius:999px;background:#fbe9e9;border:1px solid #e2aab0;color:#7a232d;font-size:12px;font-weight:700}
+.mission-signal{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.5fr) auto;gap:6px 14px;align-items:center;padding:13px 4px;border-bottom:1px solid #e4e6e1;font-size:13px;color:#29484e}
+.mission-signal b{font:700 12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#056563;min-width:3.2em;text-align:right}
+.mission-signal .flag-pill{justify-self:start}
+.mission-signal .signal-empty{grid-column:2 / 4;display:flex;align-items:baseline;justify-content:space-between;gap:10px;min-width:0}
+.insight{margin:14px 0 0;font-size:13px;line-height:1.6;color:#29484e}
+.insight b{color:#173344}
+@media (max-width:600px){
+  .bar-row{grid-template-columns:minmax(0,1fr) auto}
+  .bar-row .bar{grid-column:1 / -1;order:3}
+  .mission-signal{grid-template-columns:minmax(0,1fr) auto}
+  .mission-signal .bar{grid-column:1 / -1}
+  .mission-signal .signal-empty{grid-column:2}
+  .mission-signal .flag-pill{grid-column:1 / -1}
+}
+
+/* ---------------------------------------------------------------- coming-soon cards: a neutral emblem, one label */
+.lab-card.muted .lab-emblem,.lab-card.muted .lab-emblem{background:#eef2f0;color:#52696c;border:1px dashed #9fb3ae}
+.lab-card-foot .soon{font-weight:700}
+
+/* ---------------------------------------------------------------- settings feedback */
+.saved-note{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:13px;font-weight:700}
+.setting-row{min-height:52px;cursor:pointer}
+.setting-row input{width:22px;height:22px}
+
+/* ---------------------------------------------------------------- phone section navigation: a wrapping grid, every section visible */
+@media (max-width:600px){
+  .app>aside nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;overflow:visible}
+  .app>aside nav button{white-space:normal;text-align:center;justify-content:center;flex-direction:column;gap:4px;padding:8px 4px;font-size:12px;line-height:1.25;min-height:56px;border:1px solid #e0ddd5}
+  .app>aside nav button.active{border-color:#8fc3ba}
+  .app>aside nav:has(> :nth-child(5)):not(:has(> :nth-child(6))) button:nth-child(4){grid-column:1 / span 1}
+  .app>aside nav:has(> :nth-child(5)):not(:has(> :nth-child(6))) button:nth-child(5){grid-column:2 / span 2}
+  /* Faculty: three sections plus About; the lone fourth button spans the row. */
+  .app>aside nav:has(> :nth-child(4)):not(:has(> :nth-child(5))) button:nth-child(4){grid-column:1 / -1}
+  .app>aside .side-bottom{display:none!important}
+}
+
+/* ---------------------------------------------------------------- guest options: a popover anchored to its button */
+.menu-anchor{display:contents}
+.guest-popover{display:none}
+@media (max-width:600px){
+  .menu-anchor{display:block;position:relative}
+  .guest-popover{display:block;position:absolute;z-index:30;left:0;width:min(340px,calc(100vw - 32px));top:calc(100% + 8px);margin:0;padding:14px;border:1px solid #bdcbc6;border-radius:14px;background:#fffdfa;box-shadow:0 18px 40px rgba(23,51,68,.22)}
+  .guest-popover .side-status{margin:0 4px 10px}
+  .guest-popover .logout{display:flex;width:100%;min-height:48px;font-size:14px;border:1px solid #bdcbc6;border-radius:10px;margin:8px 0 0;justify-content:center;color:#173344;background:#fff}
+  .guest-popover .popover-close{width:100%;min-height:48px;margin-top:8px;border-radius:10px;background:#e1f0ec;color:#00494b;font-weight:700;font-size:14px}
+}
+
+/* ---------------------------------------------------------------- tap targets: >= 44px on phones and tablets, touch screens included */
+@media (max-width:900px),(pointer:coarse){
+  .back-button,.back-link,.text-button:not(.inline),.lab-card-foot button,.notice button,.error button,.hint,.unlock-row .primary,.content-actions button,.picker-row .primary,.picker-row .ghost,.state-actions button,.logout{min-height:44px}
+  .error button{min-width:44px;padding-inline:8px}
+  .back-button{padding:0 12px 0 0;display:inline-flex;align-items:center}
+  .lab-card-foot button{padding:0 4px}
+  .text-button:not(.inline){padding:0 4px;min-width:44px}
+  .move-buttons{gap:8px}
+  .move-buttons button{width:44px;height:44px}
+  .unlock-row input{min-height:44px}
+  .setting-row input{width:24px;height:24px}
+  .answer-options button,.mission-row.selectable{min-height:48px}
+  .match-row select,.picker-label select{min-height:44px}
+  .primary,.ghost{min-height:44px}
+  /* R14-B-01: the sidebar rail of a rotated phone (667-900px wide) is a touch layout too, not only the portrait menu. */
+  .app>aside nav button{min-height:44px}
+}
+@media (max-width:600px){
+  .case-panel h1{font-size:21px}
+  .answer-options{margin:20px 0}
+  .case-meta{gap:10px}
+  .drag-row{flex-wrap:nowrap}
+}
+
+/* ---------------------------------------------------------------- spacing refinements */
+.assistant-inline .eyebrow{margin-bottom:10px}
+.competency-eyebrow{margin:26px 0 12px}
+.badge-chips.left{justify-content:flex-start;margin:8px 0 6px;max-width:none}
+.result-lab .badge-chips-label{margin-top:18px}
+.result-lab .ledger{margin-left:0;max-width:none}
+.state-panel.empty .state-actions{margin-top:18px}
+.mission-row small,.mission-signal small,.bar-row small,.leaderboard-row small,small{font-size:12px}
+.badge-list{max-height:none;overflow:visible}
+.drag-row>svg,.drag-number{flex:none}.drag-row b{min-width:0;flex:1 1 auto;overflow-wrap:anywhere}.move-buttons{flex:none}
+.result-screen{padding-bottom:48px}
+.app-main>main>.error{margin-bottom:14px}
+
+/* ---------------------------------------------------------------- R9-B-02: unbroken server strings wrap inside their box.
+   Grid and flex items default to min-width:auto, so one long word would widen the track; every text the server sends gets
+   min-width:0 and overflow-wrap:anywhere, and the case layout columns are minmax(0,...) so they can shrink below their content. */
+.case-layout{grid-template-columns:minmax(0,1fr) 290px}
+/* R9-B-11: at <= 900px the assistant sits under the question (see `narrow` in mission.tsx), so the aside holds the status card alone: full width. */
+@media(max-width:900px){.case-layout{grid-template-columns:minmax(0,1fr)}.case-aside{grid-template-columns:minmax(0,1fr)}}
+.values{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:600px){.values{grid-template-columns:minmax(0,1fr)}}
+.case-panel,.case-aside,.aside-card,.assistant-inline,.value,.feedback>div,.ledger li>span,.status-row dd,.status-row dt{min-width:0}
+.hint-result,.assistant-note,.hint-budget,.value,.value span,.value b,.value em,.value small,.value strong,.match-row span,.drag-row b,.sample-chip,.feedback,.feedback p,.feedback b,.ledger li,.ledger li span,.ledger li small,.scenario-note,.context,.sync-note,.result-lede{overflow-wrap:anywhere;min-width:0}
+.match-row>span{min-width:0;max-width:100%}
+.ledger li b{flex:none}
+.sample-chip{max-width:100%;border-radius:14px}
+.drag-list,.matching-list,.answer-options{grid-template-columns:minmax(0,1fr)}
+.drag-row{min-width:0}
+
+/* ---------------------------------------------------------------- R9-B-09: inline confirmation before a guest reset */
+.reset-confirm{margin:8px 0 0;padding:12px;border:1px solid #d9a3a8;border-radius:10px;background:#fbefee;color:#173344}
+.reset-confirm p{margin:0 0 10px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.reset-confirm-actions{display:grid;gap:8px}
+.reset-confirm .logout{width:100%;justify-content:center;border:1px solid #bdcbc6;border-radius:8px;background:#fff;color:#173344;padding:8px 10px;margin:0}
+.reset-confirm .logout.danger{background:#8c2f39;border-color:#8c2f39;color:#fff}
+
+/* ---------------------------------------------------------------- faculty: roster rows, sample size, review trail (R9-C) */
+.mission-row .metric-label{margin-left:5px;font:500 11px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-style:normal;color:#52696c}
+.mission-row .id-tag,.profile-card .id-tag{display:inline;margin-left:6px;font-size:11px;font-weight:600;color:#52696c}
+.mission-signal .sample-size{display:block;margin-top:2px;color:#52696c;font-size:11px}
+.flag-pill.neutral{background:#eef2ef;border-color:#cbd8d3;color:#41595e}
+.content-title{min-width:0;display:grid;gap:3px}
+.content-title b{min-width:0;overflow-wrap:anywhere}
+.review-trail{display:block;color:#52696c;font-size:11px;overflow-wrap:anywhere}
+
+/* ---------------------------------------------------------------- R9-B-17: a matching row that reuses an association is styled, not only announced */
+.match-row select[aria-invalid="true"]{border-color:#8c2f39;box-shadow:0 0 0 2px rgba(140,47,57,.28);background:#fdf1f0}
+
+/* ---------------------------------------------------------------- R9-B-06: every hint already delivered on the step is listed, each with its level */
+.hint-level{font-weight:700}
+
+/* ---------------------------------------------------------------- R10: long server strings on the result, stacked marks, touch size */
+/* R10-B-01: everything the result screen prints from the server (badge names and descriptions, titles, ledger) wraps inside the screen.
+   overflow-wrap is inherited, and `anywhere` lets a chip shrink below the width of its longest word. */
+.result-screen{overflow-wrap:anywhere}
+.badge-chips{max-width:min(560px,100%);min-width:0}
+.badge-chips li{min-width:0;max-width:100%;overflow-wrap:anywhere;text-align:left;border-radius:18px}
+.badge-chips li>svg{flex:none}
+.badge-chips.left{max-width:100%}
+/* R10-C-06: a reviewer name with many stacked combining marks grows far above and below its line; it is clipped to its own row. */
+.review-trail{overflow:clip}
+.content-title{overflow:clip}
+.rules-note{margin:10px 0 0}
+.rules-note button{color:inherit;font-weight:700}
+@media (max-width:900px),(pointer:coarse){
+  .list-count .text-button.inline,.rules-note button,.rules-note .text-button.inline{min-height:44px;min-width:44px;padding-inline:6px}
+}
+
+
+/* R16-B-01: on a long page (About & demo guide) the section navigation and the guest controls stay in view. Desktop, tablet and rotated phones keep the
+   side rail; it is as tall as the viewport and scrolls inside itself when a short landscape screen cannot hold it. The portrait phone menu (<= 600px) is unchanged.
+   R17-B-01: no overscroll-behavior:contain here: the sidebar scrolls itself first, then hands the wheel, the swipe and PageDown on to the page. */
+@media (min-width:601px){
+  .app>aside{position:sticky;top:0;align-self:flex-start;height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;overflow-y:auto;overscroll-behavior:auto}
+}
+@media print{
+  .app>aside{position:static;height:auto;max-height:none;overflow:visible}
+}
+
+/* Text version of a table-like image (R36 B36-001): a collapsed section, a real table and 44 px choose buttons.
+   The table keeps a readable width and scrolls inside its own (keyboard-focusable) region on a narrow screen: the page never scrolls sideways. */
+.point-text{margin:12px 0 0;border:1px solid #b9c9c3;border-radius:10px;background:#fff}
+.point-text summary{display:flex;align-items:center;min-height:44px;padding:0 14px;font-weight:700;color:#0f3031;cursor:pointer}
+.point-text-body{padding:0 14px 14px}
+.point-text-indices{display:flex;flex-wrap:wrap;gap:4px 16px;margin:4px 0 10px;padding:0;list-style:none;font-weight:600;color:#1f3a3c}
+.point-text-scroll{overflow-x:auto}
+.point-text table{width:100%;min-width:440px;border-collapse:collapse;font-size:14px;color:#1f3a3c}
+.point-text th,.point-text td{padding:4px 8px;border-bottom:1px solid #dfe8e5;text-align:left;vertical-align:middle;white-space:nowrap}
+.point-text button{width:auto;min-width:72px;min-height:44px;padding:0 14px;border-radius:8px;white-space:nowrap}
+.point-text button[aria-pressed="true"]{background:#0f3031;border-color:#0f3031;color:#fff}
+/* The test name stays in view while the table scrolls sideways on a phone, so the row being chosen is always named. */
+.point-text th:first-child{position:sticky;left:0;z-index:1;background:#fff;box-shadow:1px 0 0 #dfe8e5}
+.point-text-caption{margin:0 0 6px;font-size:12px;color:#41595e}
+.point-text-hint{display:none;margin:0 0 6px;font-size:12px;font-weight:600;color:#1f3a3c}
+@media (max-width:560px){.point-text-hint{display:block}}
+/* Forced colors (Windows high contrast) replace our colours: the chosen row keeps a thick border and the system highlight, so it is still told apart. */
+@media (forced-colors:active){
+  .point-text button{border:1px solid ButtonText}
+  .point-text button[aria-pressed="true"]{border-width:3px;forced-color-adjust:none;background:Highlight;color:HighlightText;border-color:HighlightText;outline:2px solid Highlight}
+}
+
+/* Language switch (FR / EN): header of every screen and the landing screen. */
+.lang-switch{display:inline-flex;border:1px solid #9fb6b1;border-radius:999px;overflow:hidden;background:#fff}
+.lang-switch button{min-width:44px;min-height:44px;padding:0 10px;border:0;background:transparent;color:#0f3031;font-weight:800;letter-spacing:.04em}
+.lang-switch button[aria-pressed="true"]{background:#0f3031;color:#fff}
+.landing-lang{position:absolute;top:14px;right:16px;z-index:3}
+@media (forced-colors:active){.lang-switch button[aria-pressed="true"]{border:3px solid Highlight;forced-color-adjust:none;background:Highlight;color:HighlightText}}
+.result-lang{display:flex;justify-content:flex-end;margin:0 0 8px}

@@ -1,0 +1,110 @@
+/* About & demo guide: a static, calm reading page. Same tokens as the rest of the app (cream panels, teal for structure,
+   brick red only for the one thing that is not done yet). No animation: nothing here needs a reduced-motion override. */
+.about{max-width:960px;padding:0 0 24px}
+.about *{min-width:0}
+.about-head{padding:56px 0 8px}
+.about-head h1{margin:13px 0 18px;font-size:44px;line-height:1.04;letter-spacing:-.05em;color:#153540}
+.about-principle{margin:0 0 16px;padding-left:14px;border-left:3px solid #a8323c;font-size:20px;font-weight:700;line-height:1.35;letter-spacing:-.02em;color:#00494b}
+.about-lede{max-width:640px;margin:0;font-size:15px;line-height:1.7;color:#41595e}
+
+.about-section{margin-top:56px}
+.about-section h2{margin:0 0 12px;font-size:22px;letter-spacing:-.03em;line-height:1.2;color:#173344;scroll-margin-top:24px}
+.about-section h2:focus:not(:focus-visible){outline:none;box-shadow:none}
+.about-title-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-bottom:12px}
+.about-title-row h2{margin:0}
+.about-intro{max-width:680px;margin:0 0 20px;font-size:14px;line-height:1.6;color:#41595e}
+
+.about-chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;background:#e1f0ec;color:#00494b;font-size:12px;font-weight:700;line-height:1.4;white-space:nowrap}
+.about-chip.quiet{background:#eef2ef;color:#41595e}
+.about-chip.here{background:#00494b;color:#fff}
+.about-chip.needs{background:#fff3d9;box-shadow:inset 0 0 0 1px #e8c77f;color:#5c3d00}
+.about-chip.planned{background:#fff;box-shadow:inset 0 0 0 1px #8a5d16;color:#5c3d00;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.about-title-row .about-chip.planned{text-transform:none;letter-spacing:0;font-size:12px}
+
+.about-card{padding:22px;border:1px solid #e0ddd5;border-radius:12px;background:#fffdfa;box-shadow:0 8px 22px rgba(50,66,67,.045)}
+.about-card h3{margin:0 0 12px;font-size:17px;letter-spacing:-.02em;color:#173344}
+.about-card ul{margin:0;padding:0;list-style:none;display:grid;gap:12px}
+.about-card li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.55;color:#29484e}
+.about-card li>svg{flex:none;margin-top:3px}
+.about-scope,.about-states{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.about-card.is{border-top:3px solid #066a68}
+.about-card.is li>svg{color:#066a68}
+.about-card.isnt{border-top:3px solid #8c2f39}
+.about-card.isnt li>svg{color:#8c2f39}
+
+.about-prepare{max-width:680px;margin:0 0 20px;padding:16px 18px;border:1px solid #e8c77f;border-left:4px solid #b47a1e;border-radius:12px;background:#fff6e3}
+.about-prepare h3{margin:0 0 8px;font-size:16px;letter-spacing:-.02em;color:#5c3d00}
+.about-prepare ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.about-prepare li{font-size:14px;line-height:1.55;color:#5c3d00}
+.about-loop-title{margin:0 0 4px;font-size:15px;color:#173344}
+.about-loop-note{margin:0 0 12px;font-size:13px;line-height:1.55;color:#41595e}
+.about-steps{margin:0;padding:0;list-style:none;display:grid;gap:12px}
+.about-step{position:relative;display:grid;grid-template-columns:36px minmax(0,1fr);gap:16px}
+.about-step:not(:last-child)::after{content:'';position:absolute;left:17px;top:40px;bottom:-12px;width:2px;background:#cfe0db}
+.about-step-n{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:#066a68;color:#fff;font-size:14px;font-weight:700;z-index:1}
+.about-step-body{padding:16px 18px;border:1px solid #e0ddd5;border-radius:12px;background:#fffdfa;box-shadow:0 8px 22px rgba(50,66,67,.045)}
+.about-step.here .about-step-body{border-color:#8fc3ba}
+.about-step h3{margin:0 0 6px;font-size:16px;letter-spacing:-.02em;color:#173344}
+.about-step p{margin:0;font-size:14px;line-height:1.6;color:#29484e}
+.about-step p.about-step-hint{margin-top:6px;font-size:13px;color:#41595e}
+.about-step-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+.about-step-note{font-size:13px;color:#41595e}
+.about-open{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 16px;font-size:13px;font-weight:700}
+.about-step-foot .about-chip.quiet{margin-right:2px}
+.about-step.elsewhere .about-step-n{background:#fffdfa;color:#41595e;box-shadow:inset 0 0 0 2px #9fb3ae}
+.about-step.elsewhere .about-step-body{background:#f6f6f2;box-shadow:none}
+
+.about-points{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px;margin:0 0 24px}
+.about-points>div{padding:14px 0;border-top:1px solid #dfddd6}
+.about-points dt{margin:0 0 4px;font-size:14px;font-weight:700;color:#173344}
+.about-points dd{margin:0;font-size:14px;line-height:1.55;color:#41595e}
+.about-card.verified{border-color:#b9d8cf;background:#f1f7f4;border-top:3px solid #066a68}
+.about-card.verified li>svg{color:#066a68}
+.about-card.pending{border-color:#e8c77f;background:#fff6e3;border-top:3px solid #b47a1e}
+.about-card.pending h3,.about-card.pending p,.about-card.pending li{color:#5c3d00}
+.about-card.pending p{margin:0 0 12px;font-size:14px;line-height:1.55}
+.about-card.pending li>svg{color:#8a5d16}
+.about-state{display:block;margin-bottom:8px;font:700 11px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.1em;text-transform:uppercase;color:#41595e}
+.about-card.pending .about-state{color:#5c3d00}
+
+.about-loop{display:flex;align-items:stretch;gap:0;margin:0 0 20px;padding:0;list-style:none}
+.about-loop li{flex:1 1 0;display:grid;gap:2px;align-content:center;padding:14px 16px;border:1px solid #b9d8cf;border-radius:12px;background:#f1f7f4}
+.about-loop li+li{position:relative;margin-left:34px}
+.about-loop li+li::before{content:'\2192' / '';position:absolute;left:-28px;top:50%;transform:translateY(-50%);width:22px;text-align:center;font-size:18px;font-weight:700;color:#066a68}
+.about-loop b{font-size:15px;color:#173344}
+.about-loop span{font-size:13px;color:#41595e}
+.about-roadmap{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.about-roadmap li{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:6px 14px;align-items:start;padding:14px 16px;border:1px dashed #9fb3ae;border-radius:12px;background:#fffdfa}
+.about-phase-n{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;border:2px dashed #8a5d16;color:#5c3d00;font-size:14px;font-weight:700}
+.about-roadmap h3{margin:0 0 2px;font-size:15px;color:#173344}
+.about-roadmap p{margin:0;font-size:14px;line-height:1.55;color:#41595e}
+.about-roadmap .about-chip{margin-top:3px}
+
+.about-foot{margin:48px 0 0;padding:16px 18px;border:1px dashed #b9d8cf;border-radius:12px;background:#f1f7f4;font-size:13px;line-height:1.6;color:#29484e}
+
+@media (max-width:760px){
+  .about-head{padding-top:36px}
+  .about-head h1{font-size:36px}
+  .about-principle{font-size:18px}
+  .about-section{margin-top:44px}
+  .about-scope,.about-states,.about-points{grid-template-columns:minmax(0,1fr)}
+  .about-card{padding:18px}
+  .about-loop{flex-direction:column}
+  .about-loop li+li{margin:26px 0 0}
+  .about-loop li+li::before{left:50%;top:-26px;transform:translateX(-50%) rotate(90deg);height:22px;line-height:22px}
+  .about-roadmap li{grid-template-columns:34px minmax(0,1fr)}
+  .about-roadmap .about-chip{grid-column:2;justify-self:start;margin-top:4px}
+}
+@media (max-width:600px){
+  .about-step{grid-template-columns:30px minmax(0,1fr);gap:12px}
+  .about-step-n{width:30px;height:30px;font-size:13px}
+  .about-step:not(:last-child)::after{left:14px;top:34px}
+  .about-step-body{padding:14px}
+  .about-open{width:100%;justify-content:center}
+}
+@media (max-width:900px),(pointer:coarse){
+  .about-open{min-height:44px}
+}
+@media (forced-colors:active){
+  .about-chip,.about-step-n{border:1px solid CanvasText}
+}

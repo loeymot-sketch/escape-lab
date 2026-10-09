@@ -1,0 +1,3 @@
+Fresh seed + student reset: Alex = Level 6, 8,240 XP (script 2.3 canonical, capture 06 leaderboard "You 8,240").
+Script step 3 (replay Blood Smear Code, answer correctly): result "New personal best: +12 XP added to your total."; Mission control then reads "Level 6 · 8,252 XP", Progress leaderboard "#4 You 8,252 XP" [B35-015-progress-after-step3-8252xp.png].
+Script 2.3 / step 6 and docs/demo-screenshots/README (06) do not mention that the rehearsed/played step 3 moves the figure; the in-app guide only says generically that a new personal best adds XP.

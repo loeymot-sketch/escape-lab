@@ -1,0 +1,99 @@
+{
+  "wave": "A",
+  "round": 36,
+  "states_reviewed": 2650,
+  "findings": [
+    {
+      "id": "A36-001",
+      "category": "availability / O(n^2) query reachable by any registered student (event-loop freeze)",
+      "severity": "P1",
+      "evidence": "Game.competencies() (be/src/game.ts:575-582) is called by GET /api/competencies and by GET /api/attempts/:id/result (game.ts:562). Its correlated subquery `sr.solved_at = (SELECT MAX(sr2.solved_at) FROM step_results sr2 JOIN attempts a2 ... WHERE a2.user_id = a.user_id AND sr2.step_id = sr.step_id ...)` is planned by SQLite as `SEARCH sr2 USING INDEX idx_step_results_step (step_id=?)` (EXPLAIN QUERY PLAN on a copy of the DB), i.e. for every solved row of the user it walks EVERY row of that step in the whole database and then probes attempts by primary key. Cost is quadratic in the number of solved rows of one account, and the handlers are synchronous, so the single Node thread is blocked. Reproduced on a real `node src/server.ts` process (DB with ONE student holding N completed hem-01 attempts, each made with start+answer): N=6 -> 2.8 ms; N=255 -> 19 ms; N=1005 -> 296 ms; N=2005 -> 1988 ms for GET /competencies (GET /result identical: 2005 ms); N=4005 -> 8.6 s per call. While one call ran, `GET /api/health` from another client answered after 1837 ms; 5 parallel GET /competencies = 9.5 s total and a health probe queued behind them waited 3.8 s. Reachability with the DEFAULT limits: open registration, then POST /missions/hem-01/start + POST /attempts/:id/answer (verified live: 60 completed attempts, then `429 Retry-After: 60` on start), i.e. ~2000 attempts in ~34 min, ~4000 in ~67 min from one account (parallelisable with more accounts, 100 registrations/h/IP); there is no cap on attempts per user and no rate limit on GET /competencies or GET /result. Using a 3-step mission (hem-03, bio-01/03) multiplies solved rows per attempt by 3 (about 9x the cost per attempt). Dashboard, profile, roster, analytics stayed at 2-8 ms with the same account (not affected). Not in docs/KNOWN_LIMITATIONS.md (the Scale item covers leaderboard/analytics per student; A35-004 is about unfinished attempts, not this).",
+      "fix_hint": "Rewrite the 'latest solved result per step' query without the correlated subquery: `WITH latest AS (SELECT sr.step_id, MAX(sr.solved_at) m FROM step_results sr JOIN attempts a ON a.id=sr.attempt_id WHERE a.user_id=? AND sr.solved_at IS NOT NULL GROUP BY sr.step_id) SELECT ... JOIN latest` (linear), or add an index that leads with the user (e.g. step_results(step_id, solved_at) joined through a user-scoped attempt list). Optionally cap attempts per user per day or rate limit the two GET routes.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "A36-002",
+      "category": "rate limit / lockout key (IPv6)",
+      "severity": "P2",
+      "evidence": "clientIp() (be/src/app.ts:118-125) returns req.socket.remoteAddress verbatim, and every limiter key is built from that string (login `loginfail:${ip}` and `loginfail:${ip}:${email}` routes.ts:154-155, `reg:${ip}` routes.ts:124, `demo:${ip}`). No /64 (IPv6) aggregation and no canonicalisation of IPv4-mapped vs native forms. Reproduced against a default dual-stack listener (port 3801, no HOST): for one account, 10 wrong passwords from 127.0.0.1 (key ::ffff:127.0.0.1 style) -> 401x8 then 429x2; 10 more from ::1 -> 401x8 then 429x2 (a second, independent budget on the same machine); a third pass from 127.0.0.1 -> 429. A host that owns an IPv6 /64 (normal for a VPS or home line) can therefore present 2^64 distinct keys: the per-account 8-guess lockout (8 per 10 min), the 60/IP failed-login cap, the 100/h registration cap (also the teacher invite-code guess limiter) and the 10/10min class-join guess limiter all become void, and each fresh key creates new entries in the in-memory Map (sweep only drops expired windows, 10 min, RateLimiter.hit http.ts:177-191). Combined with scrypt on the 4-thread libuv pool (~31 ms each) an attacker also saturates all login/registration latency. Not listed (KNOWN item 9/11 only discuss shared IPv4 NAT).",
+      "fix_hint": "Key IPv6 clients on the /64 (or /56) prefix and unwrap ::ffff:a.b.c.d to the IPv4 string before building any limiter key; consider a global (non-IP) ceiling on login attempts per e-mail address that is not reset by changing source address.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "A36-003",
+      "category": "routing / path normalisation (reverse-proxy ACL bypass)",
+      "severity": "P3",
+      "evidence": "app.ts:131 parses the request target with `new URL(req.url, 'http://localhost')` and routes on url.pathname, so the WHATWG parser silently rewrites the target. Raw-socket results (all answered 200 `{\"status\":\"ok\"...}` or the openapi document): `GET //x/api/health`, `GET /api\\health`, `GET /api/../api/health`, `GET /api/%2e%2e/api/health`, `GET /api/./health`, `GET http://anything/api/health`, `GET /\\x/api/health`, `GET //x/api/openapi.json`. Only `%2f`, `%68`, `%61` encoded letters and `;` do not alias. Every route (including POST /api/auth/login, /api/demo/reset, /api/content/...) answers on these aliases. An operator who blocks a prefix at the proxy (e.g. `location /api/demo { deny all; }`, `/api/content`) is bypassed by `//x/api/demo/reset` or `/api\\demo/reset` because the proxy does not normalise backslashes or an extra leading path segment the way this app does.",
+      "fix_hint": "Route on the raw path: take everything before '?' of req.url, require it to start with a single '/', and reject (404/400) targets that start with '//' or contain '\\\\', '/./', '/../' or an absolute-form scheme.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "A36-004",
+      "category": "documented rule incomplete (teacher analytics flag)",
+      "severity": "P3",
+      "evidence": "GET /api/rules `success` and be/README.md say the server 'flags only the hardest mission (the lowest success), and only when it falls under 70%'. game.ts:1041-1048 additionally requires `studentsCompleted >= min(3, class size)` and excludes the Master Lab. Reproduced with the clock-controlled app: class of 4 (3 completers of hem-01 at 88% mean accuracy, nothing under 70%) shows hardest=hem-01 and no flag as documented, but a mission with only 1-2 completers in a class of 4+ can never be flagged however low its success is, and the response `hardestMission` is then a different mission or null. A teacher reading 'nothing flagged' as 'no mission under 70%' is misled.",
+      "fix_hint": "State the minimum-sample condition (3 students, or the whole class if smaller) in rules.ts `success` and in be/README.md.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "A36-005",
+      "category": "durability documentation",
+      "severity": "P3",
+      "evidence": "db.ts openDb: `PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL`. With WAL + NORMAL a transaction that was committed and acknowledged to the client (a correct answer, a paid hint, an exit-code unlock) can be lost after an OS crash or power failure (the database stays consistent, the last transactions revert). Process crash / SIGKILL is safe (already audited) but neither be/README.md nor docs/KNOWN_LIMITATIONS.md mention the power-loss window.",
+      "fix_hint": "Either document it, or set `PRAGMA synchronous = FULL` (cost: one fsync per commit, negligible at this load).",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "A36-006",
+      "category": "password hashing parameters",
+      "severity": "P3",
+      "evidence": "auth.ts:5 scrypt N=16384, r=8, p=1, 16-byte salt, 32-byte key. OWASP's current scrypt minimum set is N=2^17,r=8,p=1 (or N=2^14 only with p=5), so N=2^14,p=1 is below it (~31 ms per hash measured). The stored format is `scrypt$salt$key` (auth.ts:15) with no cost parameters, so raising the cost later requires a format change or a second algorithm tag; verifyPassword reads the global constants for every row. Login timing/enumeration is clean: 400 samples each of wrong password on an existing e-mail vs unknown ASCII e-mail vs unknown non-ASCII e-mail gave p50 31.5/31.6/31.5 ms, p90 33.2/33.6/33.3 ms, one identical 401 body; the demo-account-when-demo-off path takes the dummy-hash branch (same cost). Registration is enumerable by design (409 email_taken 1.7 ms vs 201 30 ms, 200 samples each).",
+      "fix_hint": "Store `scrypt$N$r$p$salt$key` and rehash on login when the stored cost is below the target; raise N to 2^17 if the 128 MB / ~120 ms per login is acceptable (check maxmem).",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "A36-007",
+      "category": "connection handling / hardening",
+      "severity": "P3",
+      "evidence": "createServer has no maxConnections, no per-IP connection cap and keeps Node 22 defaults. Measured: a connection that sends nothing is closed at 83.3 s (408), a header-dripping one at 83.3 s, a slow body (Content-Length 100000, one byte every 5 s) is held 323.4 s, keep-alive idle 6.0 s. 4000 idle connections were accepted at once (RSS 94 -> 120 MB) and the API stayed responsive (health 26 ms); with the hard fd limit forced to 128 the process survives (no crash) but a legitimate request got ECONNRESET until the idle sockets were released. One client with enough sockets can therefore exhaust descriptors. Pipelining 200 000 requests without reading the replies is back-pressured (client write stalled, RSS 85 -> 96 MB). Raw-socket smuggling probes (CL+TE, duplicate CL, bad TE, absolute-form, 100-continue with oversize CL, Upgrade, CONNECT, 431/413 paths, body followed by a pipelined GET) produced correct framing; no desync.",
+      "fix_hint": "Document that the API must sit behind a proxy with connection/time limits, or set server.headersTimeout/requestTimeout/maxConnections explicitly (e.g. requestTimeout 30 s).",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "A36-008",
+      "category": "documentation nits on limits",
+      "severity": "P3",
+      "evidence": "(a) docs/KNOWN_LIMITATIONS.md says NODE_ENV=test multiplies 'the per-user answer/hint/start limits by 50'; routes.ts:104-106 also multiplies the shared write budget (profile, class create, content review), and the demo sign-in ceiling becomes 1000 (routes.ts:183). (b) KNOWN item 9 still says the failed-login lockout is 'per IP, 60 failures', item 11 says it is IP+e-mail with 8 guesses; be/README.md and .env.example mention only the per-IP bucket (RATE_LOGIN_FAILURES_PER_IP) and never the fixed, non-configurable 8-guess per-account bucket (routes.ts:159), which is what actually locks a user first (reproduced: 8 wrong -> 401, 9th -> 429, correct password then also 429 for 600 s). (c) AUTH_SECRET strength is unchecked: outside production any length is accepted (`AUTH_SECRET=a` starts), and in production 32 identical characters pass (app.ts:36); NODE_ENV='production ' (trailing space) disables all production guards (extends known A-005). DEMO_MODE is strict (`=== '1'`): 'true', 'yes', '1 ' leave it OFF (verified), so a typo fails safe.",
+      "fix_hint": "Update the three documents; optionally reject AUTH_SECRET shorter than 32 characters in every environment except NODE_ENV=test.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    }
+  ],
+  "summary": {
+    "P0": 0,
+    "P1": 1,
+    "P2": 1,
+    "P3": 6,
+    "open_P0": 0,
+    "open_P1": 1,
+    "open_P2": 1,
+    "open_P3": 6
+  },
+  "verdict": "AMBER",
+  "notes": "Verdict AMBER: not GREEN because open_P1=1 (A36-001), no open P0. ATTACKED / CLEAN: (a) Security. Headers on 200/400/401/404/405/OPTIONS/HEAD/openapi: every JSON response carries Cache-Control no-store, nosniff, X-Frame-Options DENY, Referrer-Policy no-referrer, CSP default-src 'none', Vary: Origin (OPTIONS 204 and Node-level 400/408/431 have no body/hardening headers, harmless). CORS with CORS_ORIGIN=https://app.example.com: only the exact string is reflected (trailing slash, upper case, subdomain, suffix-lookalike, :443, http, null, empty all get no ACAO); default CORS_ORIGIN is '*' outside production; preflight does not reflect requested headers/methods. Start-up matrix: production needs AUTH_SECRET>=32, explicit CORS_ORIGIN, refuses DEMO_MODE=1 (ALLOW_DEMO_IN_PRODUCTION override); lower-case 'Production' is also guarded; default bind is all interfaces, loopback only with DEMO_MODE=1, HOST/PORT validated with one-line errors. With demo off: POST /auth/demo -> 404 'Demo mode is not enabled', seeded demo accounts cannot log in (401, same cost) and tokens minted by a demo-on server with the same secret are refused (401), POST /demo/reset 401/404. With demo on: /auth/demo gives passwordless student/teacher tokens (by design, rate limit 60/10min/IP); roster and student detail contain no e-mail. Lockout/limiter: X-Forwarded-For, X-Real-IP, Forwarded, X-Client-IP, CF-Connecting-IP, True-Client-IP, ::ffff: forms are ignored without TRUST_PROXY (100 concurrent wrong guesses -> exactly 8x401 + 92x429; reservation before the scrypt check holds under concurrency); only IPv6 address variation bypasses it (A36-002). HTTP-method override headers ignored; TRACE/PATCH/DELETE -> 405 with Allow; HEAD on all 19 GET routes for student, teacher and anonymous: same status as GET, never 5xx. Raw sockets: CL+TE, dup CL, bad TE, dup Host, no Host, absolute-form, pipelining x3, Expect, Upgrade, CONNECT, 20 KB header/URL (431), 65 KB/100 KB/300 KB bodies (413, no desync), NUL/semicolon/fragment/encoded-slash targets (see A36-003 for aliasing). No static file or path-traversal route exists. SQL: every statement is parameterised (grep of all template-literal SQL: only constants, placeholder lists, fixed column lists); q/status/scope/cohort injection strings -> 200/400, no 5xx. Prototype pollution: __proto__/constructor in register, profile, answer.response (incl. match pairs) -> 400 or inert; Object.prototype unchanged. ReDoS: regexes reviewed (email pattern bounded by the 2x length pre-check, names.ts regexes on <=160 code units, no nested quantifiers). JSON/body fuzz: null/array/scalar/BOM/duplicate keys/30 000-deep nesting/1e999/odd content types (415) all clean 400/415. Logs after the whole fuzz: only the start-up line, zero 5xx, no token/password/stack in any of 5 server logs. (b) Game rules vs documentation (56 763 assertions over ~2 650 scored attempts through HTTP with a controllable clock): all 10 missions, wrong answers 0,1,2,3,5,9,10,13,14,20, every hint count 0..max, completion at 0,1,25%L-1,25%L,25%L+1,63 s,50%,62.5%,75%,L-1,L seconds, late completion (L+1 s, L+1 ms) -> 409 time_expired, replays higher/lower/equal. Expected score recomputed with exact integer half-up arithmetic: 0 mismatches for score, every ledger row, penalty cap at 0, stats (accuracy, elapsed, mm:ss, firstTry), maxScore 180 / 570, newBest, xpAwarded, totalXp = sum of best per mission, /me xp and level = 250 n (n-1) formula (boundaries 499/500, 1499/1500 ... 10499/10500), ledger sum == score, lab-results ledger sum == lab xp == sum of mission scores == /me == /profile == /dashboard. Badges: all four wrong/hint variants on first play give exactly the documented Perfect Mission / No Hint sets, a perfect replay grants the missing ones, First Escape + lab badge on exit, Clinical Detective on master exit, labsCompleted excludes Master (3/3 and 7/7 badges), dashboard overall 9/9. Vault: premature code 409, five wrong codes 422 with attemptsLeft 4..0, sixth and the correct code 429 until the 10-minute window ends (1 ms before: 429, 1 ms after: 200), Master locked with 0-2 exits (403), Master fragments per solved step kept after an abandoned attempt (3,9,null,null) and exit refused with 2 of 4 digits. Hint cap per step (409 no_more_hints, no charge), wrong step, hint after limit. Leaderboard: xp desc, name asc, ties share the competition rank (1,1,3,3,5), total = students with XP, unranked viewer rank total+1, outsider cohortAvailable=false, bad scope/cohort -> 400. Teacher needs-attention: 7-day boundary exact (6 d 23:59:59.999 active, 7 d inactive), finished student never flagged, <60% accuracy flagged; hardest mission flag rules per code (A36-004). README / rules / .env.example numbers (+100/+30/+30/+20, -10, -15, Master 300/30 per step/90/60, 25% time par, 7 badges, 11 labs 4 playable, 1 620 XP for nine missions, 429 after 5 wrong codes, 64 KB body cap, 0600 files, scrypt, 7-day tokens) match the code. (c) Idempotency / duplicate delivery (identical request twice concurrently and sequentially): register x2/x10 -> exactly one 201, one user row; 6 concurrent teacher registrations with one name -> one 201; start x2 -> 201 created + 201 resumed, one attempt; correct final answer x2 -> 200 + 409 attempt_finished with one mission_best row, one xp_event, result recoverable by GET; wrong answer x2 and hint x2 are charged twice (known A-002/B-004); unlock x2 -> one exit, one set of badge rows, second answers alreadyUnlocked (first reply's newBadges is not repeated); join x2 -> one membership; class create x2 -> 201 + 409 class_name_taken; profile PUT x2 fine; content PUT same transition x2 -> two 200, one audit row (re-asking the current status is a no-op, so HTTP PUT retries are safe); stale transition -> 409. Demo: 20 concurrent student resets + 20 start/dashboard/leaderboard/badges + 6 teacher resets -> 106 x 2xx, final state byte-identical to the prepared state, integrity_check ok. Not found: P0, any scoring/progression error, lost paid hint, session leakage, answer-key leak. Challenged known items: none worse than described; KNOWN item 9 vs 11 wording is stale (A36-008b). Processes started (PIDs 52539, 52541, 57346, 57348, plus short-lived servers on 3805, 3810 and in-process apps on 3806-3809) were all stopped by PID; no file under be/, web/, docs/ or sources/ was modified."
+}

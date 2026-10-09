@@ -1,0 +1,54 @@
+{
+  "wave": "A",
+  "round": 22,
+  "final_state": true,
+  "findings": [
+    {
+      "id": "R22-A-01",
+      "severity": "P3",
+      "category": "timing side channel (legacy data only)",
+      "where": "be/src/routes.ts POST /api/auth/login, candidate loop (one awaited scrypt per candidate row)",
+      "what": "A wrong-password login costs one scrypt per candidate row. An address that still has 2 or 3 legacy rows sharing one normalised key therefore answers about 2x or 2.9x slower than any other address (existing single row, missing, non-ASCII, demo account with DEMO_MODE=0 are all identical, ~32 ms). A caller can tell 'this address has a legacy collision group' (and so that it exists) from the latency of a wrong-password attempt. Below the 3x P2 threshold; the status and body are identical (401 Incorrect email or password.), so there is no status/body enumeration. Only reachable for rows stored before the NFC rule: the API can no longer create a collision (register is 409 on every spelling).",
+      "repro_curl": "Throwaway DB: register 3 students, UPDATE users SET email = NFC / NFD / UPPER(NFC) of one address with accents; then time 40 wrong-password POST /api/auth/login for the 1-row, 2-row and 3-row address (one distinct address per group so the 8-failure bucket is not hit).",
+      "evidence": "median wrong-password latency, 40 samples each, 5 rounds x 8 groups: ASCII existing 31.9 ms, ASCII missing 31.9, non-ASCII existing 32.1, non-ASCII missing 32.1, 2 candidates 61.7 (1.93x), 3 candidates 91.3 (2.86x); min/max within +-4 ms of the median.",
+      "suggested_fix": "Acceptable for the demo scope (legacy rows only, bucket limits 8 per ip+e-mail). If wanted: verify the candidates in parallel (Promise.all) or run the dummy hash check up to a fixed 3 so the cost is constant, or add a db:check step that lists rows whose normalizeEmail() keys collide and resolve them by hand."
+    },
+    {
+      "id": "R22-A-02",
+      "severity": "P3",
+      "category": "documentation / determinism",
+      "where": "be/src/routes.ts findUsersByEmail ordering; be/README.md and docs/KNOWN_LIMITATIONS.md (no mention)",
+      "what": "When two or more legacy rows share a key AND have the same password, the login picks the exact-key row first (stored NFC lower-case), otherwise the first row returned by the non-ASCII table scan. The scan has no ORDER BY, so 'lowest id' is what SQLite does today, not a guarantee. No document states the tie-break (grep of be/README.md, docs/*.md finds no mention; only a code comment says rows 'share one key'). It is not a takeover: it needs the same password, so both holders already know it.",
+      "repro_curl": "Two registrations with the same password, then UPDATE users SET email=NFC for the first and NFD for the second; login with NFC, NFD, UPPER, padded spellings.",
+      "evidence": "Same password, ids 58 (NFC) and 59 (NFD): all 5 spellings sign in as 58. No exact row (NFD id 68, upper-case NFC id 67): NFC and NFD logins both give 67; after swapping the stored forms (NFD id 67, upper NFC id 68) both give 67 again, so lowest rowid wins when there is no exact row. Deterministic in 8 repeats, but not documented.",
+      "suggested_fix": "Add one sentence to KNOWN_LIMITATIONS (exact key first, then oldest account) and add ORDER BY id to the scan query."
+    }
+  ],
+  "probes_run": 3100,
+  "probes_note": "Approximate HTTP requests to throwaway servers on 127.0.0.1:4881 only (DEMO_MODE=1 with raised limits, DEMO_MODE=0 with raised and with default limits, DB in the scratchpad r22a; confirmed with lsof): ~190 legacy-collision logins, ~40 sampling/ordering logins, ~240 timing samples (6 cases), 252 DEMO_MODE=0 timing samples (6 server restarts), ~110 lockout-bucket requests, ~70 register probes, ~1,840 requests in 40 scored attempts with 20-way races, 395 schema-aware malformed/HEAD requests, ~100 enumeration and IP-bucket requests.",
+  "resolved_from_r21": [
+    "R21-A-01 (P2, colliding legacy pair lock-out): resolved. Pair NFC/NFD with different passwords, a triple (NFC lower, NFD lower, NFC upper-accent) and a second triple inserted in a different row order: every owner signs in with their own password via NFC, NFD, UPPER-NFC, UPPER-NFD and space-padded spellings (50 logins, 0 failures); the token sub, the login body user.id and GET /api/me id are all the owner's id every time; a wrong password is 401 with the standard body for every spelling; an owner's password never returns another owner's id. Registering any spelling of an existing legacy key is 409 (also 12 parallel attempts on a legacy pair: 8x409, 4x400 for padded forms, 0x201)."
+  ],
+  "unchanged_from_r21": [
+    "R21-A-02 (P3 scan cost) not re-measured; the scan code is unchanged and is now also used to collect candidates.",
+    "R21-A-03 (P3): U+200B in an e-mail still registers 201 (observed zq-...@x.edu + U+200B -> 201).",
+    "R21-A-04 (P3): /api/me still has no demo field; /api/profile user.demo is false for a real account (demo true was not re-verified this round except through login/me)."
+  ],
+  "checked_ok": [
+    "Collision logins (item 1): see resolved_from_r21. Same-password case is deterministic in every observation (R22-A-02 only documents it).",
+    "Enumeration (item 2): wrong-password 401 body and headers are byte-identical for existing ASCII, missing ASCII, existing/missing non-ASCII, 1/2/3 candidates, demo accounts with DEMO_MODE=0 (alex, claire, nobody@demo domain). Medians 31.9 to 32.2 ms for all single-scrypt cases; the demo account with DEMO_MODE=0 (32.2 / 32.1 ms, 42 samples each over 6 restarts) equals the unknown demo-domain address (32.0) and an unknown other address (32.2). Only the 2/3-candidate cases differ (R22-A-01).",
+    "Lockout (item 3): ASCII account: 8 wrong = 8x401, 9th = 429 {error:{code:rate_limited,message,details:{retryAfterSeconds:600}}} with Retry-After 600; the correct password is 429 while locked; another user on the same IP is 200. Missing ASCII, missing non-ASCII and the DEMO_MODE=0 demo account lock identically (8x401 then 429), so locking does not reveal existence. One bucket across a legacy triple: 8 wrong attempts spread over NFC, NFD, UPPER and padded spellings = 8x401, the 9th is 429 for all four spellings, and the correct password of each of the three owners is then 429 (design: shared by ip+key, it also locks the other owners of a colliding key from that IP). Success releases its slot: 7 wrong + 1 success + wrong = 401 then 429; 30 consecutive successes never throttle and 8 wrong still follow; success of owner 2 via NFD after 7 failures via NFC released and the next wrong is 401 then 429. Per-IP bucket: 60 failures across different e-mails then 429, a lock of the IP does not block registration (201).",
+    "DEMO_MODE=0 (item 4): demo-password-1 for alex, ALEX (upper-case) and claire = 401 with the same body as a wrong password and the same headers; tokens issued earlier with DEMO_MODE=1 give 401 on /api/me; POST /api/auth/demo = 404; with DEMO_MODE=1 the same three logins are 200 (ids 9, 9, 1).",
+    "Register (item 5): new address 201; NFC, NFD, UPPER-NFC, UPPER-NFD spellings = 409 email_taken (padded forms give 400 validation_error, as before); 30 parallel registrations of 6 spellings of one new address = 1x201, 19x409, 10x400 (padded), exactly 1 row stored, login with the NFD spelling returns the created id; the accent-less look-alike registers 201.",
+    "Regression (item 6): 395 schema-aware and blind malformed requests over all 29 spec paths (nasty path parameters, junk query strings, 6 content types, 20 body shapes, wrong methods incl. PATCH/DELETE, 5 token kinds) and 60 malformed logins: 0 five-hundreds, every 4xx on a non-HEAD request is a JSON {error:{code,message}}; status histogram 200/201/400/401/403/404/405/409/415 only. 57 HEAD requests over all GET routes (student, teacher, no token) plus HEAD on the POST/PUT routes: no body, no row count or rowid sum changed in any table. Frontend call shape: POST /api/missions/hem-01/start with no body and no Content-Type = 201 (also a second time = 201 resume), POST /api/demo/reset with no body = 200 for demo student and demo teacher, start with '{}' = 201.",
+    "Score integrity: 40 completed attempts (4 students x 5 runs of hem-01/02/03/01/02, twice; the second batch used shuffled 20-way races of ~3 correct, ~9 wrong and ~8 hint requests per step, giving scores from 0 to 140 with wrong 1 to 11 and hints 0 to 3). No step accepted more than one correct answer; ledger sum == result.score == attempts.score == result_json.score for all; wrong_total/hints_total == step_results sums == answer_log/hint_log counts; mission_best.best_score == max attempt score == sum(xp_events) == score of best_attempt_id and completions == completed attempts; /api/me xp == sum of mission_best; no negative scores; PRAGMA integrity_check ok; foreign_key_check empty.",
+    "Isolation: be/data, be/backups and the real database were not opened; throwaway DB under the scratchpad r22a, server on 127.0.0.1:4881 confirmed with lsof, killed and the directory deleted at the end. No browser, Playwright or npm test."
+  ],
+  "counts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0,
+    "P3": 2
+  },
+  "regressions": []
+}

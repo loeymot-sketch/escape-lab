@@ -1,0 +1,6 @@
+t27: Blood Smear Code started from the lab picker, left alone (as a presenter taking a question would).
+231 s ... 240 s timer 00:09 ... 00:00, then role=alert "Time is up. The server closed this attempt because its time limit passed. ..." and the screen switches to Restart mission.
+Fix the Sample shows 06:00 (Blood Smear Code 04:00); "Exit mission" leaves the attempt open and its countdown keeps running on the server (lobby then shows Resume).
+grep -in "minuteur|chrono|compte à rebours|expire|04:00|time is up" docs/FACULTY_DEMO_SCRIPT.md  -> only line 14 ("durées sont des estimations"); src/lib/demo-guide.ts has no mention either.
+The only mention of the countdown is docs/demo-screenshots/README.md ("On 03 the case timer shows its start value (04:00)").
+Answer key: the script says "Répondez faux volontairement... Réessayez avec la bonne réponse" and, in the 7 min variant, "terminez Fix the Sample", but never says which decisions are right (S1 reject, S2 repeat/re-measure, S3 accept); a wrong guess adds -10 XP lines to the result screen (cf. docs capture 05 which shows only 1 wrong).

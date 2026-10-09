@@ -1,0 +1,64 @@
+{
+  "wave": "V",
+  "round": 21,
+  "findings": [
+    {
+      "id": "V21-01", "severity": "P3", "category": "inconsistent-wording",
+      "where": "02 vs 06 vs 08 vs 09 (carry-over of r20 V-06)",
+      "what": "Vocabulary and states still differ across screens. Lab names: 'Hematology' / 'Master' (02 card title) vs 'Hematology Lab' / 'Master Lab' (06, 08) vs 'Hematology' / 'Master Lab' (09). States: 02 shows Clinical Biochemistry 'ACTIVE' while 06 shows the same lab 'NOT STARTED'; 02 Microbiology 'ACTIVE' vs 06 'IN PROGRESS'; 02 Hematology 'CLEARED' vs 06 'ESCAPED'. README caption 02 says 'Master Lab' but the card title reads 'Master'.",
+      "evidence": "02: card 04 title 'Master', card 03 'ACTIVE' with '0 of 3 missions'; 06: 'Clinical Biochemistry Lab NOT STARTED', 'Microbiology Lab IN PROGRESS', 'Hematology Lab ESCAPED'.",
+      "suggested_fix": "Align Cleared/Escaped and Active/Not started or accept as cosmetic; no demo impact."
+    },
+    {
+      "id": "V21-02", "severity": "P3", "category": "ux/contrast",
+      "where": "03 (disabled Submit), 04 (Submit vs error box), sidebar footer links on 01/02/06 (and 'Return to student demo' on 07/08/09) (carry-over of r20 V-08, contrast part)",
+      "what": "03: 'Submit answer' is a faded pink disabled button with white text, low contrast (state is legitimate: nothing selected). 04: the primary Submit button is the same crimson as the 'Not quite.' box, so the call to action visually belongs to the error. Sidebar footer links ('Faculty guest', 'Reset guest session', 'Return to student demo') are small grey text. README timer note for 04 was added (resolved part).",
+      "evidence": "03 button at about (445,1108) of the 2000-wide view; 04 button crimson (170,40,50 approx) directly under the pink error box; footer links at 11-12 px equivalent.",
+      "suggested_fix": "Optional: darken disabled label or note it; no change needed for the portfolio."
+    },
+    {
+      "id": "V21-03", "severity": "P3", "category": "cosmetic",
+      "where": "06, 07, 08, 09 (carry-over of r20 V-09)",
+      "what": "Sidebar sub-pages (Lab results, Learning settings, Student detail, Content review) still show a chevron instead of an icon. 07 stat tiles use odd icons (trophy for Students, sparkle for Completion, clock for Needs attention). 08: the identity card is wider than the three cards under it. 09: 'Demonstration data: the students, classes and results...' banner appears on a page that lists only missions (the README describes it as 'demonstration-data note', so documented but still odd). 08 timestamps like 'Oct 5, 5:00 AM' / '12:00 AM' look synthetic.",
+      "evidence": "Visual inspection of 06, 07, 08, 09.",
+      "suggested_fix": "Cosmetic; no action required for the demo."
+    },
+    {
+      "id": "V21-04", "severity": "P3", "category": "number-definition",
+      "where": "08-faculty-student-detail-1440.png (Laboratories vs Strengths and gaps)",
+      "what": "For the same single biochemistry mission (Organ Rescue Mission: 3 answers, 0 wrong, 1 hint), the Laboratories card says 'Clinical Biochemistry Lab ... 100% accuracy' while the Strengths and gaps card says 'Clinical biochemistry 3 steps 95%'. Likewise Hematology 92% accuracy vs competencies 100/100/89%. The code explains it (be/src/game.ts:683 competency score = max(0, 1 - 0.34*wrong - 0.15*hints), lab accuracy ignores hints), but nothing on screen says the competency percentage is hint-weighted, so two percentages for the same work look contradictory to a faculty reader. Not an overclaim, no raw error.",
+      "evidence": "08 rows: 'Clinical Biochemistry Lab 1 of 3 missions · 100% accuracy'; 'Clinical biochemistry 3 steps 95%'; history 'Organ Rescue Mission 131 XP 3 answers · 0 wrong · 1 hint'. game.ts:683 and :477.",
+      "suggested_fix": "Add a one-line definition under the Strengths and gaps card ('competency score also lowers for hints') or mention in README; optional."
+    },
+    {
+      "id": "V21-05", "severity": "P3", "category": "clipped-text / dangling-reference",
+      "where": "10-about-quality-roadmap-375.png",
+      "what": "The bottom edge cuts the roadmap paragraph mid-line ('students would require ethics and data protection' is half visible). The amber card starts 'These have not been reviewed by qualified biomedical experts...' and 'These' has no visible referent because the preceding heading/intro is out of frame; it still reads correctly as a negation. The README and caption now describe exactly what is shown (resolves r20 V-01), so this is only a presentation nit.",
+      "evidence": "Last visible line y~1620 of 1624 is cut; amber card first sentence at y~814.",
+      "suggested_fix": "Optional: scroll 10 about 40 px less so the last visible line is whole, or accept."
+    },
+    {
+      "id": "V21-06", "severity": "P3", "category": "caption-mismatch",
+      "where": "02 vs README row 02 and script section 5 item 2 / FR caption",
+      "what": "FR/EN caption says only three labs 'and the Master Lab are playable in this prototype' while the image shows the Master Lab card as 'Locked' ('Clear 3 labs (1 of 3 cleared)'). The README 'what it shows' column does say 'locked Master Lab', so the claim is defensible (playable once unlocked) but a reader of the caption alone may expect it to be open.",
+      "evidence": "02 card 04: lock icon, 'Locked', 'Clear 3 labs (1 of 3 cleared)'.",
+      "suggested_fix": "Optional wording: 'the Master Lab opens after three labs'."
+    }
+  ],
+  "resolved_from_r20": ["V-01", "V-02", "V-03", "V-04", "V-05", "V-07", "V-10"],
+  "still_open_from_r20": ["V-06", "V-08", "V-09"],
+  "checked": [
+    "Opened all 10 PNGs with Read. PNG sizes via sips: 01 2880x2448, 02 2880x3434, 03 2880x1800, 04 2880x1920, 05 2880x1800, 06 2880x2014, 07 2880x2764, 08 2880x3730, 09 2880x2356, 10 750x1624. All match README Format list and FACULTY_DEMO_SCRIPT section 5 (1224, 1717, 900, 960, 900, 1007, 1382, 1865, 1178, 375x812). r20 V-05 resolved: the script no longer claims every capture is 1440x900 and points to the README as single source.",
+    "Overlap / layered text (09 P1 pattern): 09 re-verified at full resolution (top crop 2880x900 and full view). Banner, 'Approved is a faculty workflow flag' note, table header, 10 rows, Draft pills and Mark reviewed buttons are all separate, no overlap, no clipping; table bottom border and sidebar footer are intact. No overlapping or layered text in any of 01-08 and 10 either (decorative circles on lab-map cards are clipped by design).",
+    "Sidebar footer: every app screen with a sidebar (01, 02, 06, 07, 08, 09) reads 'Guest demo · server-side scoring' with a green dot (r20 V-10 'server verified' removed). Student screens add 'Faculty guest' and 'Reset guest session'; faculty screens add 'Return to student demo'. 03/04/05 are focus-mode screens without sidebar. No 'server verified', 'secure', 'validated', 'certified', 'production ready' anywhere; only negations (03 'not a validated image', 09 'not a biomedical or scientific validation', 10 'Not yet biomedically validated', 'Planned, not done', 'not agreed or approved').",
+    "Raw keys / language: no raw i18n keys, undefined/null/NaN, spinners or error banners. UI is English throughout (French only in README/script captions, as intended). No unintended language mix.",
+    "r20 V-03 resolved: 06 card is now 'Milestones' with '4 of 7 earned'; 4 EARNED + 3 LOCKED rows match.",
+    "r20 V-02 resolved: 07 rows now read 'N of 38 students completed' and 'accuracy NN%' (59, 65, 69, 72, 75, 75, 81, 89), and the sentence 'Success is the class mean accuracy on each student's best attempt...' is visible at the bottom of the card; also 'Showing 8 of 10 missions. Show all 10' and the Master Lab exclusion note are visible. Bottom card edge is complete.",
+    "r20 V-04 resolved: 01 shows the whole 'Before you present' box (last bullet complete, border closed); README states it is presenter guidance, not part of the pitch. Bottom margin is tight (about 17 px display) but not clipped.",
+    "r20 V-07 resolved (wording): 05 now says 'The backend has recorded your result for \"Fix the Sample\"' followed by 'This replay did not beat your best score, so your total XP is unchanged.' (no longer contradictory); README documents 00:19 as a real replay and shows the same sentence.",
+    "Number consistency: 02 shows 3/3 + 2/3 + 0/3 missions (5 of 9) and fragments 3+2+0, equal to 06 (7-4-2, 3-8-., 0 of 3) ; Master 0 of 1 mission / 0 of 4 fragments in both 02 and 06. 05 ledger +100, 0, +30, +20, -10 = 140 of 180; accuracy 75% = 3 correct of 4 answers with 1 wrong; Fix the Sample in 08 also shows '4 answers, 1 wrong' (same 75%). 04 shows '-10' penalty, 'Wrong answers 1', hints 0 of 1; 03 hints 0 of 2, cost 15 XP in both. 07: 38 students, class selector '(38)', 08 selector '(38)'; 09 lists 3+3+3+1 = 10 missions, matching 'Show all 10' in 07. 08: 7 missions, 3 hints = 1+1+1 in history rows, lab bars 3+3+1 = 7, Level 6 / 9,120 XP. XP (9,120) appears only in 08, so no cross-image XP contradiction. 17 of 38 vs 59% is now defined on the image itself.",
+    "Captions vs images: README rows 01-10 match what is visible (01 complete box, 02 whole map with 7 Coming soon, 03 'Illustrative training image' and 'Educational scenario', 04 'Not quite.' / 'XP penalty: -10' / hint 0 of 1, 05 'Server-calculated' / 'Official timer' 00:19, 06 Code Vault and Milestones cropped above the leaderboard, 07 note plus defining sentence, 08 Sana Benali, 09 all 10 Draft plus Approved note, 10 now described as scrolled from 'Technically verified locally' to start of roadmap). Timer start values 04:00 (03) and 06:00 (04) match the README note. Script section 5 captions are shortened forms of the README captions and say so.",
+    "Cramped spacing / truncation: none found in any capture at 2x. 10 at 375 px has 16 CSS px gutters, no horizontal overflow; only the vertical crop at the very bottom (V21-05).",
+    "Overclaims check on README and script section 5/6: 'Technical checks were run locally only ... by the team's AI agents; no external human review' is honest; no 'validated by', 'certified', 'secure' or 'production ready' claims."
+  ]
+}

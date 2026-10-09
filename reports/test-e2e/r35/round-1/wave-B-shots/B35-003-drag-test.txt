@@ -1,0 +1,5 @@
+Gram Stain Challenge (mic-02, order engine), Chromium 1440x900, dev + prod build.
+Each row renders a GripVertical icon (see screenshot). Playwright rows.nth(0).dragTo(rows.nth(3)) and a manual mouse down/move/up on the grip:
+order before = [Gram iodine, Heat-fix, Safranin, Crystal violet, Decolorize]
+order after dragTo = unchanged; order after manual drag on grip = unchanged; row draggable attribute = null; cursor = auto.
+The only instruction is the aria-label of the <ol> ("Order the items. Use the move buttons to change a position."): no visible text tells a mouse user to use the arrow buttons.

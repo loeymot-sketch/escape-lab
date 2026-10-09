@@ -1,0 +1,42 @@
+{
+  "wave": "A",
+  "round": 18,
+  "states_reviewed": 52000,
+  "findings": [
+    {
+      "id": "R18-A-01",
+      "severity": "P3",
+      "category": "quality (AI-hint guard, documented heuristic)",
+      "area": "assistant.ts namesOptionByCapital, article-A branch",
+      "title": "After the R17 article exemption, 'A' followed by a lower-case word that is not in the LINK list is treated as an article, so letter forms such as 'A wins', 'A stands out', 'A sounds right', 'A feels right', 'A matches', 'A it is' are not caught on an answer-A step",
+      "evidence": "be/src/assistant.ts:74 (LINK = is was would will must should seems looks appears remains fits works ...) and :272-277. Live: leaksAnswer on hem-02-s3 (correct A): missed 'A wins','A stands out','A sounds right','A feels right','A represents the answer','A matches','A it is'. Caught: Option A, A is correct, A is the best choice, A seems plausible., A looks right, Choose A(.), Try A, Stay with A, What about A?, (A), A), **A**, Answer: A, The answer is A, A, definitely, Look at A., A works, A fits best, A would be right, fullwidth/Cyrillic/Greek/squared A, 'A\\nis correct'. Zero false positives on all 66 faculty texts of the 19 choice/decision steps (5 with answer A) and on article openers.",
+      "repro": "scratchpad/r18-A/guard.ts (node --disable-warning=ExperimentalWarning guard.ts)",
+      "expected": "n/a (R17 notes already declare this a closed heuristic with accepted loss)",
+      "actual": "a model that words the answer with a verb outside the LINK list on an answer-A step is delivered for the hint price; AI hints are OFF unless LAB_ASSISTANT_* is set",
+      "fix_hint": "optional: extend LINK with wins/matches/sounds/feels/stands/represents; no action required for release",
+      "status": "open"
+    },
+    {
+      "id": "R18-A-02",
+      "severity": "P3",
+      "category": "contract (cosmetic)",
+      "area": "OpenAPI",
+      "title": "No operation declares an operationId",
+      "evidence": "be/openapi.json: 31 operations, none has operationId (optional in OpenAPI 3.1); generated clients get synthesized names",
+      "repro": "node scripts/oas.mjs in scratchpad/r18-A",
+      "expected": "optional",
+      "actual": "absent",
+      "fix_hint": "optional",
+      "status": "open"
+    }
+  ],
+  "summary": { "P0": 0, "P1": 0, "P2": 0, "P3": 2 },
+  "verdict": "GREEN",
+  "round17_fix_verification": {
+    "R17-A-01": "HOLDS",
+    "R17-A-02": "HOLDS",
+    "R17-A-03": "HOLDS",
+    "R17-A-04": "HOLDS"
+  },
+  "notes": "R17-A-01: own 3-process stress (3 node processes, one DB file, 60 s, random parallel answers/hints/wrong answers with slow assistant stub): 45,551 completed attempts, 25,506 with hints, 0 mismatches between attempts.hints_total, step_results.hints, hint_log rows and result_json.stats.hintsUsed (also wrong_total and score), db:check problems [], no-hint badge consistent; r17 unit test for expired attempts still refunds. R17-A-02: 0 false positives on all faculty texts (66 texts, 19 steps, any answer index) and on article openers; the listed leak forms are still caught. R17-A-03: lone surrogates (high, low, mid-string, emoji+lone) are 400 validation_error in register (name/email/password/invite code), login (email/password), profile (name/program/studyLevel), class name, stepId, unlock code, demo role; query q with lone-surrogate bytes percent-decodes to U+FFFD and yields 200 (not a lone surrogate); no 500. R17-A-04: OpenAPI 3.1.0, 212 refs all resolve, byte-identical to a fresh generation (cmp), served /api/openapi.json equals the file, every operation references HeaderTooLarge whose description now documents the Node-level 400; live: 20 KB Authorization -> 431, malformed request line -> 400, CL+TE conflict -> 400 (bare, no body). web/scripts/check-api-contract.mjs passes. Generic regression: be npm test 258/258; route x role matrix 2,950 requests, 0 undeclared statuses, 0 5xx; 3,000-request fuzz 0 5xx; answer-leak scan on all 10 missions (incl. master) 0 leaks; scoring oracle 21 combos 0 mismatches; parallel answers (1x200, 9x409), parallel hints, IDOR (404 on get/result/answer/hint), 409 attempt_finished after completion; demo reset authz (anon 401, student 403, other teacher 403, demo student/teacher 200, demo off 404/401), 15 parallel resets+starts and 10 parallel teacher resets all 2xx; name races across 2 processes (12 simultaneous variants of one teacher name: 1x201 / 11x409 over 8 rounds; rename race 1x200 / 5x409; same-email race 1x201 / 7x409); password policy; token strictness (suffix, truncation, case, wrong scheme rejected); HEAD returns 200 with empty body and no side effects on read endpoints; rate limits without NODE_ENV=test (login 8x401 then 429; register 429 with Retry-After at 100/h); kill -9 mid hint -> restart: standard hint listed, charge kept, db:check problems [], second hint level 2, third no_more_hints. Servers on 7301-7304 stopped (only mine)."
+}

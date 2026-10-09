@@ -1,0 +1,6 @@
+Lab map / dashboard lab cards (accessibility tree, web/src/pages/student.tsx LabCard aria-label):
+  button "Review Hematology Lab": visible text "Review lab"
+  button "Enter Microbiology Lab": visible text "Enter lab"
+  button "Enter Clinical Biochemistry Lab": visible text "Enter lab"
+WCAG 2.5.3 Label in Name: the accessible name does not contain the visible label as a string ("Review lab" is not a substring of "Review Hematology Lab"), so speech input "click Review lab" / "click Enter lab" fails (and "Enter lab" is ambiguous between two cards anyway).
+Same on the dashboard (4 cards) and the lab map (4 cards).

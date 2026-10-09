@@ -1,0 +1,30 @@
+{
+  "wave": "B",
+  "round": 18,
+  "states_reviewed": 420,
+  "findings": [
+    {
+      "id": "R18-B-01",
+      "severity": "P3",
+      "category": "scroll / ux",
+      "area": "Sticky sidebar in short landscape (student guest)",
+      "viewport": "667x375, 812x375",
+      "title": "The first wheel / swipe / PageDown aimed at the sidebar is spent scrolling the sidebar itself before the page moves",
+      "evidence": "r18-B/t1.mjs, t1b.mjs: wheel 500 over the aside at 667x375 gives aside.scrollTop 261, scrollY 0; first PageDown with focus on the first nav button gives scrollY 0; swipes 2..4 and PageDown 2..4 then scroll the page (302, 605, 905 / 335, 670, 1005). Chaining works (30 wheel events reach maxScroll 5846).",
+      "repro": "Student guest, 667x375, open About & demo guide, wheel or swipe over the sidebar once.",
+      "expected": "Acceptable by design (the sidebar is taller than the viewport and scrolls first, R17-B-01 fix comment says so).",
+      "actual": "One gesture appears dead for a user who has not noticed that the sidebar has hidden buttons. No control is unreachable.",
+      "fix_hint": "None needed; optionally shrink the sidebar chrome in landscape so it fits 375 px.",
+      "status": "open"
+    }
+  ],
+  "summary": { "P0": 0, "P1": 0, "P2": 0, "P3": 1 },
+  "verdict": "GREEN",
+  "round17_fix_verification": {
+    "R17-B-01": "HOLDS",
+    "R17-D-01": "HOLDS",
+    "R17-B-02": "HOLDS",
+    "R17-D-02": "HOLDS"
+  },
+  "notes": "Scroll: real mouse.wheel over sidebar and main, PageDown from the sidebar, CDP touch swipe on the aside, at 1440x900, 1024x768, 768x1024, 667x375, 812x375 on About, Progress, Lab results (student) and Faculty, Content review, About (faculty): page always scrolls (sidebar not scrollable at >=768 high; in landscape the sidebar scrolls first then hands on); sidebar nav and guest controls reachable at every size. Faculty note 'Demonstration data' present on Class intelligence, Student detail (also with a student shown), Content review at 320/375/768/1440, also while the data fails to load (500/503, Retry then recovers), after reload, after class switch; absent on student pages; axe clean on all; no overflow; note readable (13px, no clipping). About page: role-aware 'Before you present', 8 steps, 'about 7 minutes with navigation', 'independent' only in negations, no production/clinical/accreditation claims, every Open button lands on the right screen with heading focus and title, no own requests (0 with API aborted, page still renders), keyboard walk has no trap, axe clean 320/375/768/1440 in both roles, no horizontal scroll. Menu/resize: 600<->601 with 250 ms human clicks (menu open then widen, confirm pending then shrink, Escape, outside click): reset posted exactly once, no swallowed click, no stale confirmation. Student play from zero (fresh accounts, 375 touch and 1440 keyboard): 9 standard missions + 3 vault unlocks + Master + Master exit via UI; UI score equals API xp delta at every step (180, 145 with one hint, 570 master; total 2155 / level 3), vault digits equal API, dashboard XP/level/completed equal API, hint persists after reload (1 of 1, -15, hint text), console empty, axe empty on every sampled state. Replay adds 0 XP when not a new best (API checked). Error injection (401/429/500/503/empty/invalid JSON) on dashboard, labs, lab, vault, start, answer, hint, profile, results: exactly one alert each; 401 after login opens a new guest with one status notice and returns to Mission control (mid-mission 401 loses the mission by design). Faculty: analytics, class picker (L2 empty state), roster/student detail (Karim Haddad, Marie Dubois) and Content review cycle draft->reviewed->approved->draft equal the API (content status also in analytics). Not tested: WebKit, screen readers. Note: first matrix run used wrong attempt-id regex for answer/hint; rerun with UUID pattern passed."
+}

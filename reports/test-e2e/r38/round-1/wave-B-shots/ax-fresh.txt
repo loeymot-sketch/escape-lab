@@ -1,0 +1,206 @@
+=== dashboard
+- main:
+  - region "Choose your first investigation.":
+    - text: LABESCAPE · LIVE DEMO
+    - heading "Choose your first investigation." [level=1]
+    - paragraph: "A virtual biomedical escape laboratory: observe the evidence, connect the clues, and unlock the next experiment. All cases and images are illustrative teaching material."
+    - button "Start the next investigation"
+    - img "Illustrative biomedical investigation workstation"
+    - text: Illustrative image INVESTIGATION BENCH Blood Smear Code
+  - text: Missions completed
+  - strong: 0 of 9
+  - text: 0% of the standard missions · The Master Lab is tracked separately Labs cleared
+  - strong: 0 of 3
+  - text: standard labs · 0 of 7 badges earned Streak
+  - strong: 0 days
+  - text: Level 1 · 0 XP (server record)
+  - paragraph: "Guest demo: the progress, XP, streak and names you see here are prepared demonstration data, not real people. Nothing you do creates an account."
+  - region "Laboratories":
+    - text: START HERE
+    - heading "Choose a laboratory" [level=2]
+    - button "View full map"
+  - article:
+    - text: 01 ACTIVE
+    - heading "Hematology" [level=3]
+    - paragraph: Blood cells, indices and the pre-analytical checks behind every count.
+    - paragraph: 0 of 3 missions · 0 of 3 code fragments
+    - button "Enter Hematology Lab": Enter lab
+  - article:
+    - text: 02 ACTIVE
+    - heading "Microbiology" [level=3]
+    - paragraph: Stains, cultures and the logic that turns a plate into an identification.
+    - paragraph: 0 of 3 missions · 0 of 3 code fragments
+    - button "Enter Microbiology Lab": Enter lab
+  - article:
+    - text: 03 ACTIVE
+    - heading "Clinical Biochemistry" [level=3]
+    - paragraph: Interpret organ panels, spot interference and read acid-base status.
+    - paragraph: 0 of 3 missions · 0 of 3 code fragments
+    - button "Enter Clinical Biochemistry Lab": Enter lab
+  - article:
+    - text: "04"
+    - img "LOCKED"
+    - heading "Master" [level=3]
+    - paragraph: One patient, three disciplines. Integrate everything you have learned.
+    - paragraph: 0 of 1 mission · 0 of 4 code fragments
+    - paragraph: Clear 3 labs (0 of 3 cleared)
+    - text: Locked
+  - region "Investigate, earn fragments, open the exit":
+    - text: HOW LABESCAPE WORKS
+    - heading "Investigate, earn fragments, open the exit" [level=2]
+    - list:
+      - listitem: "Observe. Each mission is a case: read the evidence, inspect the illustrative image or the laboratory values."
+      - listitem: Reason. Answer the interactive challenge. A wrong answer costs a few XP; a hint costs more, so think first.
+      - listitem: Collect. Finishing a mission earns XP and reveals one digit of the laboratory's exit code.
+      - listitem: Escape. With every digit found, enter the exit code in the vault to clear the laboratory and unlock the next one.
+    - paragraph: Scores, timers, penalties and unlocks are all decided by the server. Cases are educational scenarios, not clinical guidance.
+
+=== labmap
+- main:
+  - text: THE ESCAPE ROUTE
+  - heading "Laboratory map" [level=1]
+  - paragraph: Three open disciplines and a Master Lab, one investigative challenge; more laboratories are in development. Follow the evidence through illustrative laboratory scenarios built for learning.
+  - article:
+    - text: 01 ACTIVE
+    - heading "Hematology" [level=2]
+    - paragraph: Blood cells, indices and the pre-analytical checks behind every count.
+    - paragraph: 0 of 3 missions · 0 of 3 code fragments
+    - button "Enter Hematology Lab": Enter lab
+  - article:
+    - text: 02 ACTIVE
+    - heading "Microbiology" [level=2]
+    - paragraph: Stains, cultures and the logic that turns a plate into an identification.
+    - paragraph: 0 of 3 missions · 0 of 3 code fragments
+    - button "Enter Microbiology Lab": Enter lab
+  - article:
+    - text: 03 ACTIVE
+    - heading "Clinical Biochemistry" [level=2]
+    - paragraph: Interpret organ panels, spot interference and read acid-base status.
+    - paragraph: 0 of 3 missions · 0 of 3 code fragments
+    - button "Enter Clinical Biochemistry Lab": Enter lab
+  - article:
+    - text: "04"
+    - img "LOCKED"
+    - heading "Master" [level=2]
+    - paragraph: One patient, three disciplines. Integrate everything you have learned.
+    - paragraph: 0 of 1 mission · 0 of 4 code fragments
+    - paragraph: Clear 3 labs (0 of 3 cleared)
+    - text: Locked
+  - article:
+    - text: "05"
+    - heading "Immunology" [level=2]
+    - text: Coming soon
+  - article:
+    - text: "06"
+    - heading "Parasitology" [level=2]
+    - text: Coming soon
+  - article:
+    - text: "07"
+    - heading "Blood Bank / Immunohematology" [level=2]
+    - text: Coming soon
+  - article:
+    - text: "08"
+    - heading "Molecular Biology" [level=2]
+    - text: Coming soon
+  - article:
+    - text: "09"
+    - heading "Cytology" [level=2]
+    - text: Coming soon
+  - article:
+    - text: "10"
+    - heading "Histology" [level=2]
+    - text: Coming soon
+  - article:
+    - text: "11"
+    - heading "Quality Management" [level=2]
+    - text: Coming soon
+  - text: More disciplines are in development. New labs join after scientific review.
+
+=== lobby-hem
+- main:
+  - button "← All laboratories"
+  - text: HEMATOLOGY
+  - heading "Hematology Lab" [level=1]
+  - paragraph: Blood cells, indices and the pre-analytical checks behind every count.
+  - text: Missions
+  - strong: 0 of 3
+  - text: Completed in this laboratory Code fragments
+  - strong: 0 of 3
+  - text: Found by completing missions
+  - region "Choose a mission":
+    - text: MISSION PICKER
+    - heading "Choose a mission" [level=2]
+    - list:
+      - listitem:
+        - heading "Blood Smear Code" [level=3]
+        - paragraph: "Spot the finding · Difficulty: Foundation · about 4 min"
+        - paragraph: Ready
+        - button "Start Blood Smear Code": Start
+      - listitem:
+        - heading "Fix the Sample" [level=3]
+        - paragraph: "Make the call · Difficulty: Foundation · about 6 min"
+        - paragraph: Complete mission 01 to unlock
+        - button "Locked Fix the Sample" [disabled]: Locked
+      - listitem:
+        - heading "Anemia Detective" [level=3]
+        - paragraph: "Work through the case · Difficulty: Intermediate · about 8 min"
+        - paragraph: Complete mission 02 to unlock
+        - button "Locked Anemia Detective" [disabled]: Locked
+
+=== progress
+- main:
+  - text: PROGRESSION SYSTEM
+  - heading "Progress vault" [level=1]
+  - paragraph: Every fragment and badge below comes from the server record. Nothing is awarded by the interface.
+  - region "Fragments discovered":
+    - text: CODE VAULT
+    - heading "Fragments discovered" [level=2]
+    - text: Hematology Lab NOT STARTED
+    - list "Hematology Lab code fragments":
+      - listitem: "Fragment 1: not found yet"
+      - listitem: "Fragment 2: not found yet"
+      - listitem: "Fragment 3: not found yet"
+    - text: 0 of 3 fragments found Microbiology Lab NOT STARTED
+    - list "Microbiology Lab code fragments":
+      - listitem: "Fragment 1: not found yet"
+      - listitem: "Fragment 2: not found yet"
+      - listitem: "Fragment 3: not found yet"
+    - text: 0 of 3 fragments found Clinical Biochemistry Lab NOT STARTED
+    - list "Clinical Biochemistry Lab code fragments":
+      - listitem: "Fragment 1: not found yet"
+      - listitem: "Fragment 2: not found yet"
+      - listitem: "Fragment 3: not found yet"
+    - text: 0 of 3 fragments found Master Lab NOT STARTED
+    - list "Master Lab code fragments":
+      - listitem: "Fragment 1: not found yet"
+      - listitem: "Fragment 2: not found yet"
+      - listitem: "Fragment 3: not found yet"
+      - listitem: "Fragment 4: not found yet"
+    - text: 0 of 4 fragments found
+  - region "Milestones":
+    - text: BADGES
+    - heading "Milestones" [level=2]
+    - paragraph: 0 of 7 earned
+    - list:
+      - listitem: Hematology Detective Escape the Hematology Lab. LOCKED
+      - listitem: Microbiology Investigator Escape the Microbiology Lab. LOCKED
+      - listitem: Biochemistry Analyst Escape the Clinical Biochemistry Lab. LOCKED
+      - listitem: First Escape Open your first lab exit. LOCKED
+      - listitem: Perfect Mission Complete a mission with no wrong answer. LOCKED
+      - listitem: No Hint Complete a mission without using a hint. LOCKED
+      - listitem: Clinical Detective Escape the Master Lab. LOCKED
+  - region "Leaderboard":
+    - text: COHORT SIGNAL
+    - heading "Leaderboard" [level=2]
+    - text: All-time · Class
+    - heading "The leaderboard is not available yet" [level=2]
+    - paragraph: The class leaderboard appears when your learning group is set up.
+
+=== results
+- main:
+  - text: MASTERY PROGRESS
+  - heading "Lab results" [level=1]
+  - paragraph: Review the server-calculated outcome of every lab you have escaped.
+  - heading "No escaped lab yet" [level=2]
+  - paragraph: Complete every mission in a discipline, then use the Code Vault to open its exit.
+  - button "Go to the laboratory map"

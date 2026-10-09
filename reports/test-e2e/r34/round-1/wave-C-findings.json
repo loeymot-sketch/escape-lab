@@ -1,0 +1,129 @@
+{
+  "wave": "C",
+  "round": 1,
+  "states_reviewed": 64,
+  "findings": [
+    {
+      "id": "C-001",
+      "state_artifact": "wave-C-shots/roster-all.png, wave-C-shots/longname-390.png, wave-C-shots/detail.png",
+      "category": "other",
+      "severity": "P2",
+      "evidence": "Roster identity collision not disambiguated for look-alike names. In class 1 (L3) I registered students 'Alex Martin' (#50), 'Аlex Martin' (first letter CYRILLIC U+0410, #49, 20% accuracy, flagged 'Accuracy under 60%'), plus the demo Alex Martin (#9). The roster rows read: 'Open Alex Martin (#9)', 'Open Alex Martin (#50)', 'Open Аlex Martin: accuracy 20%, Accuracy under 60%' (NO tag), 'Open Alex Martin (#42)'. The Student-detail header and <select> for #49 show plain 'Alex Martin' with no '#id'. A teacher cannot tell the flagged impostor-looking student from the real Alex. web/src/lib/faculty.ts:155-183 (nameTags/foldName) says look-alike folding 'lives on the server', but GET /classes/:id/students sends no key/collision flag, so the fold never happens; the server only folds look-alikes for teacher names (game.ts assertTeacherNameFree), students 'may share names'. Server search q=alex also misses #49 (200, total 0 for q=alex&status=attention).",
+      "fix_hint": "Have the server return a canonical name key or a 'sharesName' flag per roster row (using names.ts nameKey) and tag on that; or tag every student with '#id' in the Student-detail picker. Document the limit in KNOWN_LIMITATIONS.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "C-002",
+      "state_artifact": "seeded demo DB aged by clock (Game with now = Date.now()+N days on a copy of the fresh seed); GET /classes/1/analytics",
+      "category": "numeric_integrity",
+      "severity": "P2",
+      "evidence": "Seeded Faculty data decays with wall-clock time and the documented procedure does not heal it. Fresh seed: needsAttention 5, activeStudents 31, Alex streak 6. After +3 days: needsAttention 11, active 18, streak 0. After +7 days and later: needsAttention 21 of 38, activeStudents 0, and Alex himself flagged 'No activity for 7 days' (teacher-view rule idle>=7d && progress<100, game.ts:954-956). seed:demo is idempotent (demo.ts:249 returns null when the teacher exists), POST /demo/reset (teacher) only restores name/classes/content, and the student reset only replays Alex. FACULTY_DEMO_SCRIPT 2.3 'canonical state' and the About guide never mention that the class dashboard (5 flagged, 31 active) is only true on the day of seeding; a committee demo on a DB seeded a week earlier shows 21 'Needs attention' and 0 active.",
+      "fix_hint": "Make the demo reset (or seed) re-base the 37 generated students' timestamps to now, or add a pre-demo step 'delete demo.db and re-seed' to the script and About 'Before you present' block with the reason.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "C-003",
+      "state_artifact": "wave-C-shots/detail.png (Student detail profile card); GET /classes/1/students/:id",
+      "category": "numeric_integrity",
+      "severity": "P2",
+      "evidence": "Student-detail line 'Level L · N XP · 9 missions completed' is followed by 'Counts cover the standard laboratories; the Master Lab is not part of class analytics.', but XP, Level and the attempt history DO include the Master Lab. Reproduced with a fresh student who completed all 9 standard missions and Master (score 325): teacher detail xp 1265 = 940 (standard best scores 140+95+145+120+60+95+105+180+0) + 325 (Master); missionsCompleted 9; historyTotal 10; profile/me/roster XP all 1265 (consistent across screens, but not the 'standard only' the sentence promises). Master completion/escape is not visible anywhere in the faculty view: labs[] lists only the 3 standard labs and labsEscaped stays 3 after the Master exit code (roster labs 3, detail unchanged before/after 'master unlock 200'). Likewise roster hintsUsed excludes Master hints while XP includes Master XP.",
+      "fix_hint": "Reword (e.g. 'Mission and hint counts cover the standard laboratories; XP and level include the Master Lab') and show a Master Lab row (not counted in class figures) in the Laboratories list.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "C-004",
+      "state_artifact": "GET /api/competencies, GET /api/attempts/:id/result vs GET /api/classes/1/students/9 and GET /api/labs/hematology/results",
+      "category": "numeric_integrity",
+      "severity": "P3",
+      "evidence": "Same student, same competency, two values. Alex after a 4-wrong replay of hem-01: /competencies and result.competencies (latest attempt per step, game.ts:575-596) give 'Hematology interpretation 67%'; teacher student detail and lab results (best attempts, competenciesOf) give 'Hematology interpretation 100%'. Not rendered by today's UI (mission.tsx ignores result.competencies), so only visible to an API consumer, but openapi advertises both.",
+      "fix_hint": "Use one definition (best attempts) for /competencies and result, or document the difference.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "C-005",
+      "state_artifact": "wave-C-shots/alex-history.png / detail.png (Attempt history rows)",
+      "category": "other",
+      "severity": "P3",
+      "evidence": "Attempt-history rows print '{score} XP' for every completed attempt, including replays that awarded nothing: Alex replay of hem-01 with 3 wrong: attempt score 120, result.xpAwarded 0, newBest false, total XP unchanged at 8240 (best stays 168). The faculty list therefore shows '120 XP' while the student's XP did not move; the visible figures cannot be summed to the XP in the card above. Same row for a 4-wrong first attempt shows '110 XP' (Cyrillic student #49) - fine there, but misleading for replays.",
+      "fix_hint": "Label as 'Score' (or 'Score 120 · best 168 · +0 XP').",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "C-006",
+      "state_artifact": "wave-C-shots/detail.png (Competencies panel)",
+      "category": "other",
+      "severity": "P3",
+      "evidence": "'Strongest area: Hematology interpretation.' is printed under a single competency bar at 0% (student #49: 4 wrong, 1 step). The server returns strongest = items[0] regardless of its value (game.ts:592, 686) and the UI (ui/common.tsx:128) prints it unconditionally.",
+      "fix_hint": "Only name a strongest area when pct is above a floor and at least 2 competencies exist, else show nothing.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "C-007",
+      "state_artifact": "docs/FACULTY_DEMO_SCRIPT.md section 2.4",
+      "category": "other",
+      "severity": "P3",
+      "evidence": "Script says 'Ne promettez pas de montrer « mission verrouillée » : le compte de démonstration a tout déjà débloqué.' False for the prepared Alex: Master Lab is 'Locked - Clear 3 labs (1 of 3 cleared)' on the lab map and dashboard, and Biochemistry missions 2 and 3 are locked (labs state: biochemistry 0/3 'available', master 0/1 'locked'). The About page hint itself is correctly scoped to Fix the Sample; only the script overstates.",
+      "fix_hint": "Say 'the Hematology missions are unlocked; the Master Lab and Biochemistry 2-3 are still locked'.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "C-008",
+      "state_artifact": "POST /api/demo/reset as demo teacher (demo.ts:295-315)",
+      "category": "audit_integrity",
+      "severity": "P3",
+      "evidence": "Teacher reset answers {reset:true} but does not restore the roster: after registering students that joined the seeded L3 class and running reset twice, GET /classes still returned L3 students 39 (script and About say a class of 38), and a mission approved by another teacher (hem-02 'Approved' by 'Prof Second (teacher #57)') and reviewed hem-03 stay as-is, so the 'prepared presentation state' is not restored. Only classes beyond the first two and the demo teacher's own content reviews are reset. Content audit chain itself verified intact (every status row's from/to chain matches content_status for hem-01..03; reset appended draft transitions).",
+      "fix_hint": "Document that only the demo teacher's own state is reset, or remove non-seeded members of the seeded classes on teacher reset.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "C-009",
+      "state_artifact": "GET /classes/1/students (needsAttention rule, game.ts:956)",
+      "category": "other",
+      "severity": "P3",
+      "evidence": "No sample-size floor on the per-student flag: new student Zed completed ONE mission with 2 wrong answers (accuracy 33%) and was immediately 'needsAttention: true, Accuracy under 60%'; a student with zero attempts joined <7 days ago reads 'On track' with accuracy '—' (student #42). Also analytics.hardestMission/needsAttention is set on a mission with as few as 3 completions in a class of any size (minSample=min(3,n)); 4 other missions under the 70% threshold (Gram Stain 64%, Anemia Detective 69%) carry no flag in the demo (only Acid-Base is flagged), which the on-screen note explains only partly.",
+      "fix_hint": "Require >=2 missions before flagging on accuracy; show 'No activity yet' instead of 'On track' for zero attempts.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "C-010",
+      "state_artifact": "be/src/routes.ts:249 (OpenAPI summary), GET /api/classes/1/analytics steps[]",
+      "category": "other",
+      "severity": "P3",
+      "evidence": "OpenAPI summary says 'first-attempt success per mission' but successPct is the class mean accuracy on each student's BEST attempt (rules.ts and the on-screen note say so; cleanFirstTryPct is the first-attempt figure). steps[].solved counts attempts, not students: hem-01 studentsCompleted 38 while steps[0].solved 39 (Alex replay). Not rendered by the UI.",
+      "fix_hint": "Fix the summary text; count DISTINCT users in steps[].solved or rename the field.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    }
+  ],
+  "summary": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 3,
+    "P3": 7,
+    "open_P0": 0,
+    "open_P1": 0,
+    "open_P2": 3,
+    "open_P3": 7
+  },
+  "verdict": "GREEN",
+  "notes": "Independent recomputation: a node:sqlite script (recompute.ts) reads the raw tables (mission_best, attempts, xp_events, lab_exits, answer_log, class_members, xp_carry) and recomputes for EVERY student of every class: XP (=sum best_score + xp_carry), level, missionsCompleted, progressPct (9 standard denominator), accuracy (mean steps/(steps+wrong_total) of the best attempt), hints, labsEscaped (3 standard labs, Master excluded), needsAttention, historyTotal/history (20 latest), per-lab completed/accuracy/escaped, and the cohort aggregates (avgCompletionPct, avgAccuracyPct, avgXp, avgMissionsCompleted, labsEscaped, activeStudents, needsAttention), per-mission studentsCompleted/successPct/avgHints and per-lab completionPct, plus invariants best_score==max(completed scores)==best attempt.score and xp_events sum==earned XP. 0 diffs at baseline (38 students), after registering/joining/playing 9 standard + Master missions with wrongs/hints (zero-attempt, 1 mission, 9+Master), after Alex replays (worse, hint, improved, abandoned+resumed attempt), after student demo reset and teacher demo reset, and with 46+ students incl. duplicate/long/RTL/HTML names. Cross-screen: teacher roster/detail vs /me, /profile, /dashboard, /labs, /leaderboard (rank incl. ties, total), /labs/:slug/results (ledger sum == xp == sum of mission scores for all 4 labs) and result payload ledger==score for all 10 missions (incl. a floored 0-score mission) all equal; baseline demo figures 81% accuracy / 73% completion / 5 flagged / hardest Acid-Base 59% reproduced. Empty class (0 students: '—', no NaN/Infinity/undefined in text), zero-attempt student, newly registered student, class picker race (stale class-1 response delayed 3 s while switching: final view correct), 20 s hang -> visible alert with Retry, history cap text 'Showing the latest 20 of 28 attempts'. Authz: second teacher gets 404 on another teacher's class/analytics/student (IDOR), students get 403 on all teacher routes, teacher 403 on student routes, 401 without/with bad token; malformed ids 400/404. Content review: transitions/409/400/404, lost response after server commit -> alert 'Could not confirm ... list below shows what the server recorded' and row shows Reviewed, 500 -> same resync, 401 -> recovery to a fresh Faculty guest with notice, keyboard focus returns to the row action and live region announces; approval note present; Approve then Return to draft yields 'Now draft · date' exactly as the About guide says; content_audit chain consistent. About & demo guide (teacher view) read in full: every statement checked against behaviour (step counts 1/7/8, no requests issued, anchors focus the headings, Open buttons navigate, reset flows, replay-XP rule, 'no Reset button in Faculty guest', 'Faculty-side reset not available', 390 s sum, hints/recheck do not reveal the key, order/match progress shown) - all true; no overclaim strings ('validated', 'production ready', 'independently audited', clinical/diagnostic) found in web/src or FACULTY_DEMO_SCRIPT (all are negations/disclaimers; images labelled illustrative). Demo-data disclosure note is present on Faculty analytics, Student detail and Content review, incl. empty/error states, at 1440/1024/768/390; dev server and production bundle (vite preview, scratch outDir) show 0 horizontal scroll, 0 clipped/overflowing/overlapping interactive elements, 0 console errors or failed requests except the ones I injected; long 80-char, RTL and '<img onerror>' names wrap and are inert. Not tested: touch devices, screen reader output, real cross-process races."
+}

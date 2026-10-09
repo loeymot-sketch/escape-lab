@@ -1,0 +1,122 @@
+{
+  "wave": "A",
+  "round": 16,
+  "states_reviewed": 27500,
+  "findings": [
+    {
+      "id": "R16-A-01",
+      "severity": "P2",
+      "category": "state-integrity",
+      "area": "names / class names / validation",
+      "title": "A lone surrogate in a class name (or in a symbol-only teacher name) defeats the uniqueness rule: the key is computed on the submitted string, the stored string has U+FFFD",
+      "evidence": "Live on :6101 (NODE_ENV=test, DEMO): POST /api/classes {name:\"Lone\\ud800Class<n>\"} twice as the same teacher -> 201 and 201 (expected 409 class_name_taken); GET /api/classes lists two classes both named \"Lone\\uFFFDClass<n>\"; the 201 body echoes the UNSANITISED name (lone surrogate) while every later read returns U+FFFD. The same input with a literal U+FFFD is refused (201 then 409), proving the rule exists. Same cause for teacher names made only of a symbol: register teacher \"\\u{1F9EC}\\ud800\" twice -> 201 and 201 (two teachers stored as \"\\u{1F9EC}\\uFFFD\"), while \"\\u{1F9EC}\\uFFFD\" -> 409. Letter names are unaffected (the key drops both the surrogate and U+FFFD).",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-A/surr1.mjs and /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-A/surr2.mjs (node --disable-warning=ExperimentalWarning <script>; ports hard-coded 6101)",
+      "expected": "A name is compared in the form that is stored: 409 class_name_taken / 409 name_taken on the second request; the response echoes what is stored.",
+      "actual": "node:sqlite binds a lone surrogate as U+FFFD, but classNameKey(name) / nameKey(name) run on the raw submitted string (HIDDEN removes \\p{Cs}, but U+FFFD is a symbol and stays in the stored side of the comparison), so submitted-key != stored-key. Duplicate class names defeat the \"identical labels in every picker\" guard; two teachers can hold byte-identical display names (review records still carry (teacher #id)).",
+      "fix_hint": "http.ts:45 CONTROL_CHARS / validate(): reject \\p{Cs} (or call value.toWellFormed()) for every string field before it reaches Game; at minimum game.ts:770 (createAccount), game.ts:781 (updateProfile) and game.ts:877 (createClass) should use name.toWellFormed().trim() for both the key and the stored value.",
+      "status": "open"
+    },
+    {
+      "id": "R16-A-02",
+      "severity": "P2",
+      "category": "state-integrity",
+      "area": "hint reservation (AI assistant path)",
+      "title": "A hint is charged (-15 XP, no-hint bonus lost, level consumed) in one transaction and logged in a second one: if the process stops or the second write fails between them, the learner paid for a hint that can never be shown",
+      "evidence": "game.ts:487-497 commits the reservation (step_results.hints+1, attempts.hints_total+1) BEFORE the provider is awaited (up to 4 s with LAB_ASSISTANT_*), game.ts:508-522 inserts hint_log in a second tx. Reproduction with a never-resolving provider: during the call hints_total=1 and hint_log has 0 rows; a fresh Game on the same DB (= restart / SIGTERM / kill / redeploy in that window, or a SQLITE_BUSY > 5 s in the second tx) reports hintsUsed 1, penaltyXp -15, step.hintsGiven [] and hintsOnStep 1; the next hint request on mic-01-s1 (one hint) answers 409 no_more_hints, so the paid text is gone for good. The fallback in Game.hintsGiven() only works for rows that EXIST in hint_log. Documented R10-A-10 covers only the display lag, not this permanent loss.",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-A/hintcrash1.mjs",
+      "expected": "A paid hint is always recoverable: after a restart the learner can read the faculty hint they paid for (or the charge is released).",
+      "actual": "-15 XP and the no-hint bonus are lost with nothing delivered; on a one-hint step the learner has no way to get it.",
+      "fix_hint": "game.ts:487-497: INSERT the hint_log row (source \"standard\", text NULL) inside the reservation tx; hintsGiven() already falls back to step.hints[level-1] for standard rows with NULL text. After the provider returns, UPDATE that row to source \"assistant\" + text (and only then). Alternatively refund in a catch around the second tx.",
+      "status": "open"
+    },
+    {
+      "id": "R16-A-03",
+      "severity": "P3",
+      "category": "answer-leak (AI hint guard)",
+      "area": "assistant.ts namesOptionByPosition",
+      "title": "The closed-list position guard still lets many ordinary phrasings through (52 of 97 natural phrasings of the correct letter pass), beyond the ones documented as undetected",
+      "evidence": "All phrasings listed in the R15 notes are caught (1,740 generated variants over 15 four-option steps: 203 misses, all of the kinds below) and 0 false positives on 85 faculty texts, 1,577 cross-step faculty texts, 465 clinical benign texts. Passing (hem-03-s2, answer C): \"Try C\", \"Try C next\", \"What about C?\", \"How about C\", \"Is it C?\", \"Probably C\", \"Perhaps C\", \"Maybe C\", \"Likely C.\", \"Surely C\", \"That points to C.\", \"This suggests C.\", \"C seems plausible.\", \"C is a good candidate.\", \"C stands out.\", \"C fits the indices.\", \"Stick with C.\", \"Stay with C\", \"Stick to C\", \"Number 3 is correct\", \"3 is the one\", \"Ans C\", \"C bien sur\", \"The third.\", \"Third.\", \"Option I\" (index 0, documented), squared letter U+1F172 \"Option <U+1F172>\" (NFKC leaves it), small capital U+1D04. Decision steps: \"Reject it\", \"You should reject this\" (the option id is not guarded, documented).",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-A/guard3.ts and /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-A/guard8.ts",
+      "expected": "A hint that names the correct option is dropped.",
+      "actual": "Delivered as an assistant hint for the hint price. Only reachable with LAB_ASSISTANT_* configured and a model that ignores the system prompt; the documented heuristic caveat applies, but the misses are common phrasings.",
+      "fix_hint": "assistant.ts:274 stop sending positional letters to the provider (bullets instead of \"A.\"/\"B.\"), and/or add a high-recall rule: any standalone capital option letter (excluding the pronoun-like A / I and tokens followed by - or a digit) equal to the correct letter drops the hint; map U+1F170-U+1F189 and U+1D00 small capitals in names.ts. Accept the extra false positives (vitamin C): the cost is the faculty hint.",
+      "status": "open"
+    },
+    {
+      "id": "R16-A-04",
+      "severity": "P3",
+      "category": "robustness",
+      "area": "Game.readOnlyRequest",
+      "title": "readOnlyRequest sets the readOnly flag and runs PRAGMA query_only = ON outside the try block, and resets the flag after the PRAGMA OFF in finally: an exception from either exec leaves the process in a stuck state",
+      "evidence": "game.ts:83-85: `this.readOnly = true; this.db.exec(\"PRAGMA query_only = ON\"); try { return fn(); } finally { this.db.exec(\"PRAGMA query_only = OFF\"); this.readOnly = false; }`. If the ON exec throws, readOnly stays true forever (expireStale and the badge catch-up are skipped for every later GET: overdue attempts never close, the mission cannot be restarted). If the OFF exec throws, `this.readOnly = false` is skipped and query_only may stay ON (every write answers 500 until restart). I could not make either exec fail on a healthy database (HEAD floods of 9,442 + 1,574 requests concurrent with 6 writers, abort-mid-request sockets, two processes on one file, handlers that throw: 0 5xx, 0 \"readonly\" errors, 0 stuck state), so this is a latent defect, not an observed one.",
+      "repro": "unambiguous file:line (game.ts:83-85); concurrency evidence /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-A/head2.mjs",
+      "expected": "The flag and the pragma are restored whatever happens.",
+      "actual": "see evidence",
+      "fix_hint": "game.ts:83: `const prev = this.readOnly; try { this.readOnly = true; this.db.exec(\"PRAGMA query_only = ON\"); return fn(); } finally { this.readOnly = prev; try { this.db.exec(\"PRAGMA query_only = OFF\"); } catch { /* connection unusable anyway */ } }`.",
+      "status": "open"
+    },
+    {
+      "id": "R16-A-05",
+      "severity": "P3",
+      "category": "contract",
+      "area": "POST /api/demo/reset with several processes",
+      "title": "Concurrent demo resets from two processes on one database answer 403 mission_locked / 404 / 409 (409 is not declared for the route) although the final state is correct",
+      "evidence": "Two processes on one DB, two or six simultaneous POST /api/demo/reset for the demo student: in 10 of 40 rounds one request answered 403 (\"Complete mission 01 to unlock\", from the replay of the other reset deleting mission_best), 404 or 409 while another answered 200; statuses seen with six parallel: 409,200,404,200,200,200. 409 is not in the route's declared responses (200,400,401,403,404,405,413,415). The final state equalled the canonical reset in all 48 rounds (xp 8240, 6 attempts, 5 best, 5 fragments, 4 badges, 1 exit), so docs/KNOWN_LIMITATIONS \"final state is always correct\" held, but the losing caller gets a confusing error. Single-process deployments cannot interleave (the replay never yields to I/O).",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-A/demorace1.mjs (6 per round) and /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-A/demorace2.mjs (2 per round); needs two servers on one DB (ports 6101 and 6104)",
+      "expected": "A reset answers 200 (or a declared 409 reset_in_progress) and never surfaces the replay's own preconditions.",
+      "actual": "403 / 404 / 409 from inside playAlex.",
+      "fix_hint": "demo.ts:232-281: run the delete + replay under one BEGIN IMMEDIATE (the Game used for the replay would need a savepoint-based tx helper) or take a short advisory row lock; or catch ApiError in resetDemoStudent and retry once.",
+      "status": "open"
+    },
+    {
+      "id": "R16-A-06",
+      "severity": "P3",
+      "category": "names",
+      "area": "names.ts nfkc / PRE_NFKC",
+      "title": "Greek lunate sigma is now a Latin c in the key, so the same Greek name written with a normal sigma and with a lunate sigma are two different teacher names (side effect of the R15-A-01 fix)",
+      "evidence": "nameKey(\"Σωκράτης\") = \"σωκρατησ\" but nameKey(\"Ϲωκράτης\") = \"cωκρατησ\", also for U+03F2 and for NFKD-form input (NFKD of U+03F2 is a sigma, which keeps the old key). Before round 15 both were one key. The Latin side is correct: \"Dr. Ϲlaire Moreau\" and \"Dr. U+03F9laire Moreau\" are 409 name_taken.",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-A/names2.ts",
+      "expected": "n/a (trade-off): a Greek teacher can be shadowed by a lunate-sigma spelling of their name.",
+      "actual": "two keys for one Greek name; low impact (lunate and normal sigma are drawn differently in most fonts).",
+      "fix_hint": "names.ts:65-66: accept as documented residual (add one line to KNOWN_LIMITATIONS), or map lunate to c only when the neighbouring letters are Latin.",
+      "status": "open"
+    },
+    {
+      "id": "R16-A-07",
+      "severity": "P3",
+      "category": "contract",
+      "area": "transport (Node http)",
+      "title": "A bearer token or header block above Node's 16 KB header limit is answered 431 before the application runs; 431 is declared nowhere in OpenAPI",
+      "evidence": "Matrix of 20,069 route x role x id x body cells against be/openapi.json: 0 undeclared statuses from the application and 0 5xx; the only undeclared status was 431 (773 cells, all with a 20,000-character Authorization value). The UI never produces it.",
+      "repro": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r16-A/matrix.mjs 6101 (token \"huge\")",
+      "expected": "declared or irrelevant",
+      "actual": "431 Request Header Fields Too Large (Node), body-less, no JSON error envelope",
+      "fix_hint": "openapi.ts: add a generic 431 to the shared responses, or set server.maxHeaderSize explicitly and document it.",
+      "status": "open"
+    }
+  ],
+  "summary": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 2,
+    "P3": 5
+  },
+  "verdict": "AMBER",
+  "round15_fix_verification": {
+    "R15-A-01 lunate sigma U+03F2/U+03F9 mapped before NFKC (nfkc helper)": "HOLDS",
+    "LOOKALIKES export self-consistency (every entry reaches its Latin target through the whole pipeline, both cases)": "HOLDS",
+    "R15-A-02 U+0345 always dropped, also inside precomposed iota-subscript letters (63 letters, all covered; U+037A spacing form also neutral)": "HOLDS",
+    "single canonical key / chain safety / class-name key (cross-process register and rename races, 2 processes, 6 rounds + 8-way rename)": "HOLDS",
+    "legit Greek and Cyrillic names (105 Greek given names, 840 given+surname pairs, 52 Cyrillic names: 0 false merges)": "HOLDS",
+    "R15-A-03 position guard: every documented phrasing caught, 0 false positives on faculty texts and clinical text": "HOLDS",
+    "R15-A-06 leaksAnswer fail-closed above 4000 code points and linear time (1 MB and 10 MB: 0.0 ms; 4000-cp hostile patterns < 5 ms; 600k fuzz strings, 0 throws, max 18 ms)": "HOLDS",
+    "hint_log.text == delivered == hintsGiven == attempt.step.hintsGiven; penalty -15 in hint and attempt views (24 provider behaviours incl. NUL, lone surrogate, CRLF, 400/401 emoji)": "HOLDS",
+    "R15-A-04 HEAD never writes (all tables hash-identical after a sweep of 37 routes x 4 tokens incl. an overdue attempt and missing badges)": "HOLDS",
+    "HEAD under concurrency with writes / aborts / two processes (no readonly errors, no stuck query_only)": "HOLDS",
+    "HEAD vs GET status+headers on every GET route and token class": "PARTIAL (one documented difference: /api/dashboard Content-Length differs when badges are not caught up; see R16-A-04 for the unprotected flag)",
+    "R15-A-07 password policy (6 visible + 10 code points after NFC; 45 cases, no enumeration change, no timing difference nfc/nfd, null/NUL/huge)": "HOLDS",
+    "legacy and demo logins unaffected (NFD login of NFC registration, demo password with DEMO_MODE on; refused with it off)": "HOLDS",
+    "rounds 9-14: demo reset boundaries, class cap 50 + class_name_taken, write/answer/hint/start/join/demo limiters, lockout without NODE_ENV=test, leaderboard viewer-independent total, historyTotal, startup read-only refusal, HOST/PORT validation, db:backup, migrations v0/v5/v6->v7 with 6 concurrent processes, token strictness": "HOLDS (demo reset concurrency across processes: see R16-A-05)"
+  },
+  "notes": "Environment: node v22.23.2; own servers 6101 (NODE_ENV=test, DEMO), 6102 (NODE_ENV unset = real limits, DEMO), 6103 (no DEMO), 6104 (second process on 6101's DB) and short-lived 6110-6115 (6 concurrent migrators x 9 old-schema DBs), 6120-6122, 6130; all on throwaway DBs under scratchpad/r16-A; all stopped by PID (other agents' servers 87418/87484 untouched). Baseline: cd be && npm test = 240/240 pass, tsc --noEmit clean; openapi generated to scratch is byte-identical to be/openapi.json (46,986 bytes, pretty); the served document is the same JSON in compact form (26,330 bytes, JSON-equal, not byte-equal to the file, as in earlier rounds); structural check: every $ref resolves, path params declared, every 429 declares Retry-After, no operationIds (optional). VERDICT: no P0/P1. Two P2 (lone-surrogate identity bypass, paid-but-undelivered hint on stop/failed second write) and five P3. WHAT I TRIED AND COULD NOT BREAK: (1) names: every code point as a single-character name (class table by target letter reviewed), LOOKALIKES x both cases, all Greek and Greek Extended code points under NFC/NFD/NFKD/upper/lower for both keys (only the expected lunate-sigma NFKD case differs), regex coverage of every code point whose NFD contains U+0345, symbol/emoji/variation-selector/spacing-iota variants, 105 Greek + 52 Cyrillic names pairwise, live register/rename races across two processes. (2) guard: 1,740 generated leak variants, 97 natural phrasings (R16-A-03), 465 benign texts, 85+1,577 faculty texts, 24 provider behaviours end to end, 600k fuzz strings (0 throws: cleanAssistantHint is outside the try in hintLocked, so a throw would 500 after the charge). (3) HEAD: see verification; 148 HEAD/GET pairs; 20 s flood: 9,442 HEAD (students) + 1,574 HEAD (teacher) + abort-socket HEADs concurrent with 6 players doing start/hint/wrong/right/profile, registrations, class creation, profile PUT: 0 5xx, 0 readonly. (4) passwords. (5) rounds 9-14 incl. 6-process migration from v0/v5/v6 (18 runs: all alive, user_version 7, is_demo_account backfill correct, a real account on the demo domain stays 0, db:check clean), kill -9 x3 under load + invariants (xp vs xp_events, counters vs step_results, completed attempts, best attempts, exits vs fragments, FK, integrity) all OK, SIGTERM with 60 in-flight registrations exits 0 with a clean DB. GENERIC SWEEP: 20,069-cell route x role x id x body matrix (anonymous, student, other student, teacher, other-class teacher, expired, forged, tampered body/signature, trailing segment/dot/space/padding, double dot, role lie, deleted user, negative/float/string sub, string exp, no exp, empty, junk, 20 KB): 0 5xx, 0 undeclared from the application (only the transport-level 431, R16-A-07); 216-cell semantic matrix (403 wrong role, 404 other-class, 401 for every bad token); 4,000-request random fuzz incl. TRACE/PATCH/DELETE/HEAD, hostile paths, percent-encodings, control characters, 70 KB values, deep nesting to 30,000 levels, raw sockets (duplicate Content-Length, TE+CL, Expect, absolute URI, HTTP/1.0, 100 KB path): 0 5xx, no stack trace in the server log; answer-leak scan over all six engines + Master (235 responses: start, resume, get, wrong, hint, right, early result, result, vault, unlock wrong/right, lab results, content endpoints as student, locked master): 0 forbidden keys, 0 explanation/recheck/unbought-hint/exit-code/masterCode/point-key leaks; state machine across two processes (6 parallel starts = 1 attempt, 8 wrong = 8 counted, 6 hints = 1 delivered, 8 correct = 1x200 + 7x409, IDOR 404, wrong_step 409, expiry boundaries exact limit / +1 ms, clock stepped back); scoring oracle in an independent implementation over 243 random plays (replays, hints, wrongs, expiry, unlocks, Master): 0 mismatches in score, ledger sum, xpAwarded, newBest, accuracy, XP in me/profile/dashboard/SQL/xp_events, leaderboard me, overall; analytics (studentsStarted/Completed, successPct, cleanFirstTryPct) recomputed from SQLite: 0 mismatches; leaderboard total identical for every viewer; historyTotal = SQL count; content review chain (4 teachers x 2 processes x 9 steps): audit chain consistent, illegal transitions 409; rate limits without NODE_ENV=test: login 8 failures per ip+email then 429 Retry-After 600 (also blocks the owner for the window, other accounts on the same IP unaffected, X-Forwarded-For ignored without TRUST_PROXY), unlock 5 wrong then 429 (also for the right code), PUT profile 60/min, answer 120/min, hint 30/min, start 60/min, join 10, demo 60, invalid-password registrations not counted. OTHER OBSERVATIONS (not findings): the content scan shows the correct choice is the longest label in 7 of 15 choice steps (scientific-review matter, not backend). Decision-step hints that say \"reject\" or \"accept\" are not guarded (documented R14). cohort=all leaderboard exposes first name + initial and XP of every student to any student (documented design; names without a space are shown in full). A dashboard HEAD omits the badge catch-up by design (Content-Length differs only for accounts that have un-granted badges). TOOLING SLIPS (mine, disclosed): (a) one `db:check` was run without DB_PATH from cwd be/ and therefore opened be/data/escape-lab.db READ-ONLY (it reported schemaVersion 4); (b) one start-up probe with DB_PATH=\"\" fell back to ./data/escape-lab.db and ran a real server on be/data for about 1.5 s, which migrated that file from v4 to v7, narrowed its mode to 0600 and checkpointed its WAL (row counts unchanged; nothing else had it open at the time); (c) a `db:backup` without an output argument created be/backups/escape-lab-2026-10-08T19-26-10-157Z.db (a copy of my scratch DB c.db) and my attempt to delete it was refused by the permission layer, so that file and the be/backups directory are still there and should be removed by the owner. No file under src/, test/, scripts/, web/, docs/, sources/ was edited; be/openapi.json was not regenerated in place."
+}

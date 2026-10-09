@@ -1,0 +1,26 @@
+{
+  "name": "escape-lab-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Escape Lab API: server-authoritative missions, scoring, code vault, Master Lab and teacher analytics.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "pretest": "node scripts/check-node.mjs",
+    "pretypecheck": "node scripts/check-node.mjs",
+    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/server.ts",
+    "dev": "node --watch --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/server.ts",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "openapi": "node --disable-warning=ExperimentalWarning scripts/openapi.ts > openapi.json",
+    "seed:demo": "node --disable-warning=ExperimentalWarning scripts/seed-demo.ts",
+    "db:check": "node --disable-warning=ExperimentalWarning scripts/db-check.ts",
+    "db:backup": "node --disable-warning=ExperimentalWarning scripts/db-backup.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

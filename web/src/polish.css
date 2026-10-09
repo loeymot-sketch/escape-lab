@@ -1,0 +1,361 @@
+/* Final layer: accessibility, state panels, responsive navigation, illustrative labelling.
+   Imported last so it can correct the earlier theme layers without reintroducing dark panels. */
+
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* Focus ring: dark teal with a white halo, >= 3:1 on the cream surfaces and on photographic overlays. */
+:focus-visible{outline:3px solid #0a4f52;outline-offset:2px;box-shadow:0 0 0 5px #fff}
+.scientific:focus-visible{outline-offset:-3px}
+
+/* The Reduce motion setting is server-owned; here it only switches animation off. */
+:root[data-reduce-motion="true"] *,:root[data-reduce-motion="true"] *::before,:root[data-reduce-motion="true"] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+
+/* ---------------------------------------------------------------- layout */
+.app-main{flex:1;min-width:0;width:100%;max-width:1500px;margin:0 auto;padding:0 48px}
+.app-main>main{flex:none;width:auto;max-width:none;margin:0;padding:0 0 70px}
+.boot{min-height:100vh;display:grid;place-items:center;padding:24px}
+.back-link{margin-top:22px;font-size:13px;display:inline-flex}
+.text-button.inline{display:inline-flex;font-size:inherit;text-decoration:underline;padding:0}
+
+/* ---------------------------------------------------------------- state panels */
+.state-panel{max-width:650px;margin:24px 0;padding:28px 30px;border:1px solid #dfddd6;background:#fffdfa;border-radius:12px;color:#29484e;box-shadow:0 8px 22px rgba(50,66,67,.045)}
+.state-panel h1,.state-panel h2{margin:12px 0 6px;font-size:20px;color:#173344;letter-spacing:-.02em}
+.state-title{margin:12px 0 6px;font-size:18px;font-weight:700;color:#173344}
+.state-panel p{margin:0 0 6px;font-size:13px;line-height:1.65;color:#41595e}
+.state-panel svg{color:#056563}
+.state-panel.failed{background:#fdf1f0;border-color:#e2aab0}
+.state-panel.failed svg{color:#8c2f39}
+.state-panel.failed h2,.state-panel.failed h1{color:#6f1f29}
+.state-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.boot .state-panel{margin:0}
+.spin{animation:escape-spin 1s linear infinite}
+@keyframes escape-spin{to{transform:rotate(360deg)}}
+.landing-error{margin-top:18px;max-width:540px;padding:12px 15px;border:1px solid #e2aab0;background:#fdf1f0;color:#6f1f29;border-radius:8px;font-size:13px;line-height:1.6}
+
+.error{background:#fdf1f0;color:#6f1f29;border:1px solid #e2aab0;border-radius:8px}
+.error button{color:#6f1f29;text-decoration:underline}
+.notice{margin:14px 0;padding:11px 14px;border-radius:8px;font-size:13px;line-height:1.55;border:1px solid;display:flex;gap:10px;align-items:center}
+.notice button{margin-left:auto;background:transparent;color:inherit;text-decoration:underline;font-size:12px}
+.info-note{background:#eaf3f7;border-color:#a9c9d6;color:#17475a}
+.success-note{background:#e6f5eb;border-color:#9fcbb0;color:#1f5a40}
+.error-note{background:#fdf1f0;border-color:#e2aab0;color:#6f1f29;font-weight:600}
+.saved-note{color:#1f5a40}
+.sync-note{font-size:12px;color:#52696c}
+.inline-error{color:#8c2f39;font-size:12px}
+
+/* ---------------------------------------------------------------- illustrative labelling */
+.illustrative-tag{position:absolute;z-index:3;top:14px;left:14px;padding:6px 11px;border-radius:999px;background:rgba(15,48,49,.86);color:#fff;border:1px solid rgba(255,255,255,.55);font:700 10px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.1em;text-transform:uppercase}
+.landing-visual .illustrative-tag{top:20px;left:20px}
+
+/* ---------------------------------------------------------------- mission images: rendered at their natural ratio so % maps 1:1 */
+.scientific{display:block;position:relative;width:100%;height:auto;margin:20px 0 0;padding:0;border:0;overflow:hidden;cursor:crosshair;background:#f3efe8}
+.scientific-image{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:1;filter:none;pointer-events:none;user-select:none}
+.scientific:after{display:none}
+.image-instruction-text{margin:8px 0 0;font-size:12px;color:#41595e;line-height:1.5}
+.image-caption{font-size:11px;color:#41595e}
+.marker{pointer-events:none}
+
+/* ---------------------------------------------------------------- mission screen */
+.player header{height:auto;min-height:75px;gap:12px;flex-wrap:wrap;padding:12px 2vw}
+.timer{color:#6b4a0c;font-weight:700;align-items:center}
+.case-meta{color:#41595e}
+.sample-chip{display:inline-block;margin:6px 0 0;padding:5px 10px;border-radius:999px;background:#eef2ef;color:#29484e;font-size:12px}
+.values-block{margin-top:18px}
+.values-block .values{margin:8px 0 22px}
+.value.flagged{border-color:#d9a3a8;background:#fbefee}
+.value .flag{display:inline-block;margin-top:6px;font-size:11px;color:#8c2f39}
+.value em{color:#41595e}
+.answer-options button{color:#29484e}
+.answer-options button.selected{border-width:2px;font-weight:700}
+.answer-options button span{color:#056563}
+.drag-list{list-style:none;padding:0}
+.drag-row{color:#29484e}
+.drag-number{color:#056563}
+.move-buttons button{width:34px;height:34px;background:#f3f7f4;border-color:#b6cac4;color:#29484e}
+.move-buttons button:disabled,.move-buttons button[aria-disabled="true"]{opacity:.35;cursor:not-allowed}
+.matching-list .match-row span{color:#29484e}
+.match-note{margin:4px 0 0;font-size:12px;color:#41595e}
+.feedback{align-items:flex-start;border-radius:8px}
+.feedback.correct{color:#1f5a40}
+.feedback.wrong{color:#7a232d}
+.feedback.wrong p,.feedback.correct p,.feedback p{color:#2f4a4f}
+.feedback b{display:block}
+.expired-panel .state-actions{margin-top:12px}
+.hint{color:#5c3d00}
+.hint:disabled{cursor:not-allowed}
+.hint-budget{font-size:12px!important;margin:8px 0 0!important;color:#41595e!important}
+.hint-result{color:#29484e}
+.aside-card h2{font-size:15px;margin:18px 0 7px;color:#173344}
+.aside-card p{color:#41595e}
+.status-list{margin:0}
+.status-list .status-row{color:#41595e}
+.status-list dt,.status-list dd{margin:0}
+.status-list dd{color:#173344;font-weight:700}
+.fragment-reveal.inline{max-width:none;margin:14px 0 0;text-align:left}
+.fragment-reveal.inline strong{display:inline-block;margin:4px 8px 4px 0}
+
+/* ---------------------------------------------------------------- result */
+.ledger{list-style:none;margin:18px auto;padding:0;max-width:560px;text-align:left;border-top:1px solid #d9e0dc}
+.ledger li{display:flex;justify-content:space-between;gap:12px;padding:10px 4px;border-bottom:1px solid #e4e6e1;font-size:13px;color:#29484e}
+.ledger li small{display:block;color:#52696c;font-size:11px;margin-top:2px}
+.ledger li b{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#056563}
+.ledger li.penalty b{color:#8c2f39}
+.ledger li.unearned b{color:#52696c}
+.result-lede{color:#41595e}
+.fragment-reveal strong{color:#7a4a00}
+.result-screen .notice{justify-content:center;max-width:560px;margin:14px auto}
+
+/* ---------------------------------------------------------------- lab cards, lobby */
+.lab-card h2,.lab-card h3{color:#173344;font-size:18px;margin:0 0 8px;letter-spacing:-.04em}
+.lab-card p{color:#41595e;font-size:12px}
+.lab-card .lab-meta{margin-top:8px;color:#41595e}
+.lab-card.locked{opacity:1;filter:none;background:#f4f2ec}
+.lab-card.locked h2,.lab-card.locked h3{color:#41595e}
+.lab-card-top,.lab-card-foot{color:#41595e}
+.lab-card-foot button{font-weight:700;color:#173344;text-decoration:underline;min-height:32px}
+.lab-card.red .lab-card-foot button{color:#7a232d}
+.lab-card.teal .lab-card-foot button{color:#00494b}
+.lab-card.gold .lab-card-foot button{color:#5c3d00}
+.lab-card.violet .lab-card-foot button{color:#44286b}
+.mission-picker{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.picker-row{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;padding:14px 16px;border:1px solid #dfddd6;border-radius:10px;background:#fff}
+.picker-row.locked{background:#f4f2ec}
+.picker-ordinal{font:700 13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#056563}
+.picker-main h3{margin:0 0 4px;font-size:16px;color:#173344}
+.picker-main p{margin:0;font-size:12px;color:#41595e;line-height:1.55}
+.picker-row .primary,.picker-row .ghost{min-width:96px;justify-content:center}
+.lobby-stats{max-width:900px;margin-bottom:24px}
+.picker-label{display:inline-flex;flex-direction:column;gap:6px;margin:0 18px 18px 0;font-size:12px;color:#41595e}
+.picker-label select{padding:10px 12px;border:1px solid #b6cac4;border-radius:8px;background:#fffdfa;color:#173344;font:13px inherit;min-width:220px}
+
+/* ---------------------------------------------------------------- tables and lists */
+ul.mission-table{list-style:none;margin:0;padding:0}
+button.mission-row{width:100%;background:transparent;text-align:left;color:#29484e;font:inherit;font-size:12px;cursor:pointer}
+button.mission-row:hover{background:#f1f7f4}
+.mission-row small{color:#41595e;display:flex;gap:4px;align-items:center}
+.list-count{margin:12px 0 0;font-size:12px;color:#41595e}
+.attention{color:#8c2f39!important;font-weight:600}
+.badge-list{list-style:none;margin:0;padding:0}
+.leaderboard-list{list-style:none;margin:0;padding:0}
+.leaderboard-gap{padding:4px 12px;color:#41595e}
+.vault-card small{color:#41595e}
+.code-slots{list-style:none;padding:0}
+.unlock-row{align-items:center}
+.unlock-row input{width:130px;padding:10px 12px;font-size:15px;letter-spacing:.2em}
+.unlock-row input[aria-invalid="true"]{border-color:#c0505a;box-shadow:inset 0 0 0 1px #c0505a}
+.vault-card .notice{margin:12px 0 0}
+.badge-row{opacity:1}
+.badge-row:not(.earned) b,.badge-row:not(.earned) small,.badge-row:not(.earned) .badge-state{color:#41595e}
+.status-pill{color:#29484e}
+.content-row{grid-template-areas:none}
+.content-actions button{min-height:34px}
+.teacher-panel .state-panel,.vault-panel .state-panel{box-shadow:none;margin:12px 0}
+
+/* ---------------------------------------------------------------- navigation: contrast */
+nav button{color:#36525a}
+nav button.active{background:#e1f0ec;color:#00494b;font-weight:700}
+.logout{color:#36525a;min-height:40px}
+.side-status{color:#41595e}
+.crumb{color:#41595e}
+.eyebrow{color:#41595e}
+.text-button{color:#00494b}
+.stat span,.stat small{color:#41595e}
+.hero p,.page-intro p{color:#41595e}
+.landing p{color:#41595e}
+.landing-note{color:#41595e}
+.landing-kicker{color:#00494b}
+.map-note{color:#41595e}
+.tag{color:#00494b}
+.profile-card p{color:#41595e}
+.hero-science span{color:#fff}
+.visual-caption span{color:#fff}
+.back-button{color:#36525a}
+.primary{background:#a8323c}
+.primary:hover{background:#8f2832}
+.primary:disabled{background:#a8323c;color:#fff;opacity:.55}
+
+/* ---------------------------------------------------------------- phones: guest actions live in the menu sheet */
+@media (max-width:600px){
+  .app>aside{padding:10px 16px}
+  .app>aside .side-bottom{display:none}
+  .app>aside.menu-open .side-bottom{display:block;margin:10px 0 0;padding:10px 0 0;border-top:1px solid var(--line)}
+  .app>aside.menu-open .side-bottom .logout{width:100%;min-height:44px;font-size:14px;border:1px solid #bdcbc6;border-radius:10px;margin:8px 0;justify-content:center;color:#173344;background:#fff}
+  .mobile-brand{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;background:#e1f0ec;border-radius:10px;color:#00494b;font-size:14px}
+  .mobile-brand b{color:#00494b}
+  .app-main{padding:0 16px}
+  .app-main>main{padding-bottom:50px}
+  .app>aside nav button{min-height:44px}
+  .picker-row{grid-template-columns:auto 1fr}
+  .picker-row .primary,.picker-row .ghost{grid-column:1 / -1;width:100%}
+  .unlock-row{flex-wrap:wrap}
+  .mission-row{grid-template-columns:1fr auto}
+  .mission-row small{grid-column:1 / -1}
+  .state-panel{padding:20px}
+  .case-panel{padding:18px}
+  .leaderboard-row,.leaderboard-head{grid-template-columns:.4fr 1.2fr .8fr .8fr}
+  .leaderboard-row span:last-child,.leaderboard-head span:last-child{display:block}
+  .teacher-panel,.result-lab,.vault-panel,.leaderboard-panel,.settings-card{padding:16px}
+}
+@media (max-width:650px){
+  .content-head{display:none}
+  .content-row{grid-template-columns:1fr auto;grid-template-areas:"title status" "lab lab" "actions actions"}
+  .content-row>b{grid-area:title}
+  .content-row>span:nth-child(2){grid-area:lab;display:block}
+  .content-row>.status-pill{grid-area:status}
+  .content-row>.content-actions{grid-area:actions;display:block}
+  .content-actions button{min-height:44px;width:100%}
+}
+@media (max-width:800px){
+  .leaderboard-row span:last-child,.leaderboard-head span:last-child{display:block}
+  .leaderboard-row,.leaderboard-head{grid-template-columns:.4fr 1.2fr .8fr .8fr}
+}
+@media (max-width:900px){
+  .app-main{padding:0 24px}
+  .app>aside{flex:none}
+}
+@media (max-width:600px){.app-main{padding:0 16px}}
+
+/* The mission side panel is not the app rail: undo the global <aside> rail styling. */
+.case-aside{width:auto;padding:0;border:0;box-shadow:none;background:transparent;display:grid}
+/* Never animate opacity/colour of controls: contrast must be correct at every instant, not only at rest. */
+.primary,.ghost,button{transition:transform .2s ease,box-shadow .2s ease}
+.lab-index{opacity:1}
+.feedback.wrong{background:#fdf1f0;border:1px solid #e2aab0}
+.feedback.correct{background:#e6f5eb;border:1px solid #9fcbb0}
+.landing-visual{width:auto;padding:0;border:0;background:#f3d4cc}
+.hint-result{background:#fff9eb;border-left:3px solid #9a6a14;color:#29484e;font-size:12px}
+@media (max-width:600px){
+  .player header{justify-content:space-between;padding:10px 16px}
+  .player-title{display:flex;order:3;width:100%;align-items:flex-start;gap:2px}
+}
+.value span,.value em{color:#41595e}
+/* engine-styles.css loads after the first light override, so the light surfaces are restated here. */
+.drag-row{background:#fffdfa;border:1px solid #cbd8d3;color:#29484e}
+.drag-row>svg{color:#41595e}
+.matching-list .match-row span{background:#f3f7f4;border-radius:6px;font-size:12px}
+.match-row select{background:#fffdfa;border:1px solid #8fada6;color:#173344;font-size:12px;border-radius:6px}
+.move-buttons button:hover:not(:disabled):not([aria-disabled="true"]){border-color:#056563;color:#056563}
+
+/* ---------------------------------------------------------------- non-text contrast (WCAG 1.4.11)
+   Control boundaries are >= 3:1 against the cream surfaces they sit on (checked against the computed styles by
+   e2e/a11y.spec.ts). The selected/hover state keeps its teal border from the earlier layers. */
+:root{--control-border:#667f7b}
+.answer-options button,.move-buttons button,.match-row select,.picker-label select{border-color:var(--control-border)}
+.unlock-row input,.ghost{border-color:var(--control-border)}
+.move-buttons button:disabled,.move-buttons button[aria-disabled="true"]{border-color:var(--control-border)}
+
+/* Small caption text over the photographic panel is pure white on the dark scrim. */
+.visual-caption small{color:#fff}
+
+/* The educational disclaimer under the case header. */
+.scenario-note{margin:10px 0 0;font-size:12px;line-height:1.5;color:#41595e}
+
+/* Headings that receive focus on navigation are not controls: no focus ring for mouse users (keyboard users keep the ring). */
+h1[tabindex="-1"]:focus:not(:focus-visible){outline:none;box-shadow:none}
+
+/* A control that is waiting on the server says so. */
+button[aria-busy="true"]{cursor:progress}
+
+/* Guest-demo disclosure and the short LabEscape explanation on the dashboard. */
+.demo-note { margin: -40px 0 36px; color: #4f636f; font-size: 0.8125rem; line-height: 1.5; max-width: 760px; }
+.faculty-demo-note { margin: -14px 0 26px; max-width: 760px; padding: 10px 14px; border-left: 3px solid #087c7a; border-radius: 0 8px 8px 0; background: rgba(8, 124, 122, 0.07); color: #33474f; font-size: 0.8125rem; line-height: 1.55; overflow-wrap: anywhere; }
+/* The approval disclaimer sits under the demonstration note (which pulls itself up under the page intro). */
+.bar-note.approval-note { margin: 0 0 26px; max-width: 760px; }
+.how-it-works { margin: 48px 0 8px; padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.how-it-works h2 { margin: 6px 0 18px; font-size: 22px; letter-spacing: -0.03em; }
+.how-it-works ol { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 0 0 16px; padding: 0; list-style: none; counter-reset: how; }
+.how-it-works li { position: relative; padding: 14px 14px 14px 52px; border-radius: 10px; background: rgba(8, 124, 122, 0.07); font-size: 0.8125rem; line-height: 1.55; counter-increment: how; }
+.how-it-works li::before { content: counter(how); position: absolute; left: 14px; top: 14px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #066a68; color: #fff; font-weight: 700; font-size: 0.8125rem; }
+.how-it-works p { margin: 0; color: #4f636f; font-size: 0.8125rem; line-height: 1.5; }
+
+/* Keyboard users can jump past the seven sidebar tab stops. */
+.skip-link { position: absolute; left: 8px; top: -64px; z-index: 50; display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 6px; background: #173344; color: #fff; font-size: 0.875rem; font-weight: 700; text-decoration: none; }
+.skip-link:focus { top: 8px; }
+main:focus { outline: none; }
+
+/* Hero: the text column keeps a readable width (it used to be squeezed to ~140px, which clipped or broke the title); when text and image do not both fit, the image wraps below. */
+@media (min-width: 601px) {
+  .hero { flex-wrap: wrap; }
+  .hero > div:first-child { flex: 1 1 380px; min-width: 0; }
+  .hero h1 { font-size: clamp(32px, 4.2vw, 44px); overflow-wrap: normal; }
+  main .hero .hero-science { width: min(100%, 440px); }
+}
+.mission-picker button svg { margin-right: 6px; flex: none; }
+
+/* Stat cards: three columns only when each can hold its text (they overflowed the page between 601px and ~660px). */
+.stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stat { min-width: 0; }
+@media (max-width: 760px) { .stats { grid-template-columns: 1fr; } }
+
+/* Long lab names stay inside their card, matching selects never push a step wider than a 320px phone, and the page background covers short and long pages alike. */
+.lab-card h2, .lab-card h3 { overflow-wrap: anywhere; hyphens: auto; }
+.lab-card { padding-inline: 20px; }
+.case-panel select { max-width: 100%; }
+body { min-height: 100vh; }
+
+/* Round 4: lab cards never get narrower than their longest title (they used to split "Hematolo/gy" at ~930px); the matching step cannot widen a 320px phone. */
+.lab-strip { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.map-grid { grid-template-columns: repeat(auto-fit, minmax(min(270px, 100%), 1fr)); }
+.map-grid > .lab-card { min-width: 0; max-width: 100%; }
+.lab-card h2, .lab-card h3 { overflow-wrap: break-word; hyphens: manual; }
+.match-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.match-row select { width: 100%; min-width: 0; }
+@media (max-width: 420px) { .match-row { grid-template-columns: minmax(0, 1fr); } }
+/* The cream band under short/long pages came from the root background not following the body gradient. */
+html:root { background: none; }
+body { background-attachment: fixed; }
+.state-panel .primary svg { color: currentColor; stroke: currentColor; }
+
+/* Round 5: the order engine wraps its move buttons under the text on small phones instead of splitting words; long unbreakable names (valid up to 80 characters) wrap inside their row instead of widening the page. */
+@media (max-width: 420px) {
+  .drag-list .drag-row { flex-wrap: wrap; }
+  .drag-list .drag-row b { flex: 1 1 130px; overflow-wrap: break-word; }
+  .drag-list .move-buttons { margin-left: auto; }
+}
+.mission-row.selectable, .mission-row.selectable > span, .mission-row.selectable > small { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.profile-card, .profile-card > div { min-width: 0; max-width: 100%; }
+.profile-card h2, .profile-card p { overflow-wrap: anywhere; }
+.picker-label { min-width: 0; max-width: 100%; }
+.picker-label select { max-width: 100%; min-width: 0; }
+.text-button.inline { min-height: 32px; padding-block: 8px; }
+.player-progress { background: rgba(23, 51, 68, 0.12); }
+/* Four laboratories lay out 2x2 until there is room for all four in one row (they used to leave Master alone on a second row). */
+@media (min-width: 601px) and (max-width: 1250px) { .lab-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Windows high contrast: filled buttons keep a visible border and the active section is outlined. */
+@media (forced-colors: active) {
+  .primary, .hint, .ghost, button.primary { border: 1px solid ButtonText; }
+  nav button.active { outline: 2px solid Highlight; outline-offset: -2px; }
+}
+@media (max-width: 600px) { .picker-label select { box-sizing: border-box; width: 100%; max-width: 100%; } }
+
+/* Round 6: a long unbroken class or mission name wraps inside its header/row; the mission header (with the countdown) stays visible while scrolling. */
+.section-head > * { min-width: 0; }
+.tag { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.content-row > b { min-width: 0; overflow-wrap: anywhere; }
+
+/* Round 7: the mission header (countdown, Exit) stays visible only when the viewport is tall enough, and anything focused or scrolled into view is kept clear of it (it used to hide the focused option on short screens). */
+@media (min-height: 520px) {
+  .player > header { position: sticky; top: 0; z-index: 20; background: #fffdfa; }
+  html:has(.player) { scroll-padding-top: 104px; }
+}
+/* Round 17: on a phone the sticky header is 108 px tall (it wraps), so the scroll padding keeps 12 px of air under it: a Shift+Tab no longer leaves the focus ring cut by the header. */
+@media (min-height: 520px) and (max-width: 600px) {
+  html:has(.player) { scroll-padding-top: 120px; }
+}
+/* A failed illustrative image must not paint its alt text over the ILLUSTRATIVE IMAGE tag (the alt stays available to assistive technology). */
+img[alt^="Illustrative"] { font-size: 0; color: transparent; }
+.avatar.big { flex: none; width: 64px; height: 64px; }
+.section-head { flex-wrap: wrap; gap: 8px 16px; }
+.hero-science > div b { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+/* Server-supplied free text may contain very long unbroken strings: it wraps inside its box instead of widening the page (only these elements: a global break rule would split ordinary words). */
+.picker-main, .picker-main *, .case-panel h1, .case-panel .context, .case-panel .sample-chip, .result-lab *, .lab-card p, .mission-table span { overflow-wrap: anywhere; min-width: 0; }
+
+/* Round 8: leaderboard names take the free width and wrap only when a single word is longer than it (equal fr columns used to split ordinary names); the other cells never wrap. */
+.leaderboard-row, .leaderboard-head { grid-template-columns: minmax(2.4em, auto) minmax(0, 1fr) auto auto; }
+.leaderboard-row > span, .leaderboard-head > span { white-space: nowrap; }
+.leaderboard-row > b { min-width: 0; overflow-wrap: anywhere; }
+/* Page titles, mission titles, badges and vault names are server text too: a very long word wraps inside its box. */
+.page-intro h1, .page-intro p, .player-title, .player-title b, .badge-row div, .badge-row b, .badge-row small, .vault-card-head b { min-width: 0; overflow-wrap: anywhere; }
+.mission-row b { white-space: nowrap; }
+/* Round 13: the row of a viewer without XP is one sentence, not a rank grid. */
+.leaderboard-row.unranked { display: block; }

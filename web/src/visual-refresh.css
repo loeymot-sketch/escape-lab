@@ -1,0 +1,23 @@
+/* Kept last in the import order so component styles cannot reintroduce dark panels. */
+.teacher-panel,.vault-panel,.leaderboard-panel,.settings-card,.content-panel,.result-lab{background:#fffdfa;border-color:#dfddd6;color:#173344}.eyebrow{color:#4d686a}
+.teacher-panel h2,.vault-panel h2,.leaderboard-panel h2,.settings-card h2,.result-lab h2,.content-row b,.leaderboard-row b{color:#173344}
+.mission-table{border-color:#d9e0dc}.mission-row{border-color:#e4e6e1;color:#29484e}.mission-row b{color:#056563}.mission-row small{color:#52696c}
+.tag{background:#ddf2eb;color:#056563}.vault-card{background:#f5f8f5;border-color:#d5e2dd;color:#29484e}.vault-card-head span{color:#056563}.code-slots span{background:#e6f4ef;border-color:#158077;color:#1e5553}.code-slots span.empty{background:#f4f3ef;border-color:#cbd6d2;color:#566d6e}.vault-card small,.badge-row small,.badge-state,.leaderboard-head{color:#52696c}.badge-row{border-color:#e4e6e1}.badge-icon{background:#e8efed;color:#52696c}.badge-row.earned .badge-icon{background:#fff0d0;color:#8b5b00}.badge-row.earned .badge-state{color:#835700}.leaderboard-row{border-color:#e4e6e1;color:#29484e}.leaderboard-row span:nth-child(3){color:#056563}.leaderboard-row.you{background:#e5f3ee}
+.setting-row{border-color:#e4e6e1;color:#29484e}.saved-note{background:#e6f5eb;border-color:#afd8bd;color:#245d45}.unlock-row input{background:#fffdfa;border-color:#b8cbc5;color:#173344}.result-seal{background:#fff0d4;color:#916000}.result-lede{color:#52696c}.fragment-reveal{background:#e7f5ef;border-color:#9bcfbb;color:#245d45}.fragment-reveal strong{color:#9a5f00}.fragment-reveal p{color:#426c61}
+.content-head{color:#52696c;border-color:#dce2de}.content-row{border-color:#e4e6e1;color:#29484e}.status-pill{background:#e8edeb;color:#455d60}.status-pill.reviewed{background:#fff1d5;color:#805900}.status-pill.approved{background:#e0f3ea;color:#056563}.content-actions button{border-color:#9dbdb5;color:#056563}
+.lab-card.red{color:#8a2936}.lab-card.teal{color:#005b5d}.lab-card.gold{color:#634800}.lab-card.violet{color:#563580}.lab-card.muted{color:#52696c}.lab-card p{color:#566c72}.lab-card-top{font-weight:600}.lab-card-foot{color:#52696c}
+.case-meta{color:#536b6e}
+/* The content column is a flex item beside the desktop rail. Allow it to shrink
+   below intrinsic text width instead of creating a horizontal tablet canvas. */
+.app>main{min-width:0}
+
+/* LabEscape's motion is deliberately ambient: it signals a living workstation
+   without competing with a learner's decision controls. */
+.hero-science::before{content:'';position:absolute;z-index:2;left:-18%;right:-18%;height:2px;top:18%;background:linear-gradient(90deg,transparent,rgba(203,255,242,.92),transparent);opacity:.72;pointer-events:none}
+.lab-card:not(.locked){transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+.lab-card:not(.locked):hover{transform:translateY(-5px);border-color:#8fc3ba;box-shadow:0 18px 34px rgba(28,72,70,.12)}
+@media (prefers-reduced-motion:no-preference){.hero-science img{animation:labescape-evidence-float 9s ease-in-out infinite alternate}.hero-science::before{animation:labescape-scan 5.4s ease-in-out infinite}.lab-strip .lab-card{animation:labescape-card-enter .48s both}.lab-strip .lab-card:nth-child(2){animation-delay:.06s}.lab-strip .lab-card:nth-child(3){animation-delay:.12s}.lab-strip .lab-card:nth-child(4){animation-delay:.18s}}
+@keyframes labescape-evidence-float{from{transform:scale(1.01) translate3d(0,0,0)}to{transform:scale(1.06) translate3d(-1.2%,-.8%,0)}}
+@keyframes labescape-scan{0%,100%{transform:translateY(0);opacity:.15}50%{transform:translateY(188px);opacity:.78}}
+@keyframes labescape-card-enter{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@media (min-width:601px) and (max-width:900px){.hero{gap:24px}.hero>div:first-child{min-width:0}.hero-science{width:34vw}}

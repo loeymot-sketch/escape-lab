@@ -1,0 +1,132 @@
+{
+ "wave": "D",
+ "round": 17,
+ "findings": [
+  {
+   "id": "R17-D-01",
+   "severity": "P1",
+   "category": "overclaim",
+   "title": "Step 7 sends the committee to the class analytics, roster and student detail without saying the cohort is generated demonstration data",
+   "evidence": "Faculty guest 'Class intelligence' (w-d-s7-faculty.png): 'Students 38 / Completion 73% / Needs attention 5 / Where learners get stuck: Acid-Base Emergency 59% ... / roster Inès Moreau 94% ... Marie Dubois 55% Accuracy under 60%'. grep of web/src: the only 'prepared demonstration data / not real people' notice is web/src/pages/student.tsx:63 (student dashboard) and the reset dialog; no faculty page (analytics, student detail, content review) and nothing on the About page says the 38 students, their names and figures are synthetic (be/src/demo.ts: 'Every number ... is produced by playing the real game with a controlled clock'; 38-student class with invented names). Step 7 text: 'Show the class analytics, the roster, a student detail and the Content review.' 'Before you present' says only that 'the demo student is prepared'.",
+   "repro": "Student guest > About > step 7 > Faculty guest > Class intelligence; read the page as a committee member who has not seen the student dashboard note.",
+   "expected": "A page shown to an academic committee states that the class, the 38 learners, accuracy/completion figures and 'needs attention' flags are generated demonstration data, not results from real students (and so say nothing about pedagogical effectiveness or real cohorts).",
+   "actual": "Nothing on the About page or on the faculty screens says so. Realistic names plus 'Where learners get stuck', '59%' and 'Needs attention' can be read as real class data or as evidence of use; a skeptical academic will ask 'which class is this?'.",
+   "fix_hint": "Add to 'Before you present' and to step 7 purpose: 'The class of 38 students, their names and all figures are generated demonstration data, not real learners.' Ideally add the same one-line note on the faculty dashboard.",
+   "status": "open"
+  },
+  {
+   "id": "R17-D-02",
+   "severity": "P2",
+   "category": "fact_check",
+   "title": "Step 5 hint says Blood Smear Code 'cannot host a retry'; it can (wrong answer, 2 hints, retry)",
+   "evidence": "demo-guide.ts step 5 hint: 'Blood Smear Code ends on its first correct answer, so it cannot host a retry.' Real app (bsc.mjs, bsc-wrong.png): Blood Smear Code, click a wrong place + Submit answer -> 'Not quite. Look for fragments, not whole cells... XP penalty: -10.', mission stays open, 'Hints used on this step: 0 of 2', 'Ask Lab Assistant' available; a second click + submit then completes. API: POST /attempts/:id/answer with a wrong point returns correct:false, penaltyXp -10, then a correct point returns completed:true.",
+   "repro": "About > Open the Hematology lab > Replay Blood Smear Code > click away from the schistocyte > Submit answer; then Ask Lab Assistant.",
+   "expected": "Statement true: the mission ends on the first correct answer, but it does allow a wrong answer, a hint (-15 XP) and a retry.",
+   "actual": "Page tells the presenter the 60-second step-3 mission is useless for the step-5 demonstration, which is false; an academic (or a presenter who tries it) sees the contradiction.",
+   "fix_hint": "Say 'Blood Smear Code has a single step, so the mission ends as soon as the answer is right; Fix the Sample has three samples and shows the retry more clearly.'",
+   "status": "open"
+  },
+  {
+   "id": "R17-D-03",
+   "severity": "P3",
+   "category": "fact_check",
+   "title": "'A replay adds XP to the shared demo student' is imprecise and understates what a rehearsal changes",
+   "evidence": "game.ts complete(): XP is added only when the new score beats mission_best. Fresh seeded DB: replay Blood Smear Code in a few seconds -> 'New personal best: +12 XP' (8,252 XP); replay Fix the Sample (105 XP after hint + mistake) -> 'This replay did not beat your best score, so your total XP is unchanged.' A second Blood Smear Code replay adds 0. Student detail after rehearsal shows 8,252 XP and extra attempts in the history (historyTotal 6 -> more), plus hint/accuracy counters.",
+   "repro": "Replay both missions as in steps 3-5, then open Faculty > Student detail > Alex Martin.",
+   "expected": "'A replay can add XP (only when it beats the best score) and adds attempts to the student's history.'",
+   "actual": "Page says a replay adds XP (not always true) and does not mention history/accuracy/hint counters, which the faculty step then shows to the committee.",
+   "fix_hint": "'A replay may raise the XP total and always adds an attempt to the shared demo student's history, until the next reset.'",
+   "status": "open"
+  },
+  {
+   "id": "R17-D-04",
+   "severity": "P3",
+   "category": "walkthrough",
+   "title": "'Before you present' is not role-aware and gives no recovery after an accidental Mark reviewed",
+   "evidence": "The block is rendered unchanged in the Faculty guest, where 'Reset guest session' does not exist (sticky.mjs: teacher role, Reset guest session 'absent' at every width). After UI 'Mark reviewed' on Blood Smear Code, the student 'Reset guest session' restores XP 8,240 / history 6 / no attempt in progress but Content review keeps 'reviewed' (state.sh). The UI can undo it (Mark reviewed > Approve > Return to draft; cycle.mjs) but the row then reads 'Now draft · Oct 8, 2026, 10:11 PM' instead of 'No review recorded yet', and the same trace remains after the API teacher reset (append-only audit).",
+   "repro": "Faculty guest > About > read 'Before you present'; or click Mark reviewed on any row, then follow the block.",
+   "expected": "Block tells a Faculty-guest reader to 'Return to student demo' first, and says how to put a row back to Draft (Approve, then Return to draft) and that a trace remains.",
+   "actual": "Instruction cannot be executed as written from the Faculty guest; 'The Faculty-side reset is not available in the interface' offers no remedy although a partial one exists.",
+   "fix_hint": "Add 'If you are in the Faculty guest, choose Return to student demo first.' and 'If a row was changed, use Approve then Return to draft; a dated trace remains.'",
+   "status": "open"
+  },
+  {
+   "id": "R17-D-05",
+   "severity": "P3",
+   "category": "walkthrough",
+   "title": "Time budget (390 s) omits about 25 navigations; a realistic run is 7 to 7:30, longer on a phone",
+   "evidence": "Step budgets 30+30+60+60+60+45+75+30 = 390 s = 6 min 30. Measured machine time of all clicks/loads is about 12 s (times: 0.4, 0.17, 0.32, 0.93, 0.28, 1.17, 0.94, 1.24, 2.27, 1.14 s), but the guide needs About re-opened 6 times (after each mission result and each guest switch), roughly 25-28 clicks in all, plus reading the mission screens. My estimate for a competent presenter: 6:45-7:15 desktop, 7:15-7:45 at 375 px (page is 6,776 px tall; Guest options menu for the switch and the return). Stopping Fix the Sample right after the retry saves about 25 s but then the 'server records the score and the time' result screen of step 5 is not seen.",
+   "repro": "Follow steps 1-8 at 1440x900 and 375x812 (walk.mjs, w-d-*.png, w-m-*.png).",
+   "expected": "'about 5 to 7 minutes' holds with margin.",
+   "actual": "Fits only at the top of the range.",
+   "fix_hint": "Either say 'about 7 minutes' or mark step 2 (30 s) and the end of Fix the Sample as optional.",
+   "status": "open"
+  },
+  {
+   "id": "R17-D-06",
+   "severity": "P3",
+   "category": "fact_check",
+   "title": "Step 3 title 'Start one biomedical mission' contradicts its own body ('replay')",
+   "evidence": "Step 3 h3 'Start one biomedical mission'; body 'replay the mission Blood Smear Code'; the picker button says 'Replay' and the result says 'New personal best'. Same for step 4 ('The decision-making flow' is fine).",
+   "repro": "Read step 3.",
+   "expected": "Title consistent with what the presenter does.",
+   "actual": "A skeptical reader sees 'start' then 'replay'.",
+   "fix_hint": "Title 'Play one biomedical mission'.",
+   "status": "open"
+  },
+  {
+   "id": "R17-D-07",
+   "severity": "P3",
+   "category": "overclaim",
+   "title": "Image provenance: the page is now careful, but the in-app caption and two docs still assert an origin",
+   "evidence": "Page foot: 'provenance and licensing still have to be documented' (good). In the mission screen (bsc-wrong.png): 'Stylised blood smear, created for training.' README: 'illustrative training artwork'; docs/KNOWN_LIMITATIONS.md: 'All images are illustrative artwork'; docs/SCIENTIFIC_REVIEW_BACKLOG.md C-07: no source/licence for blood-smear-hero.webp. The committee sees the caption two clicks after the page says provenance is undocumented.",
+   "repro": "Replay Blood Smear Code and read the caption under the image.",
+   "expected": "Same level of claim everywhere shown or handed to the committee.",
+   "actual": "Caption and docs say 'created for training / artwork'.",
+   "fix_hint": "Caption: 'Illustrative image for training. Not a real specimen, not validated, not for clinical use.' and align README/KNOWN_LIMITATIONS.",
+   "status": "open"
+  },
+  {
+   "id": "R17-D-08",
+   "severity": "P3",
+   "category": "fact_check",
+   "title": "Roadmap: who plans the five phases and the institution roles in 'Proposed academic direction' are not documented anywhere in the repo",
+   "evidence": "ROADMAP_LOOP: Create/Monastir, Observe & Learn/HEPL-Liège, Validate & Transfer/Monastir. docs/SCIENTIFIC_REVIEW_BACKLOG.md 5.4 proposes a pilot at BOTH Monastir and HEPL and says it must go to the ethics bodies of both institutions; no document assigns these three roles or the phases A-E (E 'Refinement and transfer' has no source). The page hedges ('proposal, not an agreement ... still have to be confirmed', 'planned, not agreed or approved'), which is acceptable.",
+   "repro": "Scroll to 'Scientific validation roadmap'; grep docs/README/be/src.",
+   "expected": "Owner confirms the loop wording before the Erasmus committee sees it.",
+   "actual": "Hedged but unsourced; 'Five phases are planned' does not say by whom.",
+   "fix_hint": "Confirm with the project owner; consider 'Five phases are proposed' instead of 'planned'.",
+   "status": "open"
+  }
+ ],
+ "summary": { "P0": 0, "P1": 1, "P2": 1, "P3": 6 },
+ "verdict": "AMBER",
+ "round16_verification": {
+  "R16-D-01": "HOLDS",
+  "R16-D-02": "HOLDS",
+  "R16-D-03": "HOLDS",
+  "R16-D-04": "HOLDS",
+  "R16-D-05": "HOLDS",
+  "R16-D-06": "PARTIAL",
+  "R16-D-07": "HOLDS",
+  "R16-D-08": "HOLDS",
+  "R16-D-09": "HOLDS",
+  "R16-D-10": "HOLDS"
+ },
+ "walkthrough": {
+  "steps": [
+   { "n": 1, "seconds": 30, "notes": "Nav to About 0.4 s machine (0.27 s on phone). Page budget 30 s fine; on a phone the page is 6,776 px tall." },
+   { "n": 2, "seconds": 30, "notes": "Open the lab map 0.17 s; back to About by nav 0.3 s. Adds one re-entry." },
+   { "n": 3, "seconds": 65, "notes": "About > Open the Hematology lab > Replay Blood Smear Code > click schistocyte + Submit: 0.9 s. Result: 180 of 180, 'New personal best: +12 XP' (XP now 8,252). Return to mission control lands on home; About must be reopened." },
+   { "n": 4, "seconds": 50, "notes": "About > lab > Replay Fix the Sample 0.28 s. Opens, nothing locked (matches the page)." },
+   { "n": 5, "seconds": 70, "notes": "Hint 'Each hint costs 15 XP', wrong answer 'Not quite... XP penalty: -10', retry Reject, Correct the interference, Accept: 105 of 180, 'This replay did not beat your best score' (no XP change), Server-calculated, Official timer. About 1.2 s clicks." },
+   { "n": 6, "seconds": 45, "notes": "About > Open the Progress vault: Hematology ESCAPED fragments 7/4/2, Exit unlocked; Microbiology 2 of 3. Matches the 'may already be unlocked' hint. 0.9 s." },
+   { "n": 7, "seconds": 80, "notes": "About > Faculty guest (sidebar; Guest options on a phone) 1.2 s > Class intelligence > roster row opens Student detail > Content review (10 missions all Draft, Mark reviewed buttons) 2.3 s. Nothing says the cohort is demonstration data (R17-D-01)." },
+   { "n": 8, "seconds": 35, "notes": "About in Faculty nav; Go to quality / Go to roadmap move focus to the headings; 1.1 s. Return to student demo 1 s." }
+  ],
+  "total_seconds": 405,
+  "fits_5_7_minutes": true,
+  "database_preparation": "Rehearsal tested end to end on a fresh seeded DB at 1440 and 375: after replays (XP 8,252, extra history rows) and an abandoned in-progress mission, student guest 'Reset guest session' -> 'Confirm reset' (phone: Guest options > Reset guest session > Confirm reset; about 0.8 s, lands on home) > click 'About & demo guide' restored Alex Martin level 6, 8,240 XP, 5 of 9 missions, Hematology completed (3 of 3, exit unlocked), Microbiology 2 of 3, continue = Petri Dish Mystery with resume:false (no mission in progress), history 6 attempts. Content review is NOT restored by that reset (a 'reviewed' row stayed reviewed). To restore it: API teacher token POST /api/demo/reset (all rows Draft, tested), or in the UI Mark reviewed > Approve > Return to draft (row reads 'Now draft · date' afterwards, a trace remains). API commands: T=$(curl -s -XPOST http://HOST/api/auth/demo -H 'content-type: application/json' -d '{\"role\":\"student\"}' | jq -r .token); curl -XPOST http://HOST/api/demo/reset -H \"authorization: Bearer $T\"; repeat with {\"role\":\"teacher\"}. Fresh-DB alternative: delete the DB and run be/scripts/seed-demo.ts."
+ },
+ "notes": "VERIFIED TRUE: mission names/order/unlock (hem-01, hem-02, hem-03, mic-01; a freshly registered account gets 403 mission_locked 'Complete mission 01 to unlock.' and Fix the Sample 'locked'); demo student already completed Blood Smear Code and Fix the Sample (replay buttons, 'Completed best score 180 of 180'); hint 15 XP (scoring.ts HINT_PENALTY, on-screen 'Each hint costs 15 XP'); wrong answers on Fix the Sample, Anemia Detective, Microbe Detective, Blood Smear Code give a re-check prompt that does not state the key; Gram Stain Challenge and Petri Dish Mystery add progress 3 of 5 / 2 of 4 ('how many items are in place' is accurate); result screen shows 'Server-calculated' and 'Official timer'; Code Vault/fragments/exit and Hematology already ESCAPED; faculty analytics, roster, student detail (roster row click), Content review exist and work in both roles at 1440 and 375; guest-switch instructions correct on desktop (sidebar) and phone (Guest options) for Faculty guest, Return to student demo and Reset guest session; role-aware step-7 chip ('You are in the Faculty guest' vs 'In the Faculty guest' + switch note) and intro paragraphs correct in both roles; 'Steps 1 to 6 and 8 work here' / 'Steps 1, 7 and 8 work here' true; Mark reviewed persists across the student reset (true, verified); Faculty-side reset really absent from the interface (verified). OVER-CLAIM SCAN: the word 'independent' appears only in two negations ('not an external or independent human review', 'no independent human security or accessibility review'); no clinical validation, production readiness, diagnostic use, accreditation, proven effectiveness, remote CI, external audit or institutional agreement is asserted (page says 'Local only', 'Not yet biomedically validated', 'Planned, not done', 'proposal, not an agreement', 'would require ethics and data-protection approval', 'not a medical device or diagnostic tool'). No stale numbers: only '5 to 7 minutes', step times and 'Five phases' (matches 5 listed). Roadmap phases A-E content matches docs/SCIENTIFIC_REVIEW_BACKLOG.md for A, B, C, D; E and the three-stage loop are unsourced (R17-D-08). A11Y: axe (wcag2a/aa, 21a/aa, 22aa, best-practice) 0 violations at 320/375/768/1440 in both roles (axe.mjs; color-contrast only 'incomplete' because of the page gradient); keyboard: 6 action buttons in order, 3 px visible outline, Enter on 'Go to quality' focuses the heading; headings h1 > h2 > h3 coherent incl. 'Before you present'; zero requests from opening About and using its buttons (only the app's own origins on initial load, no third-party host); reduced motion: 0 animated/transitioned elements and scroll is instant; 200% (720x450) and 400% (360x225) zoom: no horizontal scroll, no clipped text, both roles; no horizontal scroll at 320. STICKY SIDEBAR: aside is position:sticky with overflow-y:auto; About, Faculty guest (student), Return to student demo (faculty) and Reset guest session stay in view at 1440x900, 1280x720, 1024x768, 768x1024 while scrolled to the middle and bottom; on landscape phones (844x390, 667x375) 'Return to student demo' (faculty) and 'Investigations' sit below the fold of the scrollable sidebar and are reachable by sidebar scroll or focus (focus brings them into view); Faculty guest and Reset guest session are in view. Not tested: real human timing (estimate based on page budget plus counted navigations), WebKit/Safari. Judgement call: R17-D-01 is an omission, rated P1 because step 7 puts invented learners in front of an academic committee; downgrade to P2 only if the presenter is guaranteed to say it aloud. Scripts, screenshots, DB, logs: /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r17-D (walk.mjs, reset.mjs, prep.mjs, cycle.mjs, bsc.mjs, sticky.mjs, axe.mjs, kbd.mjs, misc.mjs, state.sh, api.sh). Own API (6701) and web server (6702) stopped; nothing written under be/, web/, docs/, sources/ or repo root."
+}

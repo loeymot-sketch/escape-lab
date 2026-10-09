@@ -1,0 +1,173 @@
+{
+  "wave": "B",
+  "round": 35,
+  "states_reviewed": 96,
+  "findings": [
+    {
+      "id": "B35-001",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-001-live-region-log.json ; B35-001-decision-4th-wrong.png",
+      "category": "a11y / aria-live: repeated identical wrong-answer feedback is not announced",
+      "severity": "P2",
+      "evidence": "Chromium, dev (5601) and production bundle (5602), identical. MutationObserver on the feedback role=alert. Fix the Sample step 1: 1st wrong answer inserts <div role=alert>Not quite. ... XP penalty: -10.</div> (announced). A 2nd submit of the same wrong option, a 3rd submit of a DIFFERENT wrong option and a 4th produce zero DOM mutations in the alert (the message text is identical for every wrong option of the step), while 'XP penalty so far' goes -10 -> -20 -> -30 -> -40 and focus is returned to the Submit button. Same on the point step (Blood Smear Code: 2nd and 3rd wrong click silent, penalty -20, -30). A screen-reader user therefore hears nothing after the 2nd+ failed try although each one costs 10 XP; the penalty counter is not a live region either. (Order engine: a changed 'N of 5 in the right place' number does re-announce, because the alert is atomic; identical text does not.) The separate known item 'same wrong answer charged again' is about the charge, this is about the missing announcement for every repeated wrong try, including different wrong options.",
+      "fix_hint": "Re-key the feedback node per submission (key = answer counter, as DragOrder already does with a nonce) or clear the alert before setting it so it is re-inserted; optionally make the 'Case status' penalty a polite live region.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-002",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-002-bio02-accessibility-tree.txt ; B35-002-bio02-panel-is-an-image-alt-empty.png",
+      "category": "a11y / screen-reader semantics: point missions expose no content of the image",
+      "severity": "P2",
+      "evidence": "Both point missions (hem-01 Blood Smear Code, bio-02 Lab Value Hacker) render the whole stimulus as <img alt=\"\"> inside a button named only 'Select a point on the scientific image' (describedby = generic click/arrow instructions). In bio-02 the stimulus is a TEXT table (Sodium 139 ... Potassium 6.4 H, hemolysis index 3+) delivered as chemistry-panel.svg, so none of the values or flags exist in the accessibility tree (see snapshot: only the button, 'Illustrative training image' and the caption 'Stylised chemistry panel'). A screen-reader user cannot know what is on the image nor choose a row; keyboard operation for sighted users does work (Enter then arrows, verified: BSC at 75%/45% and bio-02 solved by keyboard). Because Blood Smear Code is mission 1 and Fix the Sample / Anemia Detective stay locked until it is completed for a new account, the whole Hematology lab (and therefore the Master Lab) is closed to a non-visual user. Rated P2 because the cell-smear task is inherently visual and sighted keyboard users are served; arguable P1 ('inaccessible core interaction') for bio-02 where a text alternative would not spoil the exercise.",
+      "fix_hint": "For bio-02 give the panel a real text alternative (role=img with a description or an offscreen table of tests/results/flags) and let the answer be chosen by row; for hem-01 add a described alternative (e.g. a grid of labelled cells or a documented non-visual path) or state the limitation in KNOWN_LIMITATIONS.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-003",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-003-order-rows-show-grip-icons-only-arrows-work.png ; B35-003-drag-test.txt",
+      "category": "affordance: order rows show a drag handle but cannot be dragged, no visible instruction",
+      "severity": "P3",
+      "evidence": "Gram Stain Challenge (order engine): every row shows a vertical grip icon (GripVertical). dragTo(row0,row3) and a manual mouse down/move/up on the grip leave the order unchanged; draggable attribute is null, cursor auto. The only instruction ('Use the move buttons to change a position') is the aria-label of the <ol>, not visible text, so a sighted mouse/touch user is invited to drag and gets nothing.",
+      "fix_hint": "Remove the grip icon or implement drag; add one visible sentence above the list ('Use the arrow buttons to move a step up or down').",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-004",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-004-point-keyboard-log.txt ; B35-004-point-keyboard-marker-no-announcement.png",
+      "category": "a11y: keyboard marker moves on the image are silent",
+      "severity": "P3",
+      "evidence": "Focus the hotspot button and press ArrowRight, ArrowDown, Shift+ArrowRight: live-region observer logs nothing; the new position ('Marker at 65% across, 55% down') exists only in the aria-describedby paragraph, which AT reads on focus, not on change. The button has no value/state exposed.",
+      "fix_hint": "Add a polite live region (or aria-valuetext) that says the new position after each key press, like DragOrder does.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-005",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-005-label-in-name.txt",
+      "category": "a11y: label in name (WCAG 2.5.3) on lab-card buttons",
+      "severity": "P3",
+      "evidence": "web/src/pages/student.tsx LabCard sets aria-label 'Review Hematology Lab' / 'Enter Microbiology Lab' while the visible text is 'Review lab' / 'Enter lab'. The visible label is not a substring of the accessible name, so voice-control 'click Review lab' fails and 'Enter lab' is ambiguous (two cards). 8 buttons (dashboard + lab map).",
+      "fix_hint": "Make the accessible name start with the visible text ('Enter lab: Microbiology') or put the lab name in aria-describedby.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-006",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-006-root-font-size-200pct-text-unchanged.png ; B35-006-font-size.txt",
+      "category": "text sizing: app ignores the browser default font-size preference",
+      "severity": "P3",
+      "evidence": "With html{font-size:200%} none of the 15 measured text elements changed size (0 scaled >=1.5x) and the screenshot is identical to 100%: about 170 font-size declarations are in px, only 6 in rem. Page zoom works (720x450 and 360x225 emulation: no horizontal overflow, claims of the demo script hold) but users who raise the default font size instead of zooming get no larger text.",
+      "fix_hint": "Express base font sizes in rem (or inherit from html) so a larger default font size scales the UI.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-007",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-007-student-detail-class-reset-to-L3-after-choosing-L2.png",
+      "category": "faculty: class selection is not kept between Faculty analytics and Student detail",
+      "severity": "P3",
+      "evidence": "Faculty guest: choose 'L2 Biomedical Sciences (0)' on Faculty analytics (empty-state shown), open Student detail via the sidebar: the Class select reads 'L3 Biomedical Sciences', and returning to Faculty analytics also resets to L3. Each view keeps its own class state, so a teacher with several classes silently changes class when moving between views.",
+      "fix_hint": "Lift the selected class id into the app-level state next to `student`.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-008",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-008-timer-log.txt ; B35-008-time-is-up-during-narration.png",
+      "category": "demo script / in-app guide: two facts a first-time presenter needs are missing (mission countdown, answer key)",
+      "severity": "P3",
+      "evidence": "Followed docs/FACULTY_DEMO_SCRIPT.md literally on a freshly seeded DB. (1) Every mission has a server countdown (Blood Smear Code 04:00, Fix the Sample 06:00) that keeps running during narration or committee questions and after 'Exit mission' (lobby then shows Resume): a Blood Smear Code left alone ended after 240 s with role=alert 'Time is up.' and only Restart. Neither the script nor the in-app guide (demo-guide.ts) mentions it (grep: nothing; only demo-screenshots/README mentions the 04:00 start value). (2) The script asks for 'une mauvaise réponse puis la bonne', and in the 7 min variant 'terminez Fix the Sample', but never states the right choices (S1 reject, S2 re-measure, S3 accept); each wrong guess adds a '-10 XP' ledger line, so the result screen differs from capture 05 (1 wrong, 0 hints). Also: after 'Arrêtez-vous après ce réessai' the presenter is inside a full-screen mission with no sidebar, so step 6 'Open the Progress vault' needs Exit mission, then About (3 clicks instead of 1); Exit works without blocking (verified).",
+      "fix_hint": "Add to script section 2.4 / guide 'Before you present': mission countdowns (4 and 6 minutes), Exit mission leaves a running attempt, and the answer key for Fix the Sample and Blood Smear Code; say that step 6 starts with Exit mission.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-009",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-009-plan-b.txt ; B35-009-gate-button-is-Reopen-not-Retry.png ; B35-009-panel-button-is-Retry.png",
+      "category": "demo script wording contradicts product (Plan B)",
+      "severity": "P3",
+      "evidence": "Script 2.5: 'l'application affiche une erreur visible avec un bouton Retry. Relancez l'API puis cliquez Retry.' With the API stopped, a fresh page shows 'Demo laboratory unavailable' with the button 'Reopen the laboratory' (no Retry); an already open screen shows 'This page could not be loaded' + Retry. After restarting the API exactly as the script says (no AUTH_SECRET, so the signing key changes) and pressing Retry, the first call returns 401 and the app drops to Mission control with 'Your guest session expired, so a new guest session was opened.': the presenter's screen is not retried but lost.",
+      "fix_hint": "Reword Plan B ('Reopen the laboratory' at start, 'Retry' on an open page; after an API restart the app opens a new guest session on Mission control) or set a fixed AUTH_SECRET in the demo .env example.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-010",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-010-stale-vault-after-409.png",
+      "category": "persistence / two tabs: stale vault is not refreshed after a 409",
+      "severity": "P3",
+      "evidence": "Tab A on Progress with Microbiology READY (fragments 3 8 5, unlock form). Another tab resets the demo guest. In tab A, entering 385 -> 409 'Find every code fragment before entering the code.' is shown, but the card keeps 'READY', the unlock form and the digit 5 that the student no longer holds (refresh() only runs for non-4xx failures, web/src/pages/progress.tsx unlock()).",
+      "fix_hint": "Call refresh() after any 409 from the unlock endpoint.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-011",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-011-storage-write-blocked-gate.png",
+      "category": "persistence: sessionStorage.setItem failing makes the app unusable with a misleading message",
+      "severity": "P3",
+      "evidence": "Init-script making Storage.prototype.setItem throw QuotaExceededError (getItem still works): the app opens guest sessions in a loop (several 401s) and stops on 'Demo laboratory unavailable ... The server keeps rejecting guest sessions. Wait a moment, then retry.' because tabStore.set falls back to the in-memory Map but tabStore.get reads sessionStorage first (returns null) and never consults the Map. Only the 'getItem throws' case works (verified: SecurityError variant boots fine). Rare environment (old Safari private mode, full quota), but the message blames the server.",
+      "fix_hint": "In tabStore.get fall back to memory.get(key) when sessionStorage returns null, or write to memory first.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-012",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-012-lobby-completed-plus-resume.png",
+      "category": "misleading state wording: open replay shown as 'Completed'",
+      "severity": "P3",
+      "evidence": "After 'Exit mission' from a replay of Fix the Sample (step 2/3), the lab lobby row reads 'Completed · best score 180 of 180 XP' with a 'Resume' button; nothing says that an unfinished replay is open (the 'In progress' label is only used for missions never completed), and its countdown keeps running. The dashboard hero says 'Resume active investigation'.",
+      "fix_hint": "Show 'Replay in progress · best score ...' when inProgress is true on a completed mission.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-013",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-013-print-about-page-1.png",
+      "category": "print stylesheet",
+      "severity": "P3",
+      "evidence": "The only @media print rule (refine.css) un-sticks the sidebar. Printing About & demo guide (5 A4 pages via page.pdf) prints the app chrome on page 1: sidebar navigation, 'Faculty guest' and 'Reset guest session' controls and the header chip, plus faint grey blocks behind the first cards; the guide is the page a presenter is most likely to print.",
+      "fix_hint": "Hide aside/header/skip link/buttons in print and drop backgrounds on cards.",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    },
+    {
+      "id": "B35-014",
+      "state_artifact": "reports/test-e2e/r35/round-1/wave-B-shots/B35-014-xp-after-step3.txt ; B35-014-progress-after-step3-8252xp.png",
+      "category": "demo script: canonical figures drift after step 3",
+      "severity": "P3",
+      "evidence": "Script 2.3 states the canonical state 'niveau 6, 8 240 XP' and capture 06 shows the leaderboard 'You 8,240'. Doing script step 3 (replay Blood Smear Code correctly) gives 'New personal best: +12 XP added', after which Mission control reads 'Level 6 · 8,252 XP' and Progress (script step 6) shows '#4 You 8,252 XP', so the screen differs from the script/capture without the script saying so (the in-app guide only states the rule generically).",
+      "fix_hint": "Add one line in script step 3/6: replaying Blood Smear Code the first time adds +12 XP (8,252 afterwards).",
+      "status": "open",
+      "first_seen_round": 35,
+      "rounds_open": 1
+    }
+  ],
+  "summary": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 2,
+    "P3": 12,
+    "open_P0": 0,
+    "open_P1": 0,
+    "open_P2": 2,
+    "open_P3": 12
+  },
+  "verdict": "GREEN",
+  "notes": "Own servers: API 3601 (throw-away seeded DB, first run without NODE_ENV=test as the script, later NODE_ENV=test to avoid my own 60/10min demo-login limit), Vite dev 5601, production build in a scratch outDir via vite preview 5602; every process stopped by recorded PID. ATTACKED: (a) the FACULTY_DEMO_SCRIPT 5-min and 7-min flows followed literally at 1440x900 on a fresh seed (About, lab map, Blood Smear Code, Fix the Sample with hint + wrong + retry + full completion, Exit mid-mission, Progress, Faculty guest, roster, student detail, Content review, Mark reviewed -> Approve -> Return to draft -> teacher reset, About quality/roadmap, 375px phone path, Guest options, reset + confirm, double Confirm, Plan B with API down/restart), every claim of the in-app About page (all statements, buttons, keyboard order, teacher variant) and each of the 10 docs/demo-screenshots compared with the live screen (01-10 match; only the XP/timer/answer-key caveats above). Whole game played to the end incl. vault unlocks and the Master Lab (4 steps, reload at each step, 9,530 XP consistent across dashboard, leaderboard, lab results, badges, lab map, Faculty roster). (b) accessibility trees of all screens and all five engines, aria-live logging for hints, wrong answers, order moves, match, vault, settings, expiry; focus after every action; axe (wcag2a/aa/21/22 + best-practice) on 8 screens and 4 mission states: 0 violations. (c) reload at every screen and every step, reload during an in-flight hint and answer (server-side processed, state resumed correctly), second tab on the same attempt (stale answer -> clear 'not the current step', no charge), sessionStorage cleared / garbage token mid-mission (session-expired notice + Resume), reset in another tab (case closed + Restart), page.clock forward 10 min and Date +/-25 years (monotonic timer unaffected), real 240 s expiry. (d) reduced-motion (no animations), forced-colors + dark (marker, selection, EARNED/LOCKED all readable), root font-size 200%, print, long/RTL/unicode/emoji student names (Arabic, Hebrew, 80-char unbroken, emoji, Thai) in roster and detail at 1440 and 360: no overflow, bdi isolation fine. (e) rapid races: Exit disabled during submit, Faculty guest switch with nav clicks and delayed /auth/demo, double Confirm reset (one request), abandoned attempt then Reset, IDOR on attempt ids (404/403). (f) every screenshot opened and checked. 0 P0, 0 P1. The two P2 are accessibility defects of the answer interaction (B35-001 silent repeated wrong-answer feedback; B35-002 point missions without a text alternative, arguable P1 for bio-02 if screen-reader users are in scope). No finding re-reports a listed limitation (last-step explanation, F5 result difference, vault paste, same wrong answer charged, focus after failed start, 320px ring, Back, lab-card arc). Not tested: real screen reader, WebKit, concurrent multi-process load."
+}

@@ -1,0 +1,166 @@
+{
+ "wave": "D",
+ "round": 20,
+ "findings": [
+  {
+   "id": "D-01",
+   "severity": "P2",
+   "category": "doc-false-statement",
+   "where": "docs/KNOWN_LIMITATIONS.md:20",
+   "what": "States that an automated content-consistency review 'was done and its findings are listed in docs/FINAL_VALIDATION_REPORT.md'. FINAL_VALIDATION_REPORT.md contains no such list. The only place is docs/SCIENTIFIC_REVIEW_BACKLOG.md (and that one was written by an AI, unsigned). Same false pointer the backlog itself flagged as C-12 on 2026-10-08; still unfixed on 2026-10-09. Reviewers would believe a content review already exists.",
+   "evidence": "sed -n 20p docs/KNOWN_LIMITATIONS.md; grep -n -iE 'MCHC|ferritin|anion|Winter|schistocyte|ambig|consistency' docs/FINAL_VALIDATION_REPORT.md -> only line 15 (generic 'NON validated' sentence), no findings list.",
+   "suggested_fix": "Change the pointer to docs/SCIENTIFIC_REVIEW_BACKLOG.md and say it is an AI-authored preparation document, not a review."
+  },
+  {
+   "id": "D-02",
+   "severity": "P2",
+   "category": "demo-runbook",
+   "where": "docs/FACULTY_DEMO_SCRIPT.md 2.1 (and README.md 'Run locally')",
+   "what": "Runbook gives no 'node -v' / 'nvm use' step. The default shell of the machine that produced the evidence is Node v18.20.7 (FINAL report itself says 'Node 18 par défaut dans le shell'). 'npm start', 'npm run seed:demo' have NO check-node preflight (only pretest/pretypecheck/prebuild/pretest:e2e have it), so on Node 18 the presenter gets a cryptic 'node: bad option: --env-file-if-exists=.env' instead of the friendly message. The report's sentence 'refusé par les contrôles préalables' is true only for test/build, not for the commands the presenter actually runs.",
+   "evidence": "node -v -> v18.20.7 in this environment; node --disable-warning=ExperimentalWarning --env-file-if-exists=.env -e 0 -> 'node: bad option: --disable-warning=ExperimentalWarning'; be/package.json scripts: start/seed:demo/dev have no pre* hook; only root has .nvmrc.",
+   "suggested_fix": "Add 'nvm use (reads .nvmrc); node -v must print v22.18 or higher' to script 2.1 and README; optionally add prestart/preseed:demo hooks running scripts/check-node.mjs; qualify the FINAL report sentence."
+  },
+  {
+   "id": "D-03",
+   "severity": "P2",
+   "category": "evidence-integrity",
+   "where": "docs/FINAL_VALIDATION_REPORT.md 'Identification de l'état vérifié' + .ci-artifacts/local-2026-10-09/validation-manifest.json",
+   "what": "The 'identifiant d'état' (snapshot_content_sha256 c2b0cf3b...) cannot be reproduced from the described method ('SHA-256 over the sorted SHA-256 list of be/src, be/test, be/scripts, openapi.json, web/src, web/e2e, web/scripts, config and package files, and three docs'): the exact file set, the serialization and the three docs are not named, and no script is archived. Also docs/FINAL_VALIDATION_REPORT.md (very likely one of the 'three docs') and README.md were modified after the manifest DONE marker (03:04), so the hash cannot describe the current docs. Presented as the state identifier of the verdict, it is unverifiable.",
+   "evidence": "Tried 7 serializations x 32 subsets of {FINAL_VALIDATION_REPORT, FACULTY_DEMO_SCRIPT, SCIENTIFIC_REVIEW_BACKLOG, KNOWN_LIMITATIONS, README} over 136 source/config files: no match. find -newer DONE lists README.md, docs/FINAL_VALIDATION_REPORT.md, RELEASE_GATE_DECISION, GATE_TRACEABILITY_MATRIX, CLAUDE_CODE_EXECUTION_BRIEF, be/openapi.json (sha unchanged). No source file under be/src, be/test, web/src, web/e2e is newer than DONE (good).",
+   "suggested_fix": "Archive the hashing script and the explicit file list in .ci-artifacts/local-2026-10-09/, name the 3 docs, and state that the docs changed after the hash; or compute the hash over code only."
+  },
+  {
+   "id": "D-04",
+   "severity": "P2",
+   "category": "stale-docs-without-banner",
+   "where": "docs/HUMAN_REVIEW_HANDOFF_2026-10-05.md:58 ; docs/AUDIT_EVIDENCE_2026-10-04.md ; docs/E2E_VALIDATION_REPORT_2026-10-04.md ; docs/INDEPENDENT_REVIEW_REPORT_2026-10-04.md ; docs/CODEX_INITIAL_AUDIT.md ; docs/API_CONTRACT_MATRIX*.md ; docs/ULTRA_STRICT_EXECUTION_PLAN.md ; be/README.md:6,10",
+   "what": "Only 3 of the old docs (CLAUDE_CODE_EXECUTION_BRIEF, GATE_TRACEABILITY_MATRIX, RELEASE_GATE_DECISION) carry the 'Etat au 2026-10-09: chiffres anterieurs' banner. HUMAN_REVIEW_HANDOFF says 'Resultats locaux de reference a jour: backend 108/108, frontend 186/186, Playwright 232/232, JS 326 243' which is now stale (258/322/411/359 139) yet labelled 'a jour'. AUDIT_EVIDENCE (verdict CONDITIONAL PASS, 48/48, E2E 15/15) and E2E_VALIDATION_REPORT (Verdict 'PASS' / 'CONDITIONAL PASS') have no banner and no ESCALATE reminder. be/README.md says '120 tests pass' (twice) vs 258. CODEX_INITIAL_AUDIT has a heading 'Production-ready signals'. FINAL_VALIDATION_REPORT lower sections (G0..G8, 48/48, 15/15, 'PASS technique') are in the same file below the current verdict; they are dated but the 'Action suivante obligatoire' (line ~135) reads as a live instruction.",
+   "evidence": "grep outputs: HUMAN_REVIEW_HANDOFF.md:58; be/README.md:6 and :10 ('120 tests'); AUDIT_EVIDENCE.md:5 'Verdict : CONDITIONAL PASS'; E2E_VALIDATION_REPORT.md:4 'Verdict ... PASS'; CODEX_INITIAL_AUDIT.md:10 '### Production-ready signals'.",
+   "suggested_fix": "Add the same 'ARCHIVE / superseded by FINAL_VALIDATION_REPORT, release verdict ESCALATE' banner to every dated doc; fix the 'a jour' addendum and be/README test counts (or drop the numbers); rename the 'Production-ready signals' heading to 'Positive signals (not a readiness claim)'."
+  },
+  {
+   "id": "D-05",
+   "severity": "P2",
+   "category": "overclaim-independent",
+   "where": "docs/INDEPENDENT_REVIEW_REPORT_2026-10-04.md:1,3 ; docs/AUDIT_EVIDENCE_2026-10-04.md:4,9,19,64 ; docs/CLAUDE_CODE_EXECUTION_BRIEF.md:270 ; docs/CONTENT_VALIDATION_CHECKLIST_2026-10-05.md:4",
+   "what": "Wording 'Revue independante', 'Reviewer : agent independant G0-G8', 'contre-revue independante technique', column 'Revue independante', 'superviseurs adversariaux independants' for reviews done by AI agents of the same team. The current FINAL report and the app (demo-guide.ts QUALITY_POINTS) explicitly say the opposite ('ni une revue independante humaine'), and round-16 P1 was exactly this phrase on the demo page. The old docs still carry it. (CONTENT_VALIDATION_CHECKLIST 'specialiste biomedical independant' is a requirement for a future human, fine.)",
+   "evidence": "INDEPENDENT_REVIEW_REPORT_2026-10-04.md line 1/3; AUDIT_EVIDENCE line 4 'contre-revue independante technique'; CLAUDE_CODE_EXECUTION_BRIEF.md:270 'superviseurs adversariaux independants, 5 rounds' (this one sits after the 2026-10-09 banner).",
+   "suggested_fix": "Rename to 'revue croisee par agent IA (meme equipe)' or add a one-line disclaimer at the top of each of these files."
+  },
+  {
+   "id": "D-06",
+   "severity": "P2",
+   "category": "ui-overclaim",
+   "where": "web/src/pages/faculty.tsx:394-395 (Content review) + 431-432 (Approve / Return to draft)",
+   "what": "Content review is headed 'SCIENTIFIC GOVERNANCE' with intro 'Sample clinical content remains draft until a faculty reviewer moves it through the server-side approval workflow.' and offers one-click 'Mark reviewed' -> 'Approve'. Nothing on screen says that 'Approved' is NOT a scientific validation, that a single teacher can approve, or that the status is not tied to the content (KNOWN_LIMITATIONS 9-10; editing content.ts does not reset it). The only guard is the presenter's spoken sentence (script 3.1) and the in-app guide. A committee member (or the presenter by accident) can produce an 'Approved' badge on unvalidated medical content.",
+   "evidence": "grep 'SCIENTIFIC GOVERNANCE' web/src/pages/faculty.tsx:394; no 'not a validation' string in faculty.tsx; docs/KNOWN_LIMITATIONS.md:9-10; SCIENTIFIC_REVIEW_BACKLOG 1.2 item 8.",
+   "suggested_fix": "Add a static note on Content review: 'Status is a demo workflow marker, not a scientific validation; biomedical experts have not reviewed this content.'"
+  },
+  {
+   "id": "D-07",
+   "severity": "P2",
+   "category": "ui-overclaim",
+   "where": "web/src/pages/shell.tsx:26",
+   "what": "User-visible loading text: 'Opening a guided biomedical investigation with a secure guest session.' Guest sessions are passwordless demo tokens, all guests share one server user (KNOWN_LIMITATIONS), and the project states there was no security review. 'secure' is an unsupported claim in product copy.",
+   "evidence": "shell.tsx:26 ; FINAL report: no independent security review; be/src/routes.ts /api/auth/demo is passwordless by design.",
+   "suggested_fix": "Replace by 'a guest session' / 'a demonstration guest session'."
+  },
+  {
+   "id": "D-08",
+   "severity": "P3",
+   "category": "ui-overclaim",
+   "where": "web/src/pages/shell.tsx:208 ; web/src/pages/progress.tsx:236",
+   "what": "'Guest demo . server verified' (sidebar status) can be read as 'data/content verified'; it only means scoring is server-side. 'EVIDENCE OF MASTERY' eyebrow on Lab results claims mastery although pedagogical effectiveness is explicitly unevaluated (About page says so).",
+   "evidence": "shell.tsx:208; progress.tsx:236 PageIntro eyebrow='EVIDENCE OF MASTERY'.",
+   "suggested_fix": "Use 'Guest demo . server-scored' and 'LAB RESULTS' / 'YOUR RESULTS'."
+  },
+  {
+   "id": "D-09",
+   "severity": "P3",
+   "category": "stale-line-references",
+   "where": "docs/SCIENTIFIC_REVIEW_BACKLOG.md section 4 (barème, retour d'information) and C-16",
+   "what": "be/src/game.ts:387 (recheck) and :401 (explanation) are now at game.ts:413 and :427; be/src/scoring.ts:6-7 (penalties) are now :4-5. The content.ts line references (c:NN) are all correct and its SHA-256 matches the file now.",
+   "evidence": "grep -n 'recheck\\|explanation' be/src/game.ts -> 413, 427; grep -n 'WRONG_PENALTY =' be/src/scoring.ts -> 4,5.",
+   "suggested_fix": "Update the three line references or cite symbols instead of line numbers."
+  },
+  {
+   "id": "D-10",
+   "severity": "P3",
+   "category": "report-wording",
+   "where": "docs/FINAL_VALIDATION_REPORT.md 'Precision d'honnetete'",
+   "what": "'Cause etablie: des courses dans les tests' for the first attempt. Archived first-attempt logs show the SAME test (audit-fixes.spec.ts:2385 'R17-D-01: the note is shown while the class data fails to load', 'expect(getByRole(alert)) not found') failed in 3 of 3 consecutive passes, plus one other test once (R2V-01/02). A failure 3/3 is deterministic, not a classic race; the fix of the test/helper is credible (3 x 411/411 afterwards) but the wording 'cause etablie' is stronger than what the logs prove. No product defect can be excluded from logs alone for that one scenario (error alert during class-data failure).",
+   "evidence": ".ci-artifacts/local-2026-10-09-first-attempt/playwright-e2e-pass{1,2,3}.log: '1 failed / 410 passed', '1 failed / 410 passed', '2 failed / 409 passed'; exit-codes.log pass1..3 exit=1.",
+   "suggested_fix": "Say 'cause attribuee a la synchronisation des tests (test corrige, 3 x 411/411 ensuite)'; link the diff or the test change."
+  },
+  {
+   "id": "D-11",
+   "severity": "P3",
+   "category": "demo-script-accuracy",
+   "where": "docs/FACULTY_DEMO_SCRIPT.md 1, 3, 3.1 vs web/src/lib/demo-guide.ts",
+   "what": "Timings: script 5-min table sums 5:00 with step 7 = 60 s and step 4 = 30 s; in-app guide steps sum 390 s (faculty 75 s, decision 60 s); script 3.1 says ~405 s; App says 'about 7 minutes with navigation'. All admit they are estimates (script says 'aucune repetition chronometree par un humain'), so only a consistency nit. Also the claim 'Un zoom jusqu'a 200 % a ete teste' is backed only by viewport emulation (720x450 / 360x225 in round-16/17 reports), not real browser zoom.",
+   "evidence": "demo-guide.ts seconds: 30+30+60+60+60+45+75+30=390; r17 wave-D total_seconds=405; reports/test-e2e/r16..r17 notes '200% (720x450) and 400% (360x225) zoom'.",
+   "suggested_fix": "Say 'emulated zoom (viewport 720x450)' and align the timings or drop the exact seconds."
+  },
+  {
+   "id": "D-12",
+   "severity": "P3",
+   "category": "demo-script-completeness",
+   "where": "docs/FACULTY_DEMO_SCRIPT.md 2.2-2.3",
+   "what": "R19-B-04 (rehearsal): after the teacher reset curl, a Content review row that was changed during rehearsal reads 'Now draft . <date>' instead of 'No review recorded yet' (all still Draft). The script says 'les 10 missions sont en Draft' but does not mention this trace (the in-app guide does); a presenter who rehearsed and used Approve/Return to draft will see a different screen than screenshot 09. Only way to get a pristine screen is deleting be/data/demo.db and re-seeding (script mentions it only as an 'autre solution'). Also script says '5 missions sur 9' and '10 missions en Draft' without explaining 9 = standard labs, 10 = incl. Master.",
+   "evidence": "reports/test-e2e/r19/round-1/wave-B-findings.json R19-B-04; grep 'Now draft' docs/FACULTY_DEMO_SCRIPT.md -> none; web/src/lib/demo-guide.ts BEFORE_PRESENTING_FACULTY mentions it.",
+   "suggested_fix": "Add one sentence in 2.3: after any rehearsal status change prefer deleting demo.db + seed:demo; explain 9 vs 10."
+  },
+  {
+   "id": "D-13",
+   "severity": "P3",
+   "category": "demo-runbook",
+   "where": "docs/FACULTY_DEMO_SCRIPT.md 2.1",
+   "what": "Script says the frontend calls http://localhost:3000/api while the demo API binds 127.0.0.1 only (app.ts hostFor). KNOWN_LIMITATIONS:57 itself says 'browsers resolve localhost to either family'. On a machine where localhost resolves to ::1 first the browser may need fallback; not proven failing (Chrome falls back), so only a risk, but Plan B does not mention it.",
+   "evidence": "be/src/app.ts:60-68; docs/KNOWN_LIMITATIONS.md:57.",
+   "suggested_fix": "Suggest VITE_API_URL=http://127.0.0.1:3000/api in the runbook."
+  },
+  {
+   "id": "B-01",
+   "severity": "P3",
+   "category": "biomedical-missed-candidate (PLAUSIBLE)",
+   "where": "be/src/content.ts:196-222 (bio-01, c:196-222)",
+   "what": "Clinical-logic gap not stated in the backlog: bio-01 presents an oliguric post-operative patient with creatinine 4.2 and then asks (S3) 'Before calling it, which action best rules out pseudohyperkalemia?'. In true AKI, K 6.1 is probably real; teaching 'confirm on a non-hemolyzed sample' as THE action without the clinical-context step (ECG, immediate clinical communication, treatment not delayed) can model delay of a critical-value communication. The backlog C-01 covers the notify/confirm order but not the pre-test probability argument (hemolysis is not evidenced anywhere in bio-01, see C-02). Marked PLAUSIBLE: depends on local critical-value SOP.",
+   "evidence": "c:196 'reduced urine output after surgery', c:199 creatinine 4.2/BUN 62, c:209 K 6.1 HH, c:217-222; no hemolysis index in bio-01 data.",
+   "suggested_fix": "Ask the biochemist in question 1 of section 6 to rule on: communicate immediately AND confirm; add an explicit hemolysis index or an ECG/clinical-context clue to bio-01."
+  },
+  {
+   "id": "B-02",
+   "severity": "P3",
+   "category": "biomedical-missed-candidate (PLAUSIBLE)",
+   "where": "be/src/content.ts:62-70 (hem-02-s2)",
+   "what": "The displayed Hb 8.1 g/dL is the lipemia-ARTIFACTED value (falsely raised per the explanation), so the true Hb is lower than an already low 8.1: a patient-safety nuance (true severe anemia hidden by interference) the explanation never states; it says 'The specimen itself is sound'. Backlog notes only the surprise of 'low Hb described as falsely raised' (a), not the clinical consequence. PLAUSIBLE, minor.",
+   "evidence": "c:63 'Hb 8.1 ... MCHC 41', c:68 'falsely raises hemoglobin readings and MCHC'.",
+   "suggested_fix": "Ask hematologist to confirm wording; consider stating that the measurement must be repeated before any clinical use of 8.1."
+  },
+  {
+   "id": "B-03",
+   "severity": "P3",
+   "category": "backlog-assessment",
+   "where": "docs/SCIENTIFIC_REVIEW_BACKLOG.md C-01",
+   "what": "Headline 'Blocker: contradictory order notify/confirm for a critical potassium' is REAL but slightly overstated as 'contradictory': s2 explanation says 'notified at once and confirmed urgently' (both), s3 says 'confirm on a clean sample while the clinician is notified' (both, in parallel); only the stem 'Before calling it' suggests confirm-first. It is an ambiguity, not a flat contradiction. The backlog does hedge ('selon la lecture', 'provisoire', 'a confirmer'), so no honesty issue.",
+   "evidence": "c:211, c:217, c:220 quoted exactly.",
+   "suggested_fix": "Call it 'ambiguous order' in FINAL report summary ('1 bloquant provisoire' is acceptable)."
+  }
+ ],
+ "checked": [
+  "FINAL report verdict numbers vs raw logs: backend 258/258 (backend-test.log '# tests 258 # pass 258 # fail 0 # skipped 0'), typecheck clean, backend/frontend npm audit 'found 0 vulnerabilities' (stronger than audit-level=high), frontend 17 files / 322 tests, contract '13 literal and 12 dynamic', client boundary pass, JS 359139/400000, CSS 65969/120000, Playwright '411 passed' x3 (pass1 4.7m, pass2 4.9m, pass3 4.6m), exit-codes.log all 10 = 0, DONE present, Node v22.23.2 / npm 10.9.8: ALL MATCH.",
+  "sha256 recomputed: .ci-artifacts/local-2026-10-09/openapi.json == be/openapi.json == a10dd1e501fb3254e608fa6c87e6318efb5ec0bd6f18bf5c042d2e3a32c951eb == manifest == openapi.sha256; openapi-diff.log empty: MATCH. (be/openapi.json mtime is newer than DONE but content identical.)",
+  "No be/src, be/test, be/scripts, web/src, web/e2e, web/scripts file is newer than the evidence DONE marker: the verified code is the current code.",
+  "Adversarial-round table (rounds 9-19) recomputed from reports/test-e2e/rN/round-1/*.json: every P0/P1/P2/P3 cell and every wave list matches (e.g. r9 5/13/17, r17 2/2/14, r19 0/1/6). 'Totaux calcules a partir des fichiers' is true. Rounds 18 and 19 = no P0/P1.",
+  "Report claim 'Node 18 default shell' true on this machine (node -v v18.20.7); manifest first_attempt_note matches archived first-attempt logs (exit=1 x3, 1/1/2 failures).",
+  "SCIENTIFIC_REVIEW_BACKLOG: SHA-256 of be/src/content.ts (d4bd3b64...85a39) and the three assets (blood-smear-hero.webp bcf771c3..., chemistry-panel.svg 65d4f92e..., labescape-investigation-hero.webp cedafde8...) all MATCH current files. Count 1 blocker + 11 should-fix + 10 nice = 22 matches C-01..C-22 and the FINAL report/script ('22 constats, 1 bloquant provisoire').",
+  "Backlog random sample of 6 verified against be/src/content.ts: C-01 (c:211/217/220 quotes exact), C-02 (c:222 hint, no hemolysis index in bio-01 data c:199/209), C-08 (c:253 'Normal anion gap (about 12)' vs c:256 'above the usual upper limit of about 12'), C-13 (c:54 platelets 38 LL, c:209 K 6.1 HH), C-18 (correct option is the longest at c:111, 125, 218, 287, 297 - confirmed; '15 choice steps' is right), C-04/C-19 (chemistry-panel.svg: K 6.4 flag H, bicarbonate ref 22-29, K row highlighted, 'consistent with the patient' at c:228). Also C-03, C-16 (content.test.ts:70 says blood-smear-hero.png, asset is .webp), C-17 (engines.ts:40 Math.hypot on percent axes), engines.ts:12-14 labels, KNOWN_LIMITATIONS line refs :7 :9 :10 :20 :26 :38, engines.tsx:128 caption: OK. Only game.ts / scoring.ts line numbers drifted (D-09).",
+  "Arithmetic recomputed: anion gap 140-108-14=18; Winter 1.5x14+8=29 (27-31); Henderson-Hasselbalch pH ~7.29 for HCO3 14 / PaCO2 30; hotspot percentages 1230/1672=73.6, 440/941=46.8, 880/1600=55, 395/900=43.9; max score 100+30+30+20=180, Master 570; hint 15 > wrong 10; all L/H/LL/HH flags consistent with ranges in all 10 missions; every key is among its options.",
+  "Biomedical sweep of all 10 missions (9 standard + master-01): reference ranges, units, keys, explanations, distractors read for errors. No outright factual error found in the keyed answers (microcytic anemia, iron deficiency pattern, catalase/coagulase logic, Gram order, MacConkey/swarming/beta-hemolysis, AKI -> kidney, hyperkalemia as life-threatening, metabolic acidosis with AG 18 and appropriate Winter compensation, bile-esculin+/6.5% NaCl- = S. bovis group, ferritin low despite CRP up, GI work-up + endocarditis exclusion). Backlog caught the ambiguities I found (MCHC/Hb direction, TIBC limit, AG normal=12, ferritin 'only/never', odor, species-level ID, BUN/SI mix); only B-01, B-02 added as PLAUSIBLE. No P0 biomedical finding.",
+  "Overclaim grep over docs/, README.md, be/README.md, web/src (non-test) for production ready / certified / clinically / independent / GDPR / WCAG / compliant / secure / validated / mastery: README.md says 'Not production ready'; FINAL report says it does not claim readiness; About page/demo-guide copy is consistently hedged ('not an external or independent human review', 'not clinical guidance', image caption 'not for clinical use'); no GDPR, WCAG-compliance or certification claim anywhere; no biomedical-validation claim anywhere (assets.ts status 'validated' is a type member never used). Hits: D-05, D-07, D-08 only.",
+  "FACULTY_DEMO_SCRIPT labels grepped in web/src: 'Reset guest session', 'Confirm reset', 'Guest options', 'About & demo guide', 'Mark reviewed' (faculty.tsx), 'Open the Hematology lab', 'Open the lab map', 'Open the Progress vault', 'Faculty guest', 'Return to student demo', 'Open Faculty analytics', 'Open Content review', 'Go to quality', 'Go to roadmap', 'Submit answer', 'Return to mission control' (mission.tsx:480,493,538,596), 'Retry', 'Lab map' (shell), 'Class intelligence', 'Content review', 'Server-calculated', 'Official timer', 'Not quite', 'XP penalty', 'Demonstration data', Code Vault: ALL EXIST. Mission titles Blood Smear Code / Fix the Sample are served by be/src/content.ts:329-330. No step that cannot work as written found (no P1).",
+  "Demo state claims: Alex Martin, 8240 XP (ALEX_TARGET_XP), 5 completions, 38-student class, API on 127.0.0.1 in demo mode (app.ts), port 3000 default, cp .env.example .env exists, seed:demo/start scripts exist, POST /api/auth/demo and /api/demo/reset exist; round-19 rehearsal independently reported the same (curl commands tested). Screenshots: 10 PNGs exist with the exact names; no src file is newer than the screenshots; docs/demo-screenshots/README honesty notes consistent with FINAL report; R19-B-01/02/03 fixes are present (README says seven Coming soon; script section 5 'sont fournies').",
+  "Old-vs-new contradictions: 3 docs carry the stale banner correctly; no old doc says GO / production ready as a decision (all end in ESCALATE); Verdict historique 2026-10-08 section is labelled historical. Stale/contradictory items listed in D-04, D-05.",
+  "Not done by design: no servers, tests, browsers or e2e were run; snapshot hash could not be recomputed (D-03); r20 wave-V findings (screenshot captions, 'Earned milestones') not duplicated here."
+ ]
+}

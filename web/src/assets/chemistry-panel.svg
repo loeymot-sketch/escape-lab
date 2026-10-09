@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="Illustrative chemistry panel">
+<rect width="1600" height="900" fill="#fbfaf6"/>
+<rect width="1600" height="100" fill="#dcebe6"/>
+<g font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<text x="60" y="64" font-size="40" font-weight="700" fill="#173344">CHEMISTRY PANEL</text>
+<text x="1540" y="62" font-size="24" font-weight="600" fill="#35575a" text-anchor="end">ILLUSTRATIVE TRAINING IMAGE - NOT A REAL REPORT</text>
+<rect x="60" y="125" width="460" height="64" rx="32" fill="#f6d9d4" stroke="#b9c9c3"/>
+<text x="290" y="167" font-size="28" font-weight="600" fill="#173344" text-anchor="middle">Hemolysis index 3+</text>
+<rect x="560" y="125" width="460" height="64" rx="32" fill="#e6efe9" stroke="#b9c9c3"/>
+<text x="790" y="167" font-size="28" font-weight="600" fill="#173344" text-anchor="middle">Icterus index 0</text>
+<rect x="1060" y="125" width="460" height="64" rx="32" fill="#e6efe9" stroke="#b9c9c3"/>
+<text x="1290" y="167" font-size="28" font-weight="600" fill="#173344" text-anchor="middle">Lipemia index 0</text>
+<rect x="40" y="220" width="1520" height="70" fill="#eef2ef"/>
+<text x="80" y="266" font-size="24" font-weight="700" fill="#35575a" text-anchor="start" letter-spacing="2">TEST</text>
+<text x="880" y="266" font-size="24" font-weight="700" fill="#35575a" text-anchor="middle" letter-spacing="2">RESULT</text>
+<text x="1060" y="266" font-size="24" font-weight="700" fill="#35575a" text-anchor="start" letter-spacing="2">UNIT</text>
+<text x="1260" y="266" font-size="24" font-weight="700" fill="#35575a" text-anchor="start" letter-spacing="2">REFERENCE</text>
+<text x="1500" y="266" font-size="24" font-weight="700" fill="#35575a" text-anchor="middle" letter-spacing="2">FLAG</text>
+<line x1="40" y1="360" x2="1560" y2="360" stroke="#d9dfdb" stroke-width="2"/>
+<text x="80" y="336" font-size="32" font-weight="500" fill="#173344">Sodium</text>
+<text x="880" y="336" font-size="34" font-weight="500" fill="#173344" text-anchor="middle">139</text>
+<text x="1060" y="336" font-size="26" fill="#4a6366">mmol/L</text>
+<text x="1260" y="336" font-size="26" fill="#4a6366">135 - 145</text>
+<rect x="40" y="360" width="1520" height="70" fill="#fdebe8"/>
+<rect x="40" y="360" width="8" height="70" fill="#c74e55"/>
+<line x1="40" y1="430" x2="1560" y2="430" stroke="#d9dfdb" stroke-width="2"/>
+<text x="80" y="406" font-size="32" font-weight="800" fill="#a8323c">Potassium</text>
+<text x="880" y="406" font-size="34" font-weight="800" fill="#a8323c" text-anchor="middle">6.4</text>
+<text x="1060" y="406" font-size="26" fill="#4a6366">mmol/L</text>
+<text x="1260" y="406" font-size="26" fill="#4a6366">3.5 - 5.1</text>
+<text x="1500" y="406" font-size="32" font-weight="800" fill="#a8323c" text-anchor="middle">H</text>
+<line x1="40" y1="500" x2="1560" y2="500" stroke="#d9dfdb" stroke-width="2"/>
+<text x="80" y="476" font-size="32" font-weight="500" fill="#173344">Chloride</text>
+<text x="880" y="476" font-size="34" font-weight="500" fill="#173344" text-anchor="middle">103</text>
+<text x="1060" y="476" font-size="26" fill="#4a6366">mmol/L</text>
+<text x="1260" y="476" font-size="26" fill="#4a6366">98 - 107</text>
+<line x1="40" y1="570" x2="1560" y2="570" stroke="#d9dfdb" stroke-width="2"/>
+<text x="80" y="546" font-size="32" font-weight="500" fill="#173344">Bicarbonate</text>
+<text x="880" y="546" font-size="34" font-weight="500" fill="#173344" text-anchor="middle">24</text>
+<text x="1060" y="546" font-size="26" fill="#4a6366">mmol/L</text>
+<text x="1260" y="546" font-size="26" fill="#4a6366">22 - 29</text>
+<line x1="40" y1="640" x2="1560" y2="640" stroke="#d9dfdb" stroke-width="2"/>
+<text x="80" y="616" font-size="32" font-weight="500" fill="#173344">Urea</text>
+<text x="880" y="616" font-size="34" font-weight="500" fill="#173344" text-anchor="middle">5.1</text>
+<text x="1060" y="616" font-size="26" fill="#4a6366">mmol/L</text>
+<text x="1260" y="616" font-size="26" fill="#4a6366">2.5 - 7.8</text>
+<line x1="40" y1="710" x2="1560" y2="710" stroke="#d9dfdb" stroke-width="2"/>
+<text x="80" y="686" font-size="32" font-weight="500" fill="#173344">Creatinine</text>
+<text x="880" y="686" font-size="34" font-weight="500" fill="#173344" text-anchor="middle">78</text>
+<text x="1060" y="686" font-size="26" fill="#4a6366">µmol/L</text>
+<text x="1260" y="686" font-size="26" fill="#4a6366">55 - 100</text>
+<line x1="40" y1="780" x2="1560" y2="780" stroke="#d9dfdb" stroke-width="2"/>
+<text x="80" y="756" font-size="32" font-weight="500" fill="#173344">Glucose</text>
+<text x="880" y="756" font-size="34" font-weight="500" fill="#173344" text-anchor="middle">5.4</text>
+<text x="1060" y="756" font-size="26" fill="#4a6366">mmol/L</text>
+<text x="1260" y="756" font-size="26" fill="#4a6366">3.9 - 5.6</text>
+<line x1="40" y1="850" x2="1560" y2="850" stroke="#d9dfdb" stroke-width="2"/>
+<text x="80" y="826" font-size="32" font-weight="500" fill="#173344">Calcium</text>
+<text x="880" y="826" font-size="34" font-weight="500" fill="#173344" text-anchor="middle">2.35</text>
+<text x="1060" y="826" font-size="26" fill="#4a6366">mmol/L</text>
+<text x="1260" y="826" font-size="26" fill="#4a6366">2.15 - 2.55</text>
+</g></svg>

@@ -1,0 +1,2407 @@
+{
+ "trace": [
+  {
+   "kind": "api-hem01",
+   "correct": true
+  },
+  {
+   "kind": "initial-focus",
+   "f": {
+    "body": true
+   }
+  },
+  {
+   "kind": "first-tab",
+   "f": {
+    "tag": "a",
+    "role": null,
+    "label": "Skip to main content",
+    "id": null,
+    "pressed": null,
+    "expanded": null,
+    "disabled": false,
+    "visible": true,
+    "inViewport": true,
+    "indicator": true,
+    "outlineCss": "solid 3px rgb(10, 79, 82)",
+    "shadowCss": "rgb(255, 255, 255) 0px 0px 0px 5px",
+    "cls": "skip-link",
+    "type": null,
+    "value": null
+   }
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Start the next investigation",
+   "focus": "{\"tag\":\"a\",\"role\":null,\"label\":\"Skip to main content\",\"id\":null,\"pressed\":null,\"expanded\":null,\"disabled\":false,\"visible"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:start",
+   "key": "Enter",
+   "focus": "h1:A fibrin clot is visible in the tube. Platelets 38 ×10⁹/L (flagged). What do you do?",
+   "live": [
+    {
+     "t": 2110,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Starting mission…"
+    },
+    {
+     "t": 2133,
+     "kind": "region-inserted(nested)",
+     "role": "timer",
+     "text": "06:00"
+    }
+   ]
+  },
+  {
+   "kind": "started",
+   "title": "Fix the Sample",
+   "tabsToCta": 9,
+   "focus": "h1:A fibrin clot is visible in the tube. Platelets 38 ×10⁹/L (flagged). What do you do?"
+  },
+  {
+   "kind": "mission-start",
+   "title": "Fix the Sample",
+   "focus": "h1:A fibrin clot is visible in the tube. Platelets 38 ×10⁹/L (flagged). What do you do?"
+  },
+  {
+   "kind": "act",
+   "ctx": "Fix the Sample:step1:select-option",
+   "key": "Space",
+   "focus": "button:B Reject and request a new sample",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Fix the Sample:step1",
+   "idx": 1,
+   "label": "B Reject and request a new sample",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "options",
+   "ctx": "Fix the Sample:step1",
+   "labels": [
+    "Accept and report",
+    "Reject and request a new sample",
+    "Correct the interference and re-measure"
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Fix the Sample:step1:choose-wrong",
+   "key": "Space",
+   "focus": "button:A Accept and report",
+   "live": []
+  },
+  {
+   "kind": "act",
+   "ctx": "Fix the Sample:step1:wrong1:submit",
+   "key": "Enter",
+   "focus": "button:Submit answer",
+   "live": [
+    {
+     "t": 4316,
+     "kind": "region-inserted",
+     "role": "alert",
+     "text": "Not quite.Ask whether any step in the lab can repair this specimen.XP penalty: -10."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Fix the Sample:step1:wrong1",
+   "tabsToSubmit": 3,
+   "focusAfter": "button:Submit answer",
+   "live": [
+    {
+     "t": 4316,
+     "kind": "region-inserted",
+     "role": "alert",
+     "text": "Not quite.Ask whether any step in the lab can repair this specimen.XP penalty: -10."
+    }
+   ]
+  },
+  {
+   "kind": "wrap",
+   "ctx": "Fix the Sample:step1:wrong2:to-submit",
+   "key": "Tab"
+  },
+  {
+   "kind": "act",
+   "ctx": "Fix the Sample:step1:wrong2:submit",
+   "key": "Enter",
+   "focus": "button:Submit answer",
+   "live": []
+  },
+  {
+   "kind": "submit",
+   "ctx": "Fix the Sample:step1:wrong2",
+   "tabsToSubmit": 7,
+   "focusAfter": "button:Submit answer",
+   "live": []
+  },
+  {
+   "kind": "act",
+   "ctx": "Fix the Sample:step1:hint",
+   "key": "Enter",
+   "focus": "h1:A fibrin clot is visible in the tube. Platelets 38 ×10⁹/L (flagged). What do you do?",
+   "live": [
+    {
+     "t": 6782,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Hint 1. Inspect the tube before reading the number."
+    }
+   ]
+  },
+  {
+   "kind": "hint",
+   "tabsToHint": 1,
+   "focusAfter": "h1:A fibrin clot is visible in the tube. Platelets 38 ×10⁹/L (flagged). What do you do?",
+   "live": [
+    {
+     "t": 6782,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Hint 1. Inspect the tube before reading the number."
+    }
+   ]
+  },
+  {
+   "kind": "wrap",
+   "ctx": "Fix the Sample:step1:again-options",
+   "key": "Shift+Tab"
+  },
+  {
+   "kind": "act",
+   "ctx": "Fix the Sample:step1:choose-right",
+   "key": "Space",
+   "focus": "button:B Reject and request a new sample",
+   "live": []
+  },
+  {
+   "kind": "act",
+   "ctx": "Fix the Sample:step1:right:submit",
+   "key": "Enter",
+   "focus": "h1:Hb 8.1 g/dL with MCHC 41 g/dL (analyzer flag). Plasma is milky. What do you do?",
+   "live": [
+    {
+     "t": 9079,
+     "kind": "content-added",
+     "role": "status",
+     "text": "Step 1 correct.A clotted EDTA sample consumes platelets and invalidates the count. The specimen cannot be corrected, so it is rejected and a new one is requeste"
+    },
+    {
+     "t": 9079,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 1 correct.A clotted EDTA sample consumes platelets and invalidates the count. The specimen cannot be corrected, so it is rejected and a new one is requeste"
+    },
+    {
+     "t": 9079,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 1 correct.A clotted EDTA sample consumes platelets and invalidates the count. The specimen cannot be corrected, so it is rejected and a new one is requeste"
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Fix the Sample:step1:right",
+   "tabsToSubmit": 2,
+   "focusAfter": "h1:Hb 8.1 g/dL with MCHC 41 g/dL (analyzer flag). Plasma is milky. What do you do?",
+   "live": [
+    {
+     "t": 9079,
+     "kind": "content-added",
+     "role": "status",
+     "text": "Step 1 correct.A clotted EDTA sample consumes platelets and invalidates the count. The specimen cannot be corrected, so it is rejected and a new one is requeste"
+    },
+    {
+     "t": 9079,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 1 correct.A clotted EDTA sample consumes platelets and invalidates the count. The specimen cannot be corrected, so it is rejected and a new one is requeste"
+    },
+    {
+     "t": 9079,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 1 correct.A clotted EDTA sample consumes platelets and invalidates the count. The specimen cannot be corrected, so it is rejected and a new one is requeste"
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Fix the Sample:step2:select-option",
+   "key": "Space",
+   "focus": "button:C Correct the interference and re-measure",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Fix the Sample:step2",
+   "idx": 2,
+   "label": "C Correct the interference and re-measure",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Fix the Sample:step2:submit",
+   "key": "Enter",
+   "focus": "h1:Hb 13.2 g/dL, MCV 89 fL, no flags, adequate fill, delta check consistent. What do you do?",
+   "live": [
+    {
+     "t": 10799,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Lipemia scatters light and falsely raises hemoglobin readings and MCHC. The specimen itself is sound: replace the plasma with saline and repeat t"
+    },
+    {
+     "t": 10799,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Lipemia scatters light and falsely raises hemoglobin readings and MCHC. The specimen itself is sound: replace the plasma with saline and repeat t"
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Fix the Sample:step2",
+   "tabsToSubmit": 1,
+   "focusAfter": "h1:Hb 13.2 g/dL, MCV 89 fL, no flags, adequate fill, delta check consistent. What do you do?",
+   "live": [
+    {
+     "t": 10799,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Lipemia scatters light and falsely raises hemoglobin readings and MCHC. The specimen itself is sound: replace the plasma with saline and repeat t"
+    },
+    {
+     "t": 10799,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Lipemia scatters light and falsely raises hemoglobin readings and MCHC. The specimen itself is sound: replace the plasma with saline and repeat t"
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Fix the Sample:step3:select-option",
+   "key": "Space",
+   "focus": "button:A Accept and report",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Fix the Sample:step3",
+   "idx": 0,
+   "label": "A Accept and report",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Fix the Sample:step3:submit",
+   "key": "Enter",
+   "focus": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 12511,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED4Position 2 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Fix the Sample:step3",
+   "tabsToSubmit": 3,
+   "focusAfter": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 12511,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED4Position 2 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "result",
+   "title": "Fix the Sample",
+   "focus": "h1:Investigation complete.",
+   "text": "CASE COMPLETE | Investigation complete. | The backend has recorded your result for “Fix the Sample”. | Score | 95 of 180 XP | Server-calculated | Accuracy | 60% | 2 wrong · 1 hint | Time | 00:10 | Official timer | New personal best: +95 XP added to your total. | Base mission | Mission completed | +100 | First attempt | At least one step needed a second try | 0 | Time bonus | Finished in 00:10 | +30 | No hint used | 1 hint used | 0 | Hint used | 1 x -15 XP | -15 | Wrong attempt | 2 x -10 XP | -20 | CODE FRAGMENT DISCOVERED | 4 | Position 2 added to the Code Vault. | Return to mission control",
+   "ms": 10860
+  },
+  {
+   "kind": "act",
+   "ctx": "result:return",
+   "key": "Enter",
+   "focus": "h1:Continue your investigations.",
+   "live": [
+    {
+     "t": 14265,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "return",
+   "tabs": 1,
+   "focusAfter": "h1:Continue your investigations."
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Start the next investigation",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"Continue your investigations.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disabl"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:start",
+   "key": "Enter",
+   "focus": "h1:Classify the anemia by red cell size.",
+   "live": [
+    {
+     "t": 15765,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Starting mission…"
+    },
+    {
+     "t": 15782,
+     "kind": "region-inserted(nested)",
+     "role": "timer",
+     "text": "08:00"
+    }
+   ]
+  },
+  {
+   "kind": "started",
+   "title": "Anemia Detective",
+   "tabsToCta": 1,
+   "focus": "h1:Classify the anemia by red cell size."
+  },
+  {
+   "kind": "mission-start",
+   "title": "Anemia Detective",
+   "focus": "h1:Classify the anemia by red cell size."
+  },
+  {
+   "kind": "act",
+   "ctx": "Anemia Detective:step1:select-option",
+   "key": "Space",
+   "focus": "button:A Microcytic",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Anemia Detective:step1",
+   "idx": 0,
+   "label": "A Microcytic",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Anemia Detective:step1:submit",
+   "key": "Enter",
+   "focus": "h1:Iron studies are back. Which diagnosis fits best?",
+   "live": [
+    {
+     "t": 17683,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Step 1 correct.An MCV of 72 fL is below the reference range, so the anemia is microcytic."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Anemia Detective:step1",
+   "tabsToSubmit": 4,
+   "focusAfter": "h1:Iron studies are back. Which diagnosis fits best?",
+   "live": [
+    {
+     "t": 17683,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Step 1 correct.An MCV of 72 fL is below the reference range, so the anemia is microcytic."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Anemia Detective:step2:select-option",
+   "key": "Space",
+   "focus": "button:C Iron deficiency anemia",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Anemia Detective:step2",
+   "idx": 2,
+   "label": "C Iron deficiency anemia",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Anemia Detective:step2:submit",
+   "key": "Enter",
+   "focus": "h1:What should the report recommend next?",
+   "live": [
+    {
+     "t": 19466,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Low ferritin with high TIBC and a raised RDW is the pattern of depleted iron stores."
+    },
+    {
+     "t": 19466,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Low ferritin with high TIBC and a raised RDW is the pattern of depleted iron stores."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Anemia Detective:step2",
+   "tabsToSubmit": 2,
+   "focusAfter": "h1:What should the report recommend next?",
+   "live": [
+    {
+     "t": 19466,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Low ferritin with high TIBC and a raised RDW is the pattern of depleted iron stores."
+    },
+    {
+     "t": 19466,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Low ferritin with high TIBC and a raised RDW is the pattern of depleted iron stores."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Anemia Detective:step3:select-option",
+   "key": "Space",
+   "focus": "button:D Evaluate for a source of chronic blood loss",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Anemia Detective:step3",
+   "idx": 3,
+   "label": "D Evaluate for a source of chronic blood loss",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Anemia Detective:step3:submit",
+   "key": "Enter",
+   "focus": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 21244,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED2Position 3 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Anemia Detective:step3",
+   "tabsToSubmit": 1,
+   "focusAfter": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 21244,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED2Position 3 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "result",
+   "title": "Anemia Detective",
+   "focus": "h1:Investigation complete.",
+   "text": "CASE COMPLETE | Investigation complete. | The backend has recorded your result for “Anemia Detective”. | Score | 180 of 180 XP | Server-calculated | Accuracy | 100% | 0 wrong · 0 hints | Time | 00:05 | Official timer | New personal best: +180 XP added to your total. | Base mission | Mission completed | +100 | First attempt | Every step solved first time | +30 | Time bonus | Finished in 00:05 | +30 | No hint used | No Lab Assistant hint | +20 | CODE FRAGMENT DISCOVERED | 2 | Position 3 added to the Code Vault. | Return to mission control",
+   "ms": 5929
+  },
+  {
+   "kind": "act",
+   "ctx": "result:return",
+   "key": "Enter",
+   "focus": "h1:Continue your investigations.",
+   "live": [
+    {
+     "t": 22989,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "return",
+   "tabs": 1,
+   "focusAfter": "h1:Continue your investigations."
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Open the Code Vault",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"Continue your investigations.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disabl"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:open-vault",
+   "key": "Enter",
+   "focus": "h1:Progress vault",
+   "live": [
+    {
+     "t": 24506,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Opening the vault…"
+    }
+   ]
+  },
+  {
+   "kind": "vault-cards",
+   "cards": [
+    {
+     "name": "Hematology Lab",
+     "status": "READY",
+     "hasForm": true,
+     "digits": "742"
+    },
+    {
+     "name": "Microbiology Lab",
+     "status": "NOT STARTED",
+     "hasForm": false,
+     "digits": "···"
+    },
+    {
+     "name": "Clinical Biochemistry Lab",
+     "status": "NOT STARTED",
+     "hasForm": false,
+     "digits": "···"
+    },
+    {
+     "name": "Master Lab",
+     "status": "NOT STARTED",
+     "hasForm": false,
+     "digits": "····"
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "vault:unlock:Hematology Lab",
+   "key": "Enter",
+   "focus": "div:Hematology Lab ESCAPED Fragment 1: 7 Fragment 2: 4 Fragment 3: 2 Exit unlocked Hematology Lab unlocked. New badge: Hematology Detective, First Escape. Its results are now available.",
+   "live": [
+    {
+     "t": 26220,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Hematology Lab unlocked. New badge: Hematology Detective, First Escape. Its results are now available."
+    }
+   ]
+  },
+  {
+   "kind": "vault-unlock",
+   "lab": "Hematology Lab",
+   "tabsToInput": 1,
+   "typed": "742",
+   "focusAfter": "div:Hematology Lab ESCAPED Fragment 1: 7 Fragment 2: 4 Fragment 3: 2 Exit unlocked Hematology Lab unlocked. New badge: Hematology Detective, First Escape. Its results are now available.",
+   "cardFocus": "vault-card",
+   "msg": [
+    "Hematology Lab unlocked. New badge: Hematology Detective, First Escape. Its results are now available."
+   ],
+   "live": [
+    {
+     "t": 26220,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Hematology Lab unlocked. New badge: Hematology Detective, First Escape. Its results are now available."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "nav:Investigations",
+   "key": "Enter",
+   "focus": "h1:Continue your investigations.",
+   "live": [
+    {
+     "t": 28040,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "nav",
+   "name": "Investigations",
+   "tabs": 8,
+   "focusAfter": "h1:Continue your investigations."
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Start the next investigation",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"Continue your investigations.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disabl"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:start",
+   "key": "Enter",
+   "focus": "h1:The Gram stain shows purple spherical cells in clusters. What is the reading?",
+   "live": [
+    {
+     "t": 29348,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Starting mission…"
+    },
+    {
+     "t": 29355,
+     "kind": "region-inserted(nested)",
+     "role": "timer",
+     "text": "07:00"
+    }
+   ]
+  },
+  {
+   "kind": "started",
+   "title": "Microbe Detective",
+   "tabsToCta": 1,
+   "focus": "h1:The Gram stain shows purple spherical cells in clusters. What is the reading?"
+  },
+  {
+   "kind": "mission-start",
+   "title": "Microbe Detective",
+   "focus": "h1:The Gram stain shows purple spherical cells in clusters. What is the reading?"
+  },
+  {
+   "kind": "act",
+   "ctx": "Microbe Detective:step1:select-option",
+   "key": "Space",
+   "focus": "button:B Gram-positive cocci in clusters",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Microbe Detective:step1",
+   "idx": 1,
+   "label": "B Gram-positive cocci in clusters",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Microbe Detective:step1:submit",
+   "key": "Enter",
+   "focus": "h1:The catalase test is positive. Which genus is favoured?",
+   "live": [
+    {
+     "t": 31248,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Step 1 correct.Purple means Gram-positive, round means cocci, irregular clusters point towards staphylococci."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Microbe Detective:step1",
+   "tabsToSubmit": 3,
+   "focusAfter": "h1:The catalase test is positive. Which genus is favoured?",
+   "live": [
+    {
+     "t": 31248,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Step 1 correct.Purple means Gram-positive, round means cocci, irregular clusters point towards staphylococci."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Microbe Detective:step2:select-option",
+   "key": "Space",
+   "focus": "button:D Staphylococcus",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Microbe Detective:step2",
+   "idx": 3,
+   "label": "D Staphylococcus",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Microbe Detective:step2:submit",
+   "key": "Enter",
+   "focus": "h1:The tube coagulase test is positive. Name the organism.",
+   "live": [
+    {
+     "t": 32996,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Catalase-positive Gram-positive cocci in clusters are staphylococci. Streptococci and enterococci are catalase-negative."
+    },
+    {
+     "t": 32996,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Catalase-positive Gram-positive cocci in clusters are staphylococci. Streptococci and enterococci are catalase-negative."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Microbe Detective:step2",
+   "tabsToSubmit": 1,
+   "focusAfter": "h1:The tube coagulase test is positive. Name the organism.",
+   "live": [
+    {
+     "t": 32996,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Catalase-positive Gram-positive cocci in clusters are staphylococci. Streptococci and enterococci are catalase-negative."
+    },
+    {
+     "t": 32996,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Catalase-positive Gram-positive cocci in clusters are staphylococci. Streptococci and enterococci are catalase-negative."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Microbe Detective:step3:select-option",
+   "key": "Space",
+   "focus": "button:C Staphylococcus aureus",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Microbe Detective:step3",
+   "idx": 2,
+   "label": "C Staphylococcus aureus",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Microbe Detective:step3:submit",
+   "key": "Enter",
+   "focus": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 34784,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED3Position 1 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Microbe Detective:step3",
+   "tabsToSubmit": 2,
+   "focusAfter": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 34784,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED3Position 1 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "result",
+   "title": "Microbe Detective",
+   "focus": "h1:Investigation complete.",
+   "text": "CASE COMPLETE | Investigation complete. | The backend has recorded your result for “Microbe Detective”. | Score | 180 of 180 XP | Server-calculated | Accuracy | 100% | 0 wrong · 0 hints | Time | 00:05 | Official timer | New personal best: +180 XP added to your total. | Base mission | Mission completed | +100 | First attempt | Every step solved first time | +30 | Time bonus | Finished in 00:05 | +30 | No hint used | No Lab Assistant hint | +20 | CODE FRAGMENT DISCOVERED | 3 | Position 1 added to the Code Vault. | Return to mission control",
+   "ms": 5901
+  },
+  {
+   "kind": "act",
+   "ctx": "result:return",
+   "key": "Enter",
+   "focus": "h1:Continue your investigations.",
+   "live": [
+    {
+     "t": 36541,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "return",
+   "tabs": 1,
+   "focusAfter": "h1:Continue your investigations."
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Start the next investigation",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"Continue your investigations.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disabl"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:start",
+   "key": "Enter",
+   "focus": "h1:Put the Gram stain steps in the correct order (air-drying and the water rinses between reagents are left out).",
+   "live": [
+    {
+     "t": 38046,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Starting mission…"
+    },
+    {
+     "t": 38059,
+     "kind": "region-inserted(nested)",
+     "role": "timer",
+     "text": "04:00"
+    },
+    {
+     "t": 38059,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": ""
+    }
+   ]
+  },
+  {
+   "kind": "started",
+   "title": "Gram Stain Challenge",
+   "tabsToCta": 1,
+   "focus": "h1:Put the Gram stain steps in the correct order (air-drying and the water rinses between reagents are left out)."
+  },
+  {
+   "kind": "mission-start",
+   "title": "Gram Stain Challenge",
+   "focus": "h1:Put the Gram stain steps in the correct order (air-drying and the water rinses between reagents are left out)."
+  },
+  {
+   "kind": "act",
+   "ctx": "order:moveup:Heat-fix the smear",
+   "key": "Enter",
+   "focus": "button:Move up: Heat-fix the smear",
+   "live": [
+    {
+     "t": 39573,
+     "kind": "content-added",
+     "role": "status",
+     "text": "Heat-fix the smear moved to position 1 of 5."
+    }
+   ]
+  },
+  {
+   "kind": "order-move",
+   "item": "Heat-fix the smear",
+   "focus": "Move up: Heat-fix the smear",
+   "live": [
+    {
+     "t": 39573,
+     "kind": "content-added",
+     "role": "status",
+     "text": "Heat-fix the smear moved to position 1 of 5."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "order:moveup:Crystal violet (primary stain)",
+   "key": "Enter",
+   "focus": "button:Move up: Crystal violet (primary stain)",
+   "live": [
+    {
+     "t": 40157,
+     "kind": "content-added",
+     "role": "status",
+     "text": "Crystal violet (primary stain) moved to position 3 of 5."
+    }
+   ]
+  },
+  {
+   "kind": "order-move",
+   "item": "Crystal violet (primary stain)",
+   "focus": "Move up: Crystal violet (primary stain)",
+   "live": [
+    {
+     "t": 40157,
+     "kind": "content-added",
+     "role": "status",
+     "text": "Crystal violet (primary stain) moved to position 3 of 5."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "order:moveup:Crystal violet (primary stain)",
+   "key": "Enter",
+   "focus": "button:Move up: Crystal violet (primary stain)",
+   "live": [
+    {
+     "t": 40330,
+     "kind": "content-added",
+     "role": "status",
+     "text": "Crystal violet (primary stain) moved to position 2 of 5."
+    }
+   ]
+  },
+  {
+   "kind": "order-move",
+   "item": "Crystal violet (primary stain)",
+   "focus": "Move up: Crystal violet (primary stain)",
+   "live": [
+    {
+     "t": 40330,
+     "kind": "content-added",
+     "role": "status",
+     "text": "Crystal violet (primary stain) moved to position 2 of 5."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "order:moveup:Decolorize with alcohol or acetone",
+   "key": "Enter",
+   "focus": "button:Move up: Decolorize with alcohol or acetone",
+   "live": [
+    {
+     "t": 40913,
+     "kind": "content-added",
+     "role": "status",
+     "text": "Decolorize with alcohol or acetone moved to position 4 of 5."
+    }
+   ]
+  },
+  {
+   "kind": "order-move",
+   "item": "Decolorize with alcohol or acetone",
+   "focus": "Move up: Decolorize with alcohol or acetone",
+   "live": [
+    {
+     "t": 40913,
+     "kind": "content-added",
+     "role": "status",
+     "text": "Decolorize with alcohol or acetone moved to position 4 of 5."
+    }
+   ]
+  },
+  {
+   "kind": "order-final",
+   "fin": [
+    "Heat-fix the smear",
+    "Crystal violet (primary stain)",
+    "Gram iodine (mordant)",
+    "Decolorize with alcohol or acetone",
+    "Safranin counterstain"
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Gram Stain Challenge:submit",
+   "key": "Enter",
+   "focus": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 41366,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED8Position 2 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Gram Stain Challenge",
+   "tabsToSubmit": 4,
+   "focusAfter": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 41366,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED8Position 2 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "result",
+   "title": "Gram Stain Challenge",
+   "focus": "h1:Investigation complete.",
+   "text": "CASE COMPLETE | Investigation complete. | The backend has recorded your result for “Gram Stain Challenge”. | Score | 180 of 180 XP | Server-calculated | Accuracy | 100% | 0 wrong · 0 hints | Time | 00:03 | Official timer | New personal best: +180 XP added to your total. | Base mission | Mission completed | +100 | First attempt | Every step solved first time | +30 | Time bonus | Finished in 00:03 | +30 | No hint used | No Lab Assistant hint | +20 | CODE FRAGMENT DISCOVERED | 8 | Position 2 added to the Code Vault. | Return to mission control",
+   "ms": 3464
+  },
+  {
+   "kind": "act",
+   "ctx": "result:return",
+   "key": "Enter",
+   "focus": "h1:Continue your investigations.",
+   "live": [
+    {
+     "t": 42802,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "return",
+   "tabs": 1,
+   "focusAfter": "h1:Continue your investigations."
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Start the next investigation",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"Continue your investigations.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disabl"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:start",
+   "key": "Enter",
+   "focus": "h1:Match each plate observation to the organism it most suggests (presumptive identification).",
+   "live": [
+    {
+     "t": 44307,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Starting mission…"
+    },
+    {
+     "t": 44318,
+     "kind": "region-inserted(nested)",
+     "role": "timer",
+     "text": "06:00"
+    },
+    {
+     "t": 44318,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "0 of 4 matched. Match every item to enable Submit."
+    }
+   ]
+  },
+  {
+   "kind": "started",
+   "title": "Petri Dish Mystery",
+   "tabsToCta": 1,
+   "focus": "h1:Match each plate observation to the organism it most suggests (presumptive identification)."
+  },
+  {
+   "kind": "mission-start",
+   "title": "Petri Dish Mystery",
+   "focus": "h1:Match each plate observation to the organism it most suggests (presumptive identification)."
+  },
+  {
+   "kind": "match-typeahead",
+   "want": "Escherichia",
+   "got": "Escherichia coli"
+  },
+  {
+   "kind": "match-typeahead",
+   "want": "Streptococcus",
+   "got": "Streptococcus pyogenes"
+  },
+  {
+   "kind": "match-typeahead",
+   "want": "Proteus",
+   "got": "Proteus mirabilis"
+  },
+  {
+   "kind": "match-typeahead",
+   "want": "Pseudomonas",
+   "got": "Pseudomonas aeruginosa"
+  },
+  {
+   "kind": "match-note",
+   "note": "4 of 4 matched."
+  },
+  {
+   "kind": "act",
+   "ctx": "Petri Dish Mystery:submit",
+   "key": "Enter",
+   "focus": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 47115,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED5Position 3 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Petri Dish Mystery",
+   "tabsToSubmit": 1,
+   "focusAfter": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 47115,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED5Position 3 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "result",
+   "title": "Petri Dish Mystery",
+   "focus": "h1:Investigation complete.",
+   "text": "CASE COMPLETE | Investigation complete. | The backend has recorded your result for “Petri Dish Mystery”. | Score | 180 of 180 XP | Server-calculated | Accuracy | 100% | 0 wrong · 0 hints | Time | 00:03 | Official timer | New personal best: +180 XP added to your total. | Base mission | Mission completed | +100 | First attempt | Every step solved first time | +30 | Time bonus | Finished in 00:03 | +30 | No hint used | No Lab Assistant hint | +20 | CODE FRAGMENT DISCOVERED | 5 | Position 3 added to the Code Vault. | Return to mission control",
+   "ms": 2963
+  },
+  {
+   "kind": "act",
+   "ctx": "result:return",
+   "key": "Enter",
+   "focus": "h1:Continue your investigations.",
+   "live": [
+    {
+     "t": 48556,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "return",
+   "tabs": 1,
+   "focusAfter": "h1:Continue your investigations."
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Open the Code Vault",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"Continue your investigations.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disabl"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:open-vault",
+   "key": "Enter",
+   "focus": "h1:Progress vault",
+   "live": [
+    {
+     "t": 50057,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Opening the vault…"
+    }
+   ]
+  },
+  {
+   "kind": "vault-cards",
+   "cards": [
+    {
+     "name": "Hematology Lab",
+     "status": "ESCAPED",
+     "hasForm": false,
+     "digits": "742"
+    },
+    {
+     "name": "Microbiology Lab",
+     "status": "READY",
+     "hasForm": true,
+     "digits": "385"
+    },
+    {
+     "name": "Clinical Biochemistry Lab",
+     "status": "NOT STARTED",
+     "hasForm": false,
+     "digits": "···"
+    },
+    {
+     "name": "Master Lab",
+     "status": "NOT STARTED",
+     "hasForm": false,
+     "digits": "····"
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "vault:unlock:Microbiology Lab",
+   "key": "Enter",
+   "focus": "div:Microbiology Lab ESCAPED Fragment 1: 3 Fragment 2: 8 Fragment 3: 5 Exit unlocked Microbiology Lab unlocked. New badge: Microbiology Investigator. Its results are now available.",
+   "live": [
+    {
+     "t": 51767,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Microbiology Lab unlocked. New badge: Microbiology Investigator. Its results are now available."
+    }
+   ]
+  },
+  {
+   "kind": "vault-unlock",
+   "lab": "Microbiology Lab",
+   "tabsToInput": 1,
+   "typed": "385",
+   "focusAfter": "div:Microbiology Lab ESCAPED Fragment 1: 3 Fragment 2: 8 Fragment 3: 5 Exit unlocked Microbiology Lab unlocked. New badge: Microbiology Investigator. Its results are now available.",
+   "cardFocus": "vault-card",
+   "msg": [
+    "Microbiology Lab unlocked. New badge: Microbiology Investigator. Its results are now available."
+   ],
+   "live": [
+    {
+     "t": 51767,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Microbiology Lab unlocked. New badge: Microbiology Investigator. Its results are now available."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "nav:Investigations",
+   "key": "Enter",
+   "focus": "h1:Continue your investigations.",
+   "live": [
+    {
+     "t": 53609,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "nav",
+   "name": "Investigations",
+   "tabs": 8,
+   "focusAfter": "h1:Continue your investigations."
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Start the next investigation",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"Continue your investigations.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disabl"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:start",
+   "key": "Enter",
+   "focus": "h1:Which organ is most likely failing?",
+   "live": [
+    {
+     "t": 54915,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Starting mission…"
+    },
+    {
+     "t": 54924,
+     "kind": "region-inserted(nested)",
+     "role": "timer",
+     "text": "08:00"
+    }
+   ]
+  },
+  {
+   "kind": "started",
+   "title": "Organ Rescue Mission",
+   "tabsToCta": 1,
+   "focus": "h1:Which organ is most likely failing?"
+  },
+  {
+   "kind": "mission-start",
+   "title": "Organ Rescue Mission",
+   "focus": "h1:Which organ is most likely failing?"
+  },
+  {
+   "kind": "act",
+   "ctx": "Organ Rescue Mission:step1:select-option",
+   "key": "Space",
+   "focus": "button:D Kidney",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Organ Rescue Mission:step1",
+   "idx": 3,
+   "label": "D Kidney",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Organ Rescue Mission:step1:submit",
+   "key": "Enter",
+   "focus": "h1:Which result is the most immediately life-threatening if confirmed?",
+   "live": [
+    {
+     "t": 56815,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Step 1 correct.Creatinine and BUN (blood urea nitrogen) rising together with low urine output indicate reduced glomerular filtration."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Organ Rescue Mission:step1",
+   "tabsToSubmit": 1,
+   "focusAfter": "h1:Which result is the most immediately life-threatening if confirmed?",
+   "live": [
+    {
+     "t": 56815,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Step 1 correct.Creatinine and BUN (blood urea nitrogen) rising together with low urine output indicate reduced glomerular filtration."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Organ Rescue Mission:step2:select-option",
+   "key": "Space",
+   "focus": "button:C Potassium 6.1 mmol/L",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Organ Rescue Mission:step2",
+   "idx": 2,
+   "label": "C Potassium 6.1 mmol/L",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Organ Rescue Mission:step2:submit",
+   "key": "Enter",
+   "focus": "h1:Before calling it, which action best rules out pseudohyperkalemia?",
+   "live": [
+    {
+     "t": 58615,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Hyperkalemia can trigger life-threatening arrhythmias, so a potassium of 6.1 mmol/L in a patient with falling renal function is notified at once "
+    },
+    {
+     "t": 58615,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Hyperkalemia can trigger life-threatening arrhythmias, so a potassium of 6.1 mmol/L in a patient with falling renal function is notified at once "
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Organ Rescue Mission:step2",
+   "tabsToSubmit": 2,
+   "focusAfter": "h1:Before calling it, which action best rules out pseudohyperkalemia?",
+   "live": [
+    {
+     "t": 58615,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Hyperkalemia can trigger life-threatening arrhythmias, so a potassium of 6.1 mmol/L in a patient with falling renal function is notified at once "
+    },
+    {
+     "t": 58615,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Hyperkalemia can trigger life-threatening arrhythmias, so a potassium of 6.1 mmol/L in a patient with falling renal function is notified at once "
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Organ Rescue Mission:step3:select-option",
+   "key": "Space",
+   "focus": "button:A Repeat potassium on a non-hemolyzed sample",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Organ Rescue Mission:step3",
+   "idx": 0,
+   "label": "A Repeat potassium on a non-hemolyzed sample",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Organ Rescue Mission:step3:submit",
+   "key": "Enter",
+   "focus": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 60416,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED9Position 1 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Organ Rescue Mission:step3",
+   "tabsToSubmit": 4,
+   "focusAfter": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 60416,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED9Position 1 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "result",
+   "title": "Organ Rescue Mission",
+   "focus": "h1:Investigation complete.",
+   "text": "CASE COMPLETE | Investigation complete. | The backend has recorded your result for “Organ Rescue Mission”. | Score | 180 of 180 XP | Server-calculated | Accuracy | 100% | 0 wrong · 0 hints | Time | 00:05 | Official timer | New personal best: +180 XP added to your total. | Base mission | Mission completed | +100 | First attempt | Every step solved first time | +30 | Time bonus | Finished in 00:05 | +30 | No hint used | No Lab Assistant hint | +20 | CODE FRAGMENT DISCOVERED | 9 | Position 1 added to the Code Vault. | Return to mission control",
+   "ms": 5954
+  },
+  {
+   "kind": "act",
+   "ctx": "result:return",
+   "key": "Enter",
+   "focus": "h1:Continue your investigations.",
+   "live": [
+    {
+     "t": 62162,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "return",
+   "tabs": 1,
+   "focusAfter": "h1:Continue your investigations."
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Start the next investigation",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"Continue your investigations.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disabl"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:start",
+   "key": "Enter",
+   "focus": "h1:Click the result most likely affected by the specimen problem.",
+   "live": [
+    {
+     "t": 63664,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Starting mission…"
+    },
+    {
+     "t": 63678,
+     "kind": "region-inserted(nested)",
+     "role": "timer",
+     "text": "04:00"
+    }
+   ]
+  },
+  {
+   "kind": "started",
+   "title": "Lab Value Hacker",
+   "tabsToCta": 1,
+   "focus": "h1:Click the result most likely affected by the specimen problem."
+  },
+  {
+   "kind": "mission-start",
+   "title": "Lab Value Hacker",
+   "focus": "h1:Click the result most likely affected by the specimen problem."
+  },
+  {
+   "kind": "act",
+   "ctx": "point:open-details",
+   "key": "Enter",
+   "focus": "summary:Text version of this image",
+   "live": []
+  },
+  {
+   "kind": "details-open",
+   "tabsToImage": 1,
+   "tabsToSummary": 1,
+   "focus": "Text version of this image",
+   "expanded": null
+  },
+  {
+   "kind": "act",
+   "ctx": "point:select-row",
+   "key": "Enter",
+   "focus": "button:Select Potassium result",
+   "live": []
+  },
+  {
+   "kind": "point-select",
+   "tabsToRow": 3,
+   "pressed": "true",
+   "live": []
+  },
+  {
+   "kind": "act",
+   "ctx": "Lab Value Hacker:submit",
+   "key": "Enter",
+   "focus": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 66576,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED1Position 2 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Lab Value Hacker",
+   "tabsToSubmit": 7,
+   "focusAfter": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 66576,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED1Position 2 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "result",
+   "title": "Lab Value Hacker",
+   "focus": "h1:Investigation complete.",
+   "text": "CASE COMPLETE | Investigation complete. | The backend has recorded your result for “Lab Value Hacker”. | Score | 180 of 180 XP | Server-calculated | Accuracy | 100% | 0 wrong · 0 hints | Time | 00:03 | Official timer | New personal best: +180 XP added to your total. | Base mission | Mission completed | +100 | First attempt | Every step solved first time | +30 | Time bonus | Finished in 00:03 | +30 | No hint used | No Lab Assistant hint | +20 | CODE FRAGMENT DISCOVERED | 1 | Position 2 added to the Code Vault. | Return to mission control",
+   "ms": 3041
+  },
+  {
+   "kind": "act",
+   "ctx": "result:return",
+   "key": "Enter",
+   "focus": "h1:Continue your investigations.",
+   "live": [
+    {
+     "t": 67998,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "return",
+   "tabs": 1,
+   "focusAfter": "h1:Continue your investigations."
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Start the next investigation",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"Continue your investigations.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disabl"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:start",
+   "key": "Enter",
+   "focus": "h1:What is the primary acid-base disorder?",
+   "live": [
+    {
+     "t": 69503,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Starting mission…"
+    },
+    {
+     "t": 69515,
+     "kind": "region-inserted(nested)",
+     "role": "timer",
+     "text": "10:00"
+    }
+   ]
+  },
+  {
+   "kind": "started",
+   "title": "Acid-Base Emergency",
+   "tabsToCta": 1,
+   "focus": "h1:What is the primary acid-base disorder?"
+  },
+  {
+   "kind": "mission-start",
+   "title": "Acid-Base Emergency",
+   "focus": "h1:What is the primary acid-base disorder?"
+  },
+  {
+   "kind": "act",
+   "ctx": "Acid-Base Emergency:step1:select-option",
+   "key": "Space",
+   "focus": "button:B Metabolic acidosis",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Acid-Base Emergency:step1",
+   "idx": 1,
+   "label": "B Metabolic acidosis",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Acid-Base Emergency:step1:submit",
+   "key": "Enter",
+   "focus": "h1:Calculate the anion gap (Na - Cl - HCO3). What does it show?",
+   "live": [
+    {
+     "t": 71380,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Step 1 correct.Low pH with low bicarbonate means metabolic acidosis. The low PaCO2 is the lung compensating."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Acid-Base Emergency:step1",
+   "tabsToSubmit": 3,
+   "focusAfter": "h1:Calculate the anion gap (Na - Cl - HCO3). What does it show?",
+   "live": [
+    {
+     "t": 71380,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Step 1 correct.Low pH with low bicarbonate means metabolic acidosis. The low PaCO2 is the lung compensating."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Acid-Base Emergency:step2:select-option",
+   "key": "Space",
+   "focus": "button:C High anion gap (about 18)",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Acid-Base Emergency:step2",
+   "idx": 2,
+   "label": "C High anion gap (about 18)",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Acid-Base Emergency:step2:submit",
+   "key": "Enter",
+   "focus": "h1:Use Winter's formula (expected PaCO2 = 1.5 x HCO3 + 8, plus or minus 2). Is the respiratory response appropriate?",
+   "live": [
+    {
+     "t": 73167,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.140 - 108 - 14 = 18, above the usual upper limit of about 12, so unmeasured anions are present (the cut-off is method-dependent and no albumin co"
+    },
+    {
+     "t": 73167,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.140 - 108 - 14 = 18, above the usual upper limit of about 12, so unmeasured anions are present (the cut-off is method-dependent and no albumin co"
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Acid-Base Emergency:step2",
+   "tabsToSubmit": 2,
+   "focusAfter": "h1:Use Winter's formula (expected PaCO2 = 1.5 x HCO3 + 8, plus or minus 2). Is the respiratory response appropriate?",
+   "live": [
+    {
+     "t": 73167,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.140 - 108 - 14 = 18, above the usual upper limit of about 12, so unmeasured anions are present (the cut-off is method-dependent and no albumin co"
+    },
+    {
+     "t": 73167,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.140 - 108 - 14 = 18, above the usual upper limit of about 12, so unmeasured anions are present (the cut-off is method-dependent and no albumin co"
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Acid-Base Emergency:step3:select-option",
+   "key": "Space",
+   "focus": "button:A Appropriate compensation",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Acid-Base Emergency:step3",
+   "idx": 0,
+   "label": "A Appropriate compensation",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Acid-Base Emergency:step3:submit",
+   "key": "Enter",
+   "focus": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 74963,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED6Position 3 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Acid-Base Emergency:step3",
+   "tabsToSubmit": 4,
+   "focusAfter": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 74963,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED6Position 3 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "result",
+   "title": "Acid-Base Emergency",
+   "focus": "h1:Investigation complete.",
+   "text": "CASE COMPLETE | Investigation complete. | The backend has recorded your result for “Acid-Base Emergency”. | Score | 180 of 180 XP | Server-calculated | Accuracy | 100% | 0 wrong · 0 hints | Time | 00:05 | Official timer | New personal best: +180 XP added to your total. | Base mission | Mission completed | +100 | First attempt | Every step solved first time | +30 | Time bonus | Finished in 00:05 | +30 | No hint used | No Lab Assistant hint | +20 | CODE FRAGMENT DISCOVERED | 6 | Position 3 added to the Code Vault. | Return to mission control",
+   "ms": 5916
+  },
+  {
+   "kind": "act",
+   "ctx": "result:return",
+   "key": "Enter",
+   "focus": "h1:Continue your investigations.",
+   "live": [
+    {
+     "t": 76708,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "return",
+   "tabs": 1,
+   "focusAfter": "h1:Continue your investigations."
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Open the Code Vault",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"Continue your investigations.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disabl"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:open-vault",
+   "key": "Enter",
+   "focus": "h1:Progress vault",
+   "live": [
+    {
+     "t": 78207,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Opening the vault…"
+    }
+   ]
+  },
+  {
+   "kind": "vault-cards",
+   "cards": [
+    {
+     "name": "Hematology Lab",
+     "status": "ESCAPED",
+     "hasForm": false,
+     "digits": "742"
+    },
+    {
+     "name": "Microbiology Lab",
+     "status": "ESCAPED",
+     "hasForm": false,
+     "digits": "385"
+    },
+    {
+     "name": "Clinical Biochemistry Lab",
+     "status": "READY",
+     "hasForm": true,
+     "digits": "916"
+    },
+    {
+     "name": "Master Lab",
+     "status": "NOT STARTED",
+     "hasForm": false,
+     "digits": "····"
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "vault:unlock:Clinical Biochemistry Lab",
+   "key": "Enter",
+   "focus": "div:Clinical Biochemistry Lab ESCAPED Fragment 1: 9 Fragment 2: 1 Fragment 3: 6 Exit unlocked Clinical Biochemistry Lab unlocked. New badge: Biochemistry Analyst. Its results are now available.",
+   "live": [
+    {
+     "t": 79912,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Clinical Biochemistry Lab unlocked. New badge: Biochemistry Analyst. Its results are now available."
+    }
+   ]
+  },
+  {
+   "kind": "vault-unlock",
+   "lab": "Clinical Biochemistry Lab",
+   "tabsToInput": 1,
+   "typed": "916",
+   "focusAfter": "div:Clinical Biochemistry Lab ESCAPED Fragment 1: 9 Fragment 2: 1 Fragment 3: 6 Exit unlocked Clinical Biochemistry Lab unlocked. New badge: Biochemistry Analyst. Its results are now available.",
+   "cardFocus": "vault-card",
+   "msg": [
+    "Clinical Biochemistry Lab unlocked. New badge: Biochemistry Analyst. Its results are now available."
+   ],
+   "live": [
+    {
+     "t": 79912,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Clinical Biochemistry Lab unlocked. New badge: Biochemistry Analyst. Its results are now available."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "nav:Investigations",
+   "key": "Enter",
+   "focus": "h1:Continue your investigations.",
+   "live": [
+    {
+     "t": 81743,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "nav",
+   "name": "Investigations",
+   "tabs": 8,
+   "focusAfter": "h1:Continue your investigations."
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Start the next investigation",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"Continue your investigations.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disabl"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:start",
+   "key": "Enter",
+   "focus": "h1:Step 1 of 4. Interpret the blood count.",
+   "live": [
+    {
+     "t": 83053,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Starting mission…"
+    },
+    {
+     "t": 83063,
+     "kind": "region-inserted(nested)",
+     "role": "timer",
+     "text": "15:00"
+    }
+   ]
+  },
+  {
+   "kind": "started",
+   "title": "Clinical Detective",
+   "tabsToCta": 1,
+   "focus": "h1:Step 1 of 4. Interpret the blood count."
+  },
+  {
+   "kind": "mission-start",
+   "title": "Clinical Detective",
+   "focus": "h1:Step 1 of 4. Interpret the blood count."
+  },
+  {
+   "kind": "act",
+   "ctx": "Clinical Detective:step1:select-option",
+   "key": "Space",
+   "focus": "button:A Microcytic anemia",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Clinical Detective:step1",
+   "idx": 0,
+   "label": "A Microcytic anemia",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Clinical Detective:step1:submit",
+   "key": "Enter",
+   "focus": "h1:Step 2 of 4. Blood cultures grow Gram-positive cocci in chains: catalase negative, bile-esculin positive, no growth in 6.5% NaCl. Name the organism.",
+   "live": [
+    {
+     "t": 84967,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Step 1 correct.An MCV of 70 fL with Hb 8.2 g/dL is a microcytic anemia; leukocytosis fits the fever."
+    },
+    {
+     "t": 84967,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED3Position 1 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Clinical Detective:step1",
+   "tabsToSubmit": 4,
+   "focusAfter": "h1:Step 2 of 4. Blood cultures grow Gram-positive cocci in chains: catalase negative, bile-esculin positive, no growth in 6.5% NaCl. Name the organism.",
+   "live": [
+    {
+     "t": 84967,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Step 1 correct.An MCV of 70 fL with Hb 8.2 g/dL is a microcytic anemia; leukocytosis fits the fever."
+    },
+    {
+     "t": 84967,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED3Position 1 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Clinical Detective:step2:select-option",
+   "key": "Space",
+   "focus": "button:C Streptococcus gallolyticus (bovis group)",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Clinical Detective:step2",
+   "idx": 2,
+   "label": "C Streptococcus gallolyticus (bovis group)",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Clinical Detective:step2:submit",
+   "key": "Enter",
+   "focus": "h1:Step 3 of 4. Iron studies and CRP are available. Can ferritin be trusted to assess iron stores here?",
+   "live": [
+    {
+     "t": 86756,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Bile-esculin positive but salt intolerant separates the group D Streptococcus bovis group from Enterococcus."
+    },
+    {
+     "t": 86756,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Bile-esculin positive but salt intolerant separates the group D Streptococcus bovis group from Enterococcus."
+    },
+    {
+     "t": 86756,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED9Position 2 added to the Code Vault."
+    },
+    {
+     "t": 86756,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED9Position 2 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Clinical Detective:step2",
+   "tabsToSubmit": 2,
+   "focusAfter": "h1:Step 3 of 4. Iron studies and CRP are available. Can ferritin be trusted to assess iron stores here?",
+   "live": [
+    {
+     "t": 86756,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Bile-esculin positive but salt intolerant separates the group D Streptococcus bovis group from Enterococcus."
+    },
+    {
+     "t": 86756,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 2 correct.Bile-esculin positive but salt intolerant separates the group D Streptococcus bovis group from Enterococcus."
+    },
+    {
+     "t": 86756,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED9Position 2 added to the Code Vault."
+    },
+    {
+     "t": 86756,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED9Position 2 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Clinical Detective:step3:select-option",
+   "key": "Space",
+   "focus": "button:B Yes: inflammation can only raise ferritin, so a low value despite a raised CRP still points to depleted stores",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Clinical Detective:step3",
+   "idx": 1,
+   "label": "B Yes: inflammation can only raise ferritin, so a low value despite a raised CRP still points to depleted stores",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Clinical Detective:step3:submit",
+   "key": "Enter",
+   "focus": "h1:Step 4 of 4. Put the findings together. What does the report recommend?",
+   "live": [
+    {
+     "t": 88548,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 3 correct.Ferritin is an acute-phase reactant: inflammation raises it. A low ferritin despite a raised CRP is therefore a strong marker of depleted iron st"
+    },
+    {
+     "t": 88548,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 3 correct.Ferritin is an acute-phase reactant: inflammation raises it. A low ferritin despite a raised CRP is therefore a strong marker of depleted iron st"
+    },
+    {
+     "t": 88548,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED1Position 3 added to the Code Vault."
+    },
+    {
+     "t": 88548,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED1Position 3 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Clinical Detective:step3",
+   "tabsToSubmit": 3,
+   "focusAfter": "h1:Step 4 of 4. Put the findings together. What does the report recommend?",
+   "live": [
+    {
+     "t": 88548,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 3 correct.Ferritin is an acute-phase reactant: inflammation raises it. A low ferritin despite a raised CRP is therefore a strong marker of depleted iron st"
+    },
+    {
+     "t": 88548,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "Step 3 correct.Ferritin is an acute-phase reactant: inflammation raises it. A low ferritin despite a raised CRP is therefore a strong marker of depleted iron st"
+    },
+    {
+     "t": 88548,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED1Position 3 added to the Code Vault."
+    },
+    {
+     "t": 88548,
+     "kind": "text-changed",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED1Position 3 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "Clinical Detective:step4:select-option",
+   "key": "Space",
+   "focus": "button:C Alert the clinician: iron deficiency with Streptococcus gallolyticus bacteremia needs a gastrointestinal work-up and exclusion of endocarditis",
+   "live": []
+  },
+  {
+   "kind": "option",
+   "ctx": "Clinical Detective:step4",
+   "idx": 2,
+   "label": "C Alert the clinician: iron deficiency with Streptococcus gallolyticus bacteremia needs a gastrointestinal work-up and exclusion of endocarditis",
+   "pressedAfter": "true"
+  },
+  {
+   "kind": "act",
+   "ctx": "Clinical Detective:step4:submit",
+   "key": "Enter",
+   "focus": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 90270,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED3Position 1 added to the Code Vault."
+    },
+    {
+     "t": 90270,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED9Position 2 added to the Code Vault."
+    },
+    {
+     "t": 90270,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED1Position 3 added to the Code Vault."
+    },
+    {
+     "t": 90270,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED6Position 4 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "submit",
+   "ctx": "Clinical Detective:step4",
+   "tabsToSubmit": 1,
+   "focusAfter": "h1:Investigation complete.",
+   "live": [
+    {
+     "t": 90270,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED3Position 1 added to the Code Vault."
+    },
+    {
+     "t": 90270,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED9Position 2 added to the Code Vault."
+    },
+    {
+     "t": 90270,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED1Position 3 added to the Code Vault."
+    },
+    {
+     "t": 90270,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "CODE FRAGMENT DISCOVERED6Position 4 added to the Code Vault."
+    }
+   ]
+  },
+  {
+   "kind": "result",
+   "title": "Clinical Detective",
+   "focus": "h1:Investigation complete.",
+   "text": "CASE COMPLETE | Investigation complete. | The backend has recorded your result for “Clinical Detective”. | Score | 570 of 570 XP | Server-calculated | Accuracy | 100% | 0 wrong · 0 hints | Time | 00:07 | Official timer | New personal best: +570 XP added to your total. | Base mission | Mission completed | +300 | First attempt | 4 of 4 steps solved first time | +120 | Time bonus | Finished in 00:07 | +90 | No hint used | No Lab Assistant hint | +60 | CODE FRAGMENT DISCOVERED | 3 | Position 1 added to the Code Vault. | CODE FRAGMENT DISCOVERED | 9 | Position 2 added to the Code Vault. | CODE FRAGMENT DISCOVERED | 1 | Position 3 added to the Code Vault. | CODE FRAGMENT DISCOVERED | 6 | Position ",
+   "ms": 7668
+  },
+  {
+   "kind": "act",
+   "ctx": "result:return",
+   "key": "Enter",
+   "focus": "h1:Continue your investigations.",
+   "live": [
+    {
+     "t": 92016,
+     "kind": "region-inserted(nested)",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "return",
+   "tabs": 1,
+   "focusAfter": "h1:Continue your investigations."
+  },
+  {
+   "kind": "dashboard",
+   "h": "Continue your investigations.",
+   "cta": "Open the Code Vault",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"Continue your investigations.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disabl"
+  },
+  {
+   "kind": "act",
+   "ctx": "dash:open-vault",
+   "key": "Enter",
+   "focus": "h1:Progress vault",
+   "live": [
+    {
+     "t": 93534,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Opening the vault…"
+    }
+   ]
+  },
+  {
+   "kind": "vault-cards",
+   "cards": [
+    {
+     "name": "Hematology Lab",
+     "status": "ESCAPED",
+     "hasForm": false,
+     "digits": "742"
+    },
+    {
+     "name": "Microbiology Lab",
+     "status": "ESCAPED",
+     "hasForm": false,
+     "digits": "385"
+    },
+    {
+     "name": "Clinical Biochemistry Lab",
+     "status": "ESCAPED",
+     "hasForm": false,
+     "digits": "916"
+    },
+    {
+     "name": "Master Lab",
+     "status": "READY",
+     "hasForm": true,
+     "digits": "3916"
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "vault:unlock:Master Lab",
+   "key": "Enter",
+   "focus": "div:Master Lab ESCAPED Fragment 1: 3 Fragment 2: 9 Fragment 3: 1 Fragment 4: 6 Exit unlocked Master Lab unlocked. New badge: Clinical Detective. Its results are now available.",
+   "live": [
+    {
+     "t": 95265,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Master Lab unlocked. New badge: Clinical Detective. Its results are now available."
+    }
+   ]
+  },
+  {
+   "kind": "vault-unlock",
+   "lab": "Master Lab",
+   "tabsToInput": 1,
+   "typed": "3916",
+   "focusAfter": "div:Master Lab ESCAPED Fragment 1: 3 Fragment 2: 9 Fragment 3: 1 Fragment 4: 6 Exit unlocked Master Lab unlocked. New badge: Clinical Detective. Its results are now available.",
+   "cardFocus": "vault-card",
+   "msg": [
+    "Master Lab unlocked. New badge: Clinical Detective. Its results are now available."
+   ],
+   "live": [
+    {
+     "t": 95265,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Master Lab unlocked. New badge: Clinical Detective. Its results are now available."
+    }
+   ]
+  },
+  {
+   "kind": "act",
+   "ctx": "nav:Investigations",
+   "key": "Enter",
+   "focus": "h1:All investigations complete.",
+   "live": [
+    {
+     "t": 97068,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Loading investigation map…"
+    }
+   ]
+  },
+  {
+   "kind": "nav",
+   "name": "Investigations",
+   "tabs": 8,
+   "focusAfter": "h1:All investigations complete."
+  },
+  {
+   "kind": "dashboard",
+   "h": "All investigations complete.",
+   "cta": "Review the laboratory map",
+   "focus": "{\"tag\":\"h1\",\"role\":null,\"label\":\"All investigations complete.\",\"id\":\"hero-title\",\"pressed\":null,\"expanded\":null,\"disable"
+  },
+  {
+   "kind": "act",
+   "ctx": "nav:Progress",
+   "key": "Enter",
+   "focus": "h1:Progress vault",
+   "live": [
+    {
+     "t": 98695,
+     "kind": "region-inserted",
+     "role": "status",
+     "text": "Opening the vault…"
+    }
+   ]
+  },
+  {
+   "kind": "nav",
+   "name": "Progress",
+   "tabs": 6,
+   "focusAfter": "h1:Progress vault"
+  }
+ ],
+ "issues": [],
+ "logs": [],
+ "tabs": 221
+}

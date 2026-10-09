@@ -1,0 +1,134 @@
+{
+  "wave": "A",
+  "round": 20,
+  "findings": [
+    {
+      "id": "R20-A-01",
+      "severity": "P2",
+      "category": "auth / account identity",
+      "where": "POST /api/auth/register and POST /api/auth/login (e-mail key)",
+      "what": "The e-mail is only trimmed/lower-cased, never Unicode-normalised (NFC). The NFC and NFD spellings of the same address register as two different accounts that look identical, and each spelling logs into its own account. A user whose keyboard or autofill emits the other normalisation form gets 'Incorrect email or password' with no hint, or can create a second look-alike account. The server already NFC-normalises passwords and compares teacher names through a canonical key, so e-mail is the odd one out.",
+      "repro_curl": "B=http://127.0.0.1:4871; NFC=$(printf 'caf\\xc3\\xa9-x@x.edu'); NFD=$(printf 'cafe\\xcc\\x81-x@x.edu'); for E in \"$NFC\" \"$NFD\"; do curl -s -o /dev/null -w '%{http_code}\\n' -X POST $B/api/auth/register -H 'Content-Type: application/json' -d \"{\\\"name\\\":\\\"N\\\",\\\"email\\\":\\\"$E\\\",\\\"password\\\":\\\"passw0rd-long-1\\\"}\"; done",
+      "evidence": "Both registrations returned 201 (user ids 63 and 64, both shown as the same e-mail). Login with the NFD string returned the id 64 token; a login with the NFC string returns id 63. Observed with 'e-acute' + uniq suffix.",
+      "suggested_fix": "Normalise e-mail with .normalize('NFC') (ideally NFKC) before trim/lower-case in register and login, and add a migration that detects existing collisions."
+    },
+    {
+      "id": "R20-A-02",
+      "severity": "P2",
+      "category": "score integrity / progression design",
+      "where": "src/scoring.ts computeScore penalty cap + src/game.ts answer/complete",
+      "what": "Wrong answers stop costing anything once the penalties have consumed the points earned (base + time bonus, about 130 XP on a 180 mission). After about 13 wrong answers the mission still completes at score 0 and grants the full fragment, the mission-complete state and the unlock progress. Fragments and exits depend on completion, not on score, so the only brake on brute force is the 120 answers/min/student rate limit. Choice, decision and point steps have no partial-progress signal, so pure guessing finishes every mission and every lab exit code with no domain knowledge. XP (and so the leaderboard) is protected, knowledge-gated progression is not.",
+      "repro_curl": "B=http://127.0.0.1:4871; T=<student token>; A=$(curl -s -X POST $B/api/missions/hem-01/start -H \"Authorization: Bearer $T\" | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"attempt\"][\"attemptId\"])'); for i in $(seq 30); do curl -s -o /dev/null -X POST $B/api/attempts/$A/answer -H \"Authorization: Bearer $T\" -H 'Content-Type: application/json' -d '{\"stepId\":\"hem-01-s1\",\"response\":{\"x\":1,\"y\":1}}'; done; curl -s -X POST $B/api/attempts/$A/answer -H \"Authorization: Bearer $T\" -H 'Content-Type: application/json' -d '{\"stepId\":\"hem-01-s1\",\"response\":{\"x\":73.6,\"y\":46.8}}'",
+      "evidence": "30 wrong + 2 hints then correct: result.score 0, xpAwarded 0, ledger [base 100, first 0, time 30, no_hint 0, hints -30, wrong -100] and fragment {labSlug hematology, position 1, digit 7} returned. A bio-01 attempt with 120 wrong answers showed penaltyXp -130 (capped). This is consistent with the README (a wrong answer is a penalty, not a lock) so it is a design-level risk, not a bug.",
+      "suggested_fix": "If fragments are meant to certify knowledge: add a per-step cool-down or lockout after N wrong answers, or withhold the fragment when the mission score is 0 or the accuracy is below a threshold (the replay can still award it)."
+    },
+    {
+      "id": "R20-A-03",
+      "severity": "P3",
+      "category": "contract / stale data",
+      "where": "GET /api/attempts/:id/result (frozen result_json)",
+      "what": "The result of an older attempt is a snapshot taken at completion. After a better replay, the old attempt still says newBest:true and totalXp as of that moment, while /api/me shows the real total. A client that re-opens a past result sees a total that contradicts the profile.",
+      "repro_curl": "Complete hem-01 with 30 wrong answers (score 0), complete it again cleanly (score 180), then: curl -s $B/api/attempts/$FIRST_ATTEMPT/result -H \"Authorization: Bearer $T\" | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d[\"newBest\"],d[\"totalXp\"],d[\"score\"])'",
+      "evidence": "Observed 'True 0 0' for the first attempt while GET /api/me returned xp 180.",
+      "suggested_fix": "Recompute newBest (best_attempt_id == this attempt) and totalXp on read, or document these two fields as 'at the time of completion' in the API contract."
+    },
+    {
+      "id": "R20-A-04",
+      "severity": "P3",
+      "category": "method handling / headers",
+      "where": "src/app.ts request dispatcher (OPTIONS and /api/openapi.json)",
+      "what": "(a) OPTIONS answers 204 for every path, including unknown ones, and never sends an Allow header, so it cannot be used to discover the methods of a route (405 responses do carry Allow). (b) POST/PUT/DELETE /api/openapi.json answers 404 'No such endpoint' while every other GET-only path answers 405 with Allow; the document also does not describe itself.",
+      "repro_curl": "curl -si -X OPTIONS http://127.0.0.1:4871/api/nope -H 'Origin: http://localhost:5173' | head -3; curl -si -X POST http://127.0.0.1:4871/api/openapi.json -H 'Content-Type: application/json' -d '{}' | head -1",
+      "evidence": "First call: HTTP/1.1 204 No Content (no Allow). Second call: HTTP/1.1 404 Not Found.",
+      "suggested_fix": "Answer OPTIONS 404 for unknown paths and add Allow on known ones; register /api/openapi.json in the route table (or return 405 with Allow: GET, HEAD, OPTIONS)."
+    },
+    {
+      "id": "R20-A-05",
+      "severity": "P3",
+      "category": "error format consistency",
+      "where": "Node HTTP parser level and 401 responses",
+      "what": "Protocol-level failures never reach the JSON envelope: a bad request line, unknown method (FOO), missing Host, CL+TE conflict, or a header block over 16 KB answer a bare '400 Bad Request' / '431' with an empty body and no Content-Type. This is documented in openapi.json (HeaderTooLarge), but a client that always parses error.code will throw on them. 401 responses carry no WWW-Authenticate header.",
+      "repro_curl": "printf 'GET /api/health HTTP/9.9\\r\\n\\r\\n' | nc 127.0.0.1 4871 | head -1; curl -si -X FOO http://127.0.0.1:4871/api/health | head -1",
+      "evidence": "HTTP/1.1 400 Bad Request with empty body (both). 20 KB header: HTTP/1.1 431 empty body. No 5xx was produced by any input.",
+      "suggested_fix": "Add server.on('clientError', ...) to write a JSON error envelope for 400/431 when the socket is still writable; add WWW-Authenticate: Bearer to 401."
+    },
+    {
+      "id": "R20-A-06",
+      "severity": "P3",
+      "category": "validation consistency",
+      "where": "Routes without a body schema: POST /api/missions/:id/start, POST /api/demo/reset",
+      "what": "These routes accept and silently ignore any JSON body (array, unknown or client-timing fields such as startedAt/elapsedSec), unlike every other mutation, which uses additionalProperties:false and answers 400. No score or timer effect was found (the server clock is used), but the contract is inconsistent and a typo in a client goes unnoticed.",
+      "repro_curl": "curl -s -o /dev/null -w '%{http_code}\\n' -X POST 'http://127.0.0.1:4871/api/missions/hem-01/start?elapsedSec=0' -H \"Authorization: Bearer $T\" -H 'Content-Type: application/json' -d '[1,2,3]'",
+      "evidence": "201 for body [1,2,3] and for {\"startedAt\":1,\"elapsedSec\":0}; the attempt started with elapsedSec 0 from the server clock. POST /api/demo/reset with {\"xp\":99999} gave 200.",
+      "suggested_fix": "Give both routes an empty-object schema (additionalProperties:false) or reject non-empty bodies, and say so in openapi."
+    },
+    {
+      "id": "R20-A-07",
+      "severity": "P3",
+      "category": "governance / roles",
+      "where": "PUT /api/content/missions/:id/status",
+      "what": "Role-checked only. Any teacher account (anyone holding the invite code) can review, approve and then re-open (approved -> draft) any mission, including approving content they reviewed themselves; the status is global, not per teacher or class. Attribution (name (teacher #id)) and the audit table exist, and illegal transitions are blocked (review_required, illegal_transition).",
+      "repro_curl": "for S in reviewed approved draft; do curl -s -X PUT http://127.0.0.1:4871/api/content/missions/bio-03/status -H \"Authorization: Bearer $TEACHER\" -H 'Content-Type: application/json' -d \"{\\\"status\\\":\\\"$S\\\"}\"; echo; done",
+      "evidence": "Teacher A reviewed then approved bio-03 (200, 200); teacher B then moved it approved -> draft (200).",
+      "suggested_fix": "If scientific sign-off matters, require the approver to differ from the reviewer, or add a separate approver role."
+    },
+    {
+      "id": "R20-A-08",
+      "severity": "P3",
+      "category": "profile contract",
+      "where": "GET /api/profile (user.demo)",
+      "what": "user.demo is true for the demo student (Alex) but false for the demo teacher (Dr. Claire Moreau), although POST /api/demo/reset works for her and the flag is the only client-side signal for 'demo account'.",
+      "repro_curl": "TOK=$(curl -s -X POST http://127.0.0.1:4871/api/auth/demo -H 'Content-Type: application/json' -d '{\"role\":\"teacher\"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"token\"])'); curl -s http://127.0.0.1:4871/api/profile -H \"Authorization: Bearer $TOK\" | python3 -c 'import sys,json;print(json.load(sys.stdin)[\"user\"][\"demo\"])'",
+      "evidence": "Prints False for the teacher; True for the student.",
+      "suggested_fix": "Derive user.demo from is_demo_account for both roles, or document that it means 'demo student'."
+    },
+    {
+      "id": "R20-A-09",
+      "severity": "P3",
+      "category": "rate limiting design",
+      "where": "POST /api/auth/login (loginfail:ip:email bucket, 8 per 10 min)",
+      "what": "The per-account failure bucket is keyed on ip+email, so anyone behind the same NAT or school network can lock a classmate's sign-in for 10 minutes with 8 wrong guesses; the correct password is refused with 429 while it lasts. It is the deliberate trade-off against locking out the owner from elsewhere.",
+      "repro_curl": "for i in $(seq 9); do curl -s -o /dev/null -X POST http://127.0.0.1:4871/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"victim@x.edu\",\"password\":\"wrong-wrong-1\"}'; done; curl -s -X POST http://127.0.0.1:4871/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"victim@x.edu\",\"password\":\"<correct>\"}'",
+      "evidence": "25 parallel wrong logins gave 8x401 and 17x429; the following correct-password login returned 429 with Retry-After 600.",
+      "suggested_fix": "Accept as a documented risk, or add a CAPTCHA/step-up instead of a hard lock for the account bucket."
+    },
+    {
+      "id": "R20-A-10",
+      "severity": "P3",
+      "category": "contract (OpenAPI)",
+      "where": "be/openapi.json (served at /api/openapi.json)",
+      "what": "Success responses are declared as {\"description\":\"Success\"} with no schema for all 31 operations (the README acknowledges it), so response shapes cannot be validated against the spec. The six operations compared (answer, hint, unlock, login, register, PUT profile/content status) match on request body constraints (required, additionalProperties:false, maxLength 64 on stepId, unlock pattern ^[0-9]{3,4}$) and on the declared error statuses; every observed 4xx used the single envelope {error:{code,message[,details]}} with a snake_case code. Minor gaps: HEAD is not described, and the \\S name pattern is laxer than the server (zero-width-only names are accepted by the spec and rejected by the server).",
+      "repro_curl": "curl -s http://127.0.0.1:4871/api/openapi.json | python3 -c 'import sys,json;s=json.load(sys.stdin);print(s[\"paths\"][\"/api/attempts/{id}/answer\"][\"post\"][\"responses\"][\"200\"])'",
+      "evidence": "Prints {'description': 'Success'}.",
+      "suggested_fix": "Add component schemas for AnswerResult, HintResult, AttemptView, ResultPayload, then add a contract test that validates live responses against them."
+    },
+    {
+      "id": "R20-A-11",
+      "severity": "P3",
+      "category": "routing / proxy parity",
+      "where": "src/app.ts new URL(req.url, 'http://localhost')",
+      "what": "Request targets '//evil.com/api/health', 'http://evil.com/api/health' and '/api\\health' all resolve to /api/health because the WHATWG URL parser treats the first as an authority and turns a backslash into a slash. A front proxy that sees them as non-/api paths or as a different path (ACLs, rate-limit zones, cache keys) will disagree with the app. Harmless today (all routes are bearer-authenticated, no cookies), kept as hardening.",
+      "repro_curl": "printf 'GET //evil.com/api/health HTTP/1.1\\r\\nHost: x\\r\\n\\r\\n' | nc 127.0.0.1 4871 | head -1",
+      "evidence": "HTTP/1.1 200 OK with the health JSON for all three targets.",
+      "suggested_fix": "Reject targets that do not start with a single '/' or contain a backslash (400) before URL parsing, and use req.url's path directly."
+    }
+  ],
+  "probes_run": 1250,
+  "checked_ok": [
+    "No 5xx and no stack trace from client input: about 700 randomised type/prototype/unicode fuzz bodies on 11 POST/PUT routes plus about 550 targeted probes; server.log held only the start line.",
+    "Answer replay: 20 parallel correct answers gave exactly one 200 and 19 wrong_step; after completion every answer/hint returns 409 attempt_finished; parallel hints give exactly one charge per hint level (no_more_hints beyond); 25 parallel wrong answers counted 25 and the penalty cap held.",
+    "Answer validation: out-of-range option, non-string/NaN/Infinity/1e999/negative/null/boolean coordinates, duplicate or missing order ids, duplicate right ids, __proto__/constructor keys in body and response, 5,000-deep arrays and 8,000-deep objects, 64 KB edge and 70 KB bodies (413), empty body, invalid JSON, BOM, invalid UTF-8, lone surrogate escapes, wrong Content-Type (415) all gave 400/409/413/415 with the standard envelope. Duplicate JSON keys: last wins, validated after parse, no bypass.",
+    "Client score/time/correct fields on answer and hint are rejected 400 (additionalProperties:false); on start they are ignored and the server clock decides. Timer verified live: remainingSec fell 240 to 237 over 3 s, after 240 s answer/hint/result gave 409 time_expired, XP stayed 0, a new start created a new attempt.",
+    "Score integrity: read-only reconciliation of the throw-away DB after about 280 completed attempts: ledger sum == attempts.score == result_json.score for all; sum(xp_events) == mission_best per user/mission; best_score == max attempt score; wrong/hint counters equal step_results and answer_log/hint_log; no negative score; max 180 per standard mission, 570 Master; hint-vs-answer races (5 rounds) stayed consistent. /api/me, /api/profile, leaderboard and lab results agreed (2190 = 3x540+570).",
+    "Replay/farming: replays raise XP only by the delta over the best (lower replay xpAwarded 0, fragment not repeated); demo reset plus replay returns Alex to exactly 8240 and 12 parallel resets (student and teacher) all 200 with consistent state.",
+    "Unlock: locked mission (hem-02/03 before 01) and Master mission/lab (before 3 exits) return 403 mission_locked/lab_locked on start and unlock; unlock before all fragments gives 409 vault_incomplete; wrong code 422 with attemptsLeft, 6th attempt 429 with Retry-After 600 (also for the right code); 15 parallel correct unlocks gave 1 fresh unlock and one set of badges; coming-soon labs 404; code format variants (74, 74200, ' 742', Arabic-Indic and fullwidth digits, number, null) all 400.",
+    "Auth/roles: no token 401; student on every teacher route 403 wrong_role; teacher on student routes 403; demo student 403 on teacher routes; forged role/sub/exp, unsigned, empty-signature, garbage, token-in-query, Basic scheme and duplicate Authorization all 401; IDOR on attempts (answer/hint/result/get) and on classes/students across teachers returns the same 404 as a missing object; demo reset 403 not_demo for non-demo accounts, 401 without a token.",
+    "DEMO_MODE off (second instance on a copy-free seeded DB): /api/auth/demo 404, seeded accounts cannot log in (same 401 as a wrong password), tokens minted with demo mode on are rejected 401.",
+    "Security headers on every response: Cache-Control no-store, X-Content-Type-Options nosniff, X-Frame-Options DENY, Referrer-Policy no-referrer, CSP default-src 'none'. No Set-Cookie anywhere (bearer in header, so CSRF is not applicable); text/plain and form POSTs are 415 so no CORS-safelisted forgery. CORS: only the configured origin is echoed (evil, null and prefix-lookalike origins get none), Vary: Origin always, Retry-After exposed.",
+    "Methods/routes: HEAD mirrors GET status and headers, never writes (table row counts identical before/after 40 HEADs), is 405 with Allow on POST routes; PUT/PATCH/DELETE/TRACE on wrong routes 405 with correct Allow; unknown routes, trailing slash, case, double slash, %2e%2e, %00 and malformed percent-encoding 404/400 JSON.",
+    "Unicode and injection: teacher names with Cyrillic/Greek/fullwidth/zero-width/I-l-1 homoglyphs, concurrent duplicate-name registrations and parallel renames (exactly one winner, 409 name_taken for the rest), the (teacher #N) suffix imitation, bidi controls, lone surrogates (400), NUL/control characters, 81 and 10,000-character names (400), emoji and RTL names (accepted), 34 exotic student names renamed through leaderboard/roster/detail (all 200), SQL-ish and HTML payloads stored as inert text, same-class-name races (1 of 15), class limit and write rate limit.",
+    "Registration and login: 15 concurrent same-email registrations gave 1 created and 14 email_taken; register limiter returns 429 with Retry-After; login gives the same 401 for unknown and wrong-password accounts; NoSQL-style objects and arrays are 400; role injection on register is 400.",
+    "Content review: transitions enforced (draft to reviewed to approved to draft), approve without review 409, spoofed reviewer field 400, no review status visible to students, 60 writes/min limit returns 429.",
+    "No answer key, exit code or explanation appears in dashboard, labs, lobby, vault, badges, competencies, leaderboard, profile, rules, openapi or in-progress attempt payloads for a fresh student; the order/match progress count is the documented partial signal."
+  ]
+}

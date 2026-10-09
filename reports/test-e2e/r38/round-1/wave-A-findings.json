@@ -1,0 +1,89 @@
+{
+ "wave": "A",
+ "round": 38,
+ "states_reviewed": 173000,
+ "findings": [
+  {
+   "id": "A38-001",
+   "category": "availability / unauthenticated memory pinning (challenges A36-007 'idle socket lives about 83 s')",
+   "severity": "P2",
+   "evidence": "Default server (app.ts createServer without options: headersTimeout 60 s, requestTimeout 300 s, maxConnections undefined, no per-IP cap; readJson buffers up to 64 KiB per request). Real `node src/server.ts` on :3814: 3000 TCP connections each sent a POST /api/auth/login header with Content-Length: 65000 plus 60,000 body bytes and then stopped. RSS 100 MB -> 328 MB (about 76 KB held per socket; 1-byte-body sockets cost 14 KB: 5000 sockets 99 -> 169 MB). /api/health stayed fast (p95 3 ms), so nobody is stalled, but the memory is pinned for the whole request timeout. Close times measured on single sockets: idle or partial headers 90 s (408), partial body 330 s (408), keep-alive after a request 6 s. 3000 sockets cost the attacker 180 MB of upload once; 13,000 sockets from one host pin about 1 GB, 20,000 about 1.5 GB for 5.5 minutes, repeatable. No authentication, no account, works in default and DEMO mode; also bypasses every rate limit because limits are applied only after the body is read. A36-007 only documents idle sockets of about 83 s and a P3 rating.",
+   "fix_hint": "Reject an oversized declared Content-Length (>64 KiB) on the headers before reading anything; set server.requestTimeout to ~15-30 s and headersTimeout ~10 s (JSON bodies are tiny); set server.maxConnections or cap per IP at the reverse proxy; document the proxy requirement in README.",
+   "status": "open",
+   "first_seen_round": 38,
+   "rounds_open": 1
+  },
+  {
+   "id": "A38-002",
+   "category": "scale / class size has no cap (teacher analytics 500 and multi-second blocking)",
+   "severity": "P3",
+   "evidence": "Class analytics cost per call, real process, class of N students with 9 completed attempts each (direct SQL fixtures): N=2,500 583 ms; 5,000 1,313 ms; 10,000 3,018 ms; 20,000 6,777 ms with RSS 118 MB -> 756 MB (cost per student rises 0.23 -> 0.34 ms, so slightly worse than linear). Roster at 100,001 members: 1,363 ms and 27.7 MB. HARD FAILURE: GET /api/classes/:id/analytics answers 500 {\"error\":{\"code\":\"internal_error\"}} as soon as a class has 32,767 members (server log: `Error: too many SQL variables`, game.ts analytics() builds `user_id IN (?,?,...)` from every member id); 32,766 members still answers 200 in 844 ms. Roster endpoint keeps working. Cost for the attacker: one account per member (registration is 100/hour/IP by default, unbounded behind an IPv6 /64, A36-002) and the join code of the target class; joinClass has no capacity limit.",
+   "fix_hint": "Cap class size (for example 500) in joinClass or paginate; chunk the IN list or use a temp table / join on class_members instead of binding every id; build the analytics per-mission aggregates in SQL instead of 5 x bestRows per student.",
+   "status": "open",
+   "first_seen_round": 38,
+   "rounds_open": 1
+  },
+  {
+   "id": "A38-003",
+   "category": "availability / reads take the write lock (busy_timeout blocks the whole event loop)",
+   "severity": "P3",
+   "evidence": "Game.badges() (game.ts:268-269) runs tx(this.db, ...) = BEGIN IMMEDIATE on every GET /api/badges, /api/dashboard and /api/profile even when nothing is granted. With a second process holding the write lock for 3 s (BEGIN IMMEDIATE on the same DB file, which README/KNOWN_LIMITATIONS say is a supported 'two processes' setup), `GET /api/badges` answered 200 after 2,996 ms and a concurrent unrelated `GET /api/health` also took 2,996 ms (node:sqlite busy handler sleeps synchronously inside the event loop; busy_timeout=5000, so a 5 s holder turns these GETs into 500). Single process: not reachable. HEAD requests skip it (readOnlyRequest).",
+   "fix_hint": "Skip the write transaction when SELECT shows nothing to grant (check conditions first, BEGIN IMMEDIATE only if a badge is missing), or move the catch-up out of the read path; state the single-writer assumption.",
+   "status": "open",
+   "first_seen_round": 38,
+   "rounds_open": 1
+  },
+  {
+   "id": "A38-004",
+   "category": "availability / successful logins are not throttled (scrypt thread pool)",
+   "severity": "P3",
+   "evidence": "routes.ts login gives its failure slots back on success, so correct-password logins are unlimited. One IP, 8 own accounts x 7 in-flight loops (56 in flight, below the 60 per-IP and 8 per-account in-flight reservations): victim login latency 36 ms idle -> 448-464 ms (5 samples), flood throughput 773 logins in 4.5 s; with a single account the 8-slot reservation caps it (victim 66-92 ms). /api/health and authenticated routes are unaffected (scrypt runs on the 4-thread libuv pool). A non-NFC password doubles the scrypt work per attempt (auth.ts verifyPassword). Several source IPs scale it (not seconds from one IP).",
+   "fix_hint": "Count successes in a separate generous per-IP/per-account bucket (for example 30 per minute) or bound concurrent scrypt jobs; document UV_THREADPOOL_SIZE.",
+   "status": "open",
+   "first_seen_round": 38,
+   "rounds_open": 1
+  },
+  {
+   "id": "A38-005",
+   "category": "storage growth / attacker-controlled bytes in answer_log",
+   "severity": "P3",
+   "evidence": "game.ts:405 stores safeJson(response).slice(0, 2000) for every answered step; `response` is only schema-checked as an object, extra keys are ignored by checkResponse. Real server: 100 wrong answers {\"stepId\":\"hem-01-s1\",\"response\":{\"pad\":\"x\"*60000,\"x\":0,\"y\":0}} -> 100 x 200 OK, answer_log AVG(length(response_json)) = 2000, 200,000 bytes. At the default 120 answers/min that is 240 KB/min = 14.4 MB/hour = 345 MB/day per account (the cap of 400 rows applies per attempt only, new attempts are unlimited), about 20x the normal row size. Not read by any request path (streak/lastActive read only created_at).",
+   "fix_hint": "Store a normalised response (only the engine's expected fields, or the hash/length), or cap total answer_log rows per user.",
+   "status": "open",
+   "first_seen_round": 38,
+   "rounds_open": 1
+  },
+  {
+   "id": "A38-006",
+   "category": "scale / default leaderboard is O(all users)",
+   "severity": "P3",
+   "evidence": "game.ts:878 loads `SELECT id, name FROM users` for every leaderboard call, including the default cohort=class. 100,000 student rows (class of 38): GET /api/leaderboard 86 / 71 / 70 ms, 20 concurrent -> /api/health p50 54 ms, max 208 ms. cohort=all (A37-002, known): 1,558 ms per call and 20 concurrent calls -> health p50 1,539 ms at 100k users (about 15 us per user). Linear, as documented; the default path was documented as cheap.",
+   "fix_hint": "Query names only for the ids returned (WHERE id IN) or join once; cache the all-cohort ranking for a few seconds.",
+   "status": "open",
+   "first_seen_round": 38,
+   "rounds_open": 1
+  },
+  {
+   "id": "A38-007",
+   "category": "availability / demo reset is unthrottled and linear in history (DEMO_MODE only)",
+   "severity": "P3",
+   "evidence": "POST /api/demo/reset (routes.ts:255) has no limiter. Fresh seed: 8-12 ms (student), 3 ms (teacher); flood from one token 199/s (1 loop), 306/s (5), 323/s (20 loops) with /api/health p50 54 ms at 20 loops. Cost grows with what the shared Alex account accumulated (DELETE cascade + replay in one transaction): 5,000 attempts 108 ms, 50,000 attempts 1,208 ms (health 1,202 ms during it), i.e. about 14 hours of default-limit play. Linear, DEMO_MODE only, and the reset itself wipes the history.",
+   "fix_hint": "Add limiter.hit('reset:'+uid, 6, 60_000); optionally cap attempts per account.",
+   "status": "open",
+   "first_seen_round": 38,
+   "rounds_open": 1
+  }
+ ],
+ "summary": {
+  "P0": 0,
+  "P1": 0,
+  "P2": 1,
+  "P3": 6,
+  "open_P0": 0,
+  "open_P1": 0,
+  "open_P2": 1,
+  "open_P3": 6
+ },
+ "verdict": "GREEN",
+ "notes": "Snapshot id at start and at end: 96233cf7caabeb02b0d9cf871892151627ae48bf3bbc20b7cd2974def258c81d (identical, 143 files; nothing under be/, web/, docs/, sources/ was edited; all databases were throw-away copies of a seeded DB in scratchpad/r38A/db, servers on ports 3801-3818 stopped by PID). \n(b) STATEFUL FUZZ: 173k randomized steps in about 30 runs (seeds 1-6, 11-16, 21-26, 52, 61-66, 71-73; in-process server, real HTTP, controllable clock, 6 students + Alex + 2 teachers + demo teacher, 3 classes plus created ones). Ops: start/resume/replay, correct/wrong/malformed/wrong-stepId answers, hints (single, 3 in parallel, hint with a slow/failing/leaky/over-long assistant while the clock jumps past the limit and another request closes the attempt), vault unlock (right, wrong, early, malformed), join (valid, lowercase, invalid), exact time-limit boundary (limit-1, limit, limit+1 ms), 3-way parallel answers, clock +1 ms / +seconds / +days / -seconds, demo resets (student and teacher), teacher class creation, content transitions (valid and illegal), renames, authz probes, and 3 runs (6000 steps each) with TWO app instances on one DB file (hint reserved on one instance, answers on the other). After EVERY step for the acting student: XP = sum of best score; best = max of completed scores; completions count; xp_events per mission = best; recomputed score from step_results + elapsed = stored score; ledger sum = score = result_json.score; 0 <= score <= maxScore; result_json hint/wrong stats = counters; wrong_total/hints_total = step_results sums = answer_log wrong rows (when <400) = hint_log rows; current_step = solved steps; fragments only for solved steps/completed missions with the right digit and none missing; exits need full vault; master needs 3 exits; attempt rows never precede the completed prerequisite; badges granted iff condition (after catch-up); completed attempts byte-identical (attempt, step_results, hint_log, answer_log fingerprints) for the whole run; attempt view penaltyXp/counters; /me, /dashboard (xp, completed, labsCompleted, streak, badges, per-lab, lab state), /labs, lab lobby (states, bestScore, inProgress), /vault, /profile (xp split, accuracy, avg time, labs, badges), /badges, /competencies (independent recomputation), /labs/:slug/results (xp, accuracy, ledger rows vs result_json, code digits), leaderboard (all/class x all/week: top 20 rows, ranks, totals, me) vs raw SQLite. Every 25 steps for all 3 teachers: roster rows, ordering, analytics cohort aggregates, per-mission started/completed/success/clean-first-try/avgSec/avgHints/step avgWrong, hardest-mission flag, per-lab aggregates, analytics-vs-roster agreement, student detail, cross-teacher authz. End of run: PRAGMA integrity_check ok and foreign_key_check empty in all 30 runs; 0 responses with status >= 500; 0 invariant violations in 20 of 21 long runs (the single run with 9 'violations', seed 14, was my own harness letting a 7-day bearer token expire after a +9 day clock jump; fixed in the harness, not an API defect). Fuzz power check: against copies of be/src with injected bugs (hint refund forgets hints_total, master unlock needs 2 labs, completions not incremented) the fuzz reported violations within 100-600 steps. Totals: 13,091 mission completions (714 Master Lab), 552 lab exits, 1,526 demo resets, 7,461 expiries.\n(a)/(c) SHAPE HUNT through real node src/server.ts with /api/health probed concurrently: EXPLAIN QUERY PLAN of all 80 SQL statements (no scan except users/content_status/2 aggregate scans; window queries use the index plus one temp b-tree). competencies()/result/dashboard/badges/profile/leaderboard with ONE student at 5k / 20k / 50k attempts in shapes blocks-ascending, blocks-descending, interleaved, single mission (5 missions): competencies 14 / 65 / 169-179 ms (blocks 5000 = 14.3 ms), result identical, dashboard 11 / 45 / 136-149 ms (streak, known A37-003), badges/profile/leaderboard <= 4 ms: linear, no shape differs. Class analytics with 300 students x 20 / 100 / 500 attempts (blocks and descending): 55 / 167 / 814 ms and 56 / 181 / 933 ms, roster 17 / 58 / 285 ms, detail 2-4 ms; 300 x 100 attempts x 40 answer rows (1.2M answer_log rows): analytics 297 ms. Alex (demo student, member of the 38-student class) with 50k attempts: analytics 240 ms. Many users: 20,000 students x 9 attempts etc. see A38-002. No quadratic behaviour remains in the two fixed queries. Latent, NOT reachable through the API (so not filed): Game.competencies() accumulates with `[...(by.get(c) ?? []), s]` (O(k^2)) and RANK()=1 keeps every row tied on the latest solved_at; with injected ties (same solved_at for k rows of one user, which would need k attempts finishing the same step in one millisecond) competencies took 390 ms at k=5,000 and 5.4 s at k=20,000. Replace the spread with push() as defence in depth.\n(d) Checked and clean: HEAD on 18 routes never wrote (total_changes unchanged, query_only restored, write works afterwards); 3000 raw malformed HTTP requests (bad methods, percent-encoding, 9 KB paths, chunked/CL conflicts, Expect, Upgrade, 30,000-deep JSON, XFF 6 KB) -> only 2xx/4xx/431, no 5xx, server alive; slow-loris sockets do not delay other requests (health p95 3 ms with 5000 open); rate-limit map and statement cache growth are bounded per user/IP (A36-002/A37-004 stand); login flood with one account is capped at 8 in flight (victim 66-92 ms); /api/openapi.json 29 KB at about 1.7 ms; startup quick_check on a 391 MB DB takes 3.1 s; request timeouts are Node defaults (headersTimeout 60 s, requestTimeout 300 s, keepAliveTimeout 5 s, no maxConnections). Not attacked: real LLM provider, WebKit, Docker image, screen reader, multi-process load beyond the two-instance fuzz."
+}

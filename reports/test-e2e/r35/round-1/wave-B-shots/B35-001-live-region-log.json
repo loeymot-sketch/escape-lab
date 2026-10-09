@@ -1,0 +1,55 @@
+{
+ "decision_hem02_step1": [
+  {
+   "attempt": "wrong A (1st)",
+   "announcements": [
+    {
+     "why": "alert inserted",
+     "text": "Not quite.Ask whether any step in the lab can repair this specimen.XP penalty: -10."
+    }
+   ],
+   "xpPenaltyCounterAfter": "-10"
+  },
+  {
+   "attempt": "wrong A (same, 2nd)",
+   "announcements": [],
+   "xpPenaltyCounterAfter": "-20"
+  },
+  {
+   "attempt": "wrong C (different wrong option)",
+   "announcements": [],
+   "xpPenaltyCounterAfter": "-30"
+  },
+  {
+   "attempt": "wrong C (same, again)",
+   "announcements": [],
+   "xpPenaltyCounterAfter": "-40"
+  }
+ ],
+ "point_hem01": [
+  {
+   "attempt": "wrong point (1st)",
+   "announcements": [
+    {
+     "why": "alert inserted",
+     "text": "Not quite.Look for fragments, not whole cells: sharp angles and no central pallor.XP penal"
+    },
+    {
+     "why": "alert inserted",
+     "text": "Not quite.Look for fragments, not whole cells: sharp angles and no central pallor.XP penal"
+    }
+   ],
+   "xpPenaltyCounterAfter": "-10"
+  },
+  {
+   "attempt": "same wrong point (2nd)",
+   "announcements": [],
+   "xpPenaltyCounterAfter": "-20"
+  },
+  {
+   "attempt": "different wrong point (3rd)",
+   "announcements": [],
+   "xpPenaltyCounterAfter": "-30"
+  }
+ ]
+}

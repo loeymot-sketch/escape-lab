@@ -1,0 +1,114 @@
+{
+ "rows": [
+  {
+   "at": "1.3",
+   "desc": "Open the Hematology lab",
+   "ms": 49
+  },
+  {
+   "at": "2.5",
+   "desc": "Replay Blood Smear Code",
+   "ms": 48
+  },
+  {
+   "at": "4.4",
+   "desc": "click schistocyte (known coordinates)"
+  },
+  {
+   "at": "5.8",
+   "desc": "Submit answer",
+   "ms": 43
+  },
+  {
+   "at": "7.2",
+   "desc": "Return to mission control",
+   "ms": 49
+  },
+  {
+   "at": "8.5",
+   "desc": "Lab map (sidebar)",
+   "ms": 60
+  },
+  {
+   "at": "9.7",
+   "desc": "Review Hematology Lab",
+   "ms": 47
+  },
+  {
+   "at": "11.0",
+   "desc": "Replay Fix the Sample",
+   "ms": 51
+  },
+  {
+   "at": "12.3",
+   "desc": "Ask Lab Assistant (hint)",
+   "ms": 45
+  },
+  {
+   "at": "13.5",
+   "desc": "choose wrong option A",
+   "ms": 26
+  },
+  {
+   "at": "14.8",
+   "desc": "Submit (wrong)",
+   "ms": 41
+  },
+  {
+   "at": "16.1",
+   "desc": "choose right option B",
+   "ms": 16
+  },
+  {
+   "at": "17.3",
+   "desc": "Submit (right)",
+   "ms": 40
+  },
+  {
+   "at": "18.6",
+   "desc": "Exit mission",
+   "ms": 51
+  },
+  {
+   "at": "19.8",
+   "desc": "About & demo guide (sidebar)",
+   "ms": 30
+  },
+  {
+   "at": "21.1",
+   "desc": "Open the Progress vault",
+   "ms": 47
+  },
+  {
+   "at": "22.4",
+   "desc": "Faculty guest",
+   "ms": 64
+  },
+  {
+   "at": "24.1",
+   "desc": "Open roster row (Inès Moreau)",
+   "ms": 21
+  },
+  {
+   "at": "25.4",
+   "desc": "Content review",
+   "ms": 19
+  },
+  {
+   "at": "26.8",
+   "desc": "About & demo guide (faculty sidebar)",
+   "ms": 24
+  },
+  {
+   "at": "28.0",
+   "desc": "Go to quality",
+   "ms": 16
+  },
+  {
+   "at": "29.2",
+   "desc": "Go to roadmap",
+   "ms": 19
+  }
+ ],
+ "clicks": 22
+}

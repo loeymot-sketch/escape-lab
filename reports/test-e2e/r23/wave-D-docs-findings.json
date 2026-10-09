@@ -1,0 +1,99 @@
+{
+  "wave": "D",
+  "round": 23,
+  "findings": [
+    {
+      "id": "R23-D-01", "severity": "P2", "category": "convergence claim contradicts the goal's own exit criteria (residual of R22-D-04, not fixed, arguably stronger now)",
+      "where": "docs/FINAL_VALIDATION_REPORT.md:108 ('les tours 21 et 22 (consecutifs, sur l'etat final du code) ont P0 = 0 et P1 = 0 ... Les criteres techniques de docs/GOAL_FINAL_MVP.md sont remplis') and :126 (Verdict row)",
+      "what": "Two checkable problems in one sentence. (a) 'sur l'etat final du code' is false for tour 21: R21-A-01 (the login regression) was found IN tour 21 and fixed afterwards (routes.ts 12:21, final chain 12:21:48), so only tour 22 audited the final code. (b) GOAL_FINAL_MVP.md:21 requires two consecutive rounds with P0=P1=0 'et aucun P2 nouveau introduit par ces corrections'. The report's own table gives tour 21 = 3 P2 (two introduced by the tour-20 fixes: R21-A-01, banners) and tour 22 documents = 4 P2 (D-02 pointer sentence and D-03 unarchived figures were created by the tour-21 doc edits). So 'criteres remplis' is contradicted by the report's own rows 123-124. R22-D-04 asked for a reserve on the verdict; the verdict row (126) is still unqualified and the 'Non reaudite' row (125) lists as the four P2 fixes three real P2 plus 'tournures nvm/Node 18' (those were P3) and omits D-04 entirely. Mitigations: the 4 P2 and the 'non reaudite' status are disclosed, ESCALATE for production is kept.",
+      "evidence": "docs/GOAL_FINAL_MVP.md:21; FINAL lines 108, 123-126; reports/test-e2e/r21/*.json (3 P2) and r22/wave-D (4 P2); R21-A-01 found in r21 wave-A, fix in routes.ts 12:21:04.",
+      "suggested_fix": "Say 'le tour 22 est le seul tour sur le code final ; le critere \"aucun P2 nouveau\" n'est pas atteint pour les documents (4 P2 au tour 22) ; sous reserve du tour 23'. Drop 'sur l'etat final du code' for tour 21; fix the list in row 125 (D-01..D-04)."
+    },
+    {
+      "id": "R23-D-02", "severity": "P2", "category": "number does not match its source",
+      "where": "docs/FINAL_VALIDATION_REPORT.md:124 (Tour 22 row): 'R21-A-01 confirme resolu (50 connexions sur 2 paires et 2 triplets de lignes en collision ...)'",
+      "what": "The source (reports/test-e2e/r22/wave-A-backend-findings.json, resolved entry R21-A-01, line 30) describes ONE pair (NFC/NFD, different passwords), a triple and a second triple (different row order): 50 logins, 0 failures. That is 1 pair + 2 triples, not 2 pairs + 2 triples. Other pairs (ids 58/59, 67/68) appear only in R22-A-02 for the same-password tie-break, not in the 50 logins.",
+      "evidence": "node read of wave-A JSON resolved_from_r21 text; grep -n 'pair' in the JSON.",
+      "suggested_fix": "'1 paire et 2 triplets'."
+    },
+    {
+      "id": "R23-D-03", "severity": "P3", "category": "stale-text (residual of R22-D-05)",
+      "where": "docs/CODEX_INITIAL_AUDIT.md:3",
+      "what": "The English banner still says 'in its \"Tour 20 / Tour 21\" section'; the heading is 'Tour 20 / Tour 21 / Tour 22'. The other 10 banners are updated (verified with a NBSP-insensitive scan: API_CONTRACT_MATRIX x2, AUDIT_EVIDENCE, CLAUDE_CODE_EXECUTION_BRIEF, E2E_VALIDATION_REPORT, GATE_TRACEABILITY_MATRIX, HUMAN_REVIEW_HANDOFF, INDEPENDENT_REVIEW_REPORT, RELEASE_GATE_DECISION, ULTRA_STRICT_EXECUTION_PLAN). 11 banners exist in total, not 10. Still findable (prefix matches).",
+      "evidence": "docs/CODEX_INITIAL_AUDIT.md mtime 12:05, line 3.",
+      "suggested_fix": "Use the full heading."
+    },
+    {
+      "id": "R23-D-04", "severity": "P3", "category": "demo-runbook / English wording (residual of R22-D-07)",
+      "where": "README.md:7 ; be/README.md:7 (and FINAL:25, FACULTY_DEMO_SCRIPT:20 in French)",
+      "what": "English is clean (no French left in README.md or be/README.md, grep for accents and common French words finds none). But the Node 18 symptom is still a garbled composite: 'node: bad option: --disable-warning=… (or --env-file-if-exists…)=.env' (or '--disable-warning=...'). The first string is not a real message (dangling '=.env'). On this machine's Node v18.20.7, npm start and seed:demo print exactly 'node: bad option: --disable-warning=ExperimentalWarning' (verified: node --disable-warning=ExperimentalWarning -e 1; the env-file flag gives its own 'bad option' only if run alone). 'bad option = Node version' advice is correct.",
+      "evidence": "node -v v18.20.7; the two node invocations; be/package.json start/dev/seed:demo.",
+      "suggested_fix": "Write the literal 'node: bad option: --disable-warning=ExperimentalWarning' only."
+    },
+    {
+      "id": "R23-D-05", "severity": "P3", "category": "archive completeness",
+      "where": ".ci-artifacts/local-2026-10-09-round21-22/README.md ; r20-supervisor-pass/misconfigured-parallel-repeat-load.log",
+      "what": "The archive README (12:31) lists neither r21-failed-pass/prod-only.log and watch.log (both cited by the docs and present) nor r20-supervisor-pass/misconfigured-parallel-repeat-load.log (12:37, cited nowhere: grep in docs and README finds nothing). That log is a 24-test repeat of R5-02/03 and R6-01 with 6 workers: '4 failed, 20 passed', all 4 failures are R5-02/03. FINAL:119 says the 30/30 repetition is 'journal non archive' without mentioning that an archived repetition of the same test, in a misconfigured parallel setup, has failures. The file name says 'misconfigured' and it is not a claim, but a reader opening the folder meets an unexplained red log of a test the report calls fixed.",
+      "evidence": "ls of the archive; tail of the log (4 failed / 20 passed (46.6s)); grep -rn misconfigured docs README.md .ci-artifacts/.../README.md -> none.",
+      "suggested_fix": "Add 3 lines to the archive README: prod-only.log (3/3, 8.5 s), watch.log, and 'misconfigured-parallel-repeat-load.log: 6 workers on the shared test DB, not the supported configuration, 4/24 failures of R5-02/03 (shared-state), not a result of the 1-worker config'. Only say this if the cause is actually known."
+    },
+    {
+      "id": "R23-D-06", "severity": "P3", "category": "traceability (unchanged R22-D-11)",
+      "where": "docs/FINAL_VALIDATION_REPORT.md:123 ('un P1 visuel (chevauchement) trouve par l'agent des captures a ete corrige avant le tour')",
+      "what": "Still no report file records that P1 (r21 visual JSON has 6 P3 and a 'no overlap' note). Not an overclaim (it admits a P1), only untraceable; the sentence was not given a 'non archive' qualifier.",
+      "evidence": "grep P1 reports/test-e2e/r21/wave-V-visual-findings.json.",
+      "suggested_fix": "Add 'non archive'."
+    },
+    {
+      "id": "R23-D-07", "severity": "P3", "category": "ui-overclaim-residual (unchanged R22-D-08)",
+      "where": "web/src/pages/progress.tsx:237",
+      "what": "Eyebrow 'MASTERY PROGRESS' above 'Lab results' still present (only occurrence of 'mastery' in web/src). Code deliberately untouched since the final chain.",
+      "evidence": "grep -rn -i mastery web/src",
+      "suggested_fix": "'LAB RESULTS'."
+    },
+    {
+      "id": "R23-D-08", "severity": "P3", "category": "count-honesty (unchanged R22-D-09)",
+      "where": "docs/SCIENTIFIC_REVIEW_BACKLOG.md:175 ; FINAL:17 ; FACULTY_DEMO_SCRIPT:116 ; KNOWN_LIMITATIONS:25",
+      "what": "Recounted: 25 headings (B-01..B-03, C-01..C-22), 1 + 12 + 12 matches the text. Still includes C-12 (doc pointer already corrected) and B-03 (requalification of C-01), so 'open distinct biomedical points' is 23. Cosmetic.",
+      "evidence": "grep of '^- \\*\\*[BC]-' = 25.",
+      "suggested_fix": "'25 entrees (dont 1 corrigee, 1 requalification)'."
+    },
+    {
+      "id": "R23-D-09", "severity": "P3", "category": "demo-runbook-gap (unchanged R22-D-10)",
+      "where": "docs/FACULTY_DEMO_SCRIPT.md section 2.5 Plan B",
+      "what": "No sentence that after an API restart (AUTH_SECRET blank in .env.example) the guest session expires and the mission in progress is lost. grep for expir / AUTH_SECRET in the script: no match. From code reading in r21, not re-run.",
+      "evidence": "grep -n -i 'expir\\|AUTH_SECRET' docs/FACULTY_DEMO_SCRIPT.md -> nothing.",
+      "suggested_fix": "One sentence in Plan B."
+    },
+    {
+      "id": "R23-D-10", "severity": "P3", "category": "stale header / citation precision",
+      "where": "docs/KNOWN_LIMITATIONS.md:3 and :21",
+      "what": "Line 3 still says 'items 10-11 added on 2026-10-09 after round 20'; items 12-14 (rounds 21-22) are not mentioned there. Item 14 cites only the root watch.log for '4 full passes (rounds 22 and 23)': two passes are in the root watch.log, the other two in final-r23/watch.log. Archive README says 'toutes les 2 s'; the logs sample every ~2.4 s (rounding).",
+      "evidence": "line 3; watch.log timestamps 12:00:55-12:10:00 (root) and 12:21:31-12:31:18 (final-r23).",
+      "suggested_fix": "Say 'items 10-14 added 2026-10-09' and cite both watch.log files."
+    }
+  ],
+  "resolved_from_r22": [
+    {"id": "R22-D-01", "status": "resolved", "how": "FINAL:24 now says a10dd1e5 is the value 'au moment de la passe archivee du 03:04' and that the current file is f1dbd031...c6c6; FINAL:49 says the same ('hash actuel f1dbd031...'); FINAL:120 consistent. shasum -a 256 be/openapi.json = f1dbd031f6c1ee65ddec55d9d22bc7c98b86004c4e9abcdf00d4949bec48c6c6 and be/src/content.ts = d4bd3b64...85a39 (both equal identity-sha256.txt, final-r23/identity-sha256.txt, openapi.sha256, and the report)."},
+    {"id": "R22-D-02", "status": "resolved", "how": "FINAL:7 now states 265/322/411 as the most recent state and says the 'Verdict final' and 'Resultats' blocks (258, 411 x3) are the archived 03:04 pass. 258 vs 265, 359139 vs 359503 verified in logs."},
+    {"id": "R22-D-03", "status": "resolved", "how": "FINAL:119 says '30/30 ... journal non archive' (honest); 3/3 for the production-bundle project now has r21-failed-pass/prod-only.log ('3 passed (8.5s)') and a 4-line watch.log. KNOWN_LIMITATIONS:21 points to prod-only.log which exists. (Residual: R23-D-05.)"},
+    {"id": "R22-D-04", "status": "not resolved", "how": "Verdict unqualified; the new line 108 states the criteria are met, which the report's own rows contradict. See R23-D-01."},
+    {"id": "R22-D-05", "status": "mostly resolved", "how": "FINAL:28 is in the past tense. 10 of 11 banners carry the full heading; CODEX_INITIAL_AUDIT.md still says 'Tour 20 / Tour 21' (R23-D-03)."},
+    {"id": "R22-D-06", "status": "resolved", "how": "README.md:7 and FACULTY_DEMO_SCRIPT:20 put 'nvm use 22' first (works here: v22.23.2); .nvmrc (22.18.0) mentioned only as a repo file in the script, no longer as the first command."},
+    {"id": "R22-D-07", "status": "partly", "how": "French removed from the English READMEs, but the symptom string is still a composite with a dangling '=.env' (R23-D-04)."},
+    {"id": "R22-D-08", "status": "open (unchanged)", "how": "R23-D-07."},
+    {"id": "R22-D-09", "status": "open (unchanged)", "how": "R23-D-08."},
+    {"id": "R22-D-10", "status": "open (unchanged)", "how": "R23-D-09."},
+    {"id": "R22-D-11", "status": "open (unchanged)", "how": "R23-D-06."}
+  ],
+  "checked": [
+    "Doc claims vs logs (all match): root backend-test.log '# tests 264 / pass 264 / fail 0'; final-r23 '# tests 265 / pass 265 / fail 0'; 03:04 archive '# tests 258'. fe-unit.log 17 files / 322 passed in both. final-r23 e2e1 '411 passed (4.8m)', e2e2 '411 passed (4.6m)'; root e2e1/e2e2 411 passed (4.6m) each; r21-failed-pass e2e1 411 passed, e2e2 '3 failed / 408 passed (4.8m)'; r20-supervisor-pass e2e.log '1 failed / 410 passed', e2e-final.log '411 passed (5.4m)'. exit.log: all entries 0 in root and final-r23; r20 pass e2e 1; r21 failed pass e2e2 1. fe-build 'JS 359503 / 400000, CSS 66025 / 120000' (final) vs 359139/65969 (03:04 table). be-audit/fe-audit 24 bytes (0 vulnerabilities).",
+    "Every file named in the docs exists: .ci-artifacts/local-2026-10-09-round21-22/{README.md, final-r23/{e2e1,e2e2,watch,identity-sha256}, r21-failed-pass/prod-only.log, watch.log, r20-supervisor-pass/*, watch.log}, local-2026-10-09/validation-manifest.json, first-attempt dir, reports/test-e2e/r20,r21,r22 JSON, web/e2e/audit-fixes.spec.ts, be/test/r20-fixes.test.ts, docs/demo-screenshots (10 PNG + README). web/playwright.config.ts:60/69 write webserver-exit.log next to E2E_DB_PATH as KNOWN_LIMITATIONS:21 says.",
+    "Counts recomputed by script: r20 A 0/0/2/9, D 0/0/7/9, V 0/0/4/6 = 0/0/13/24; r21 A 0/0/1/3, D 0/0/2/7, V 0/0/0/6 = 0/0/3/16; r22 A 0/0/0/2 (R22-A-01, A-02), D 0/0/4/7. All equal the numbers in FINAL:122-124 (only the '2 paires' detail is wrong, R23-D-02). 'environ 3 100 requetes' = probes_run 3100; '395 requetes mal formees sans 5xx' and '40 tentatives en course' match wave-A. 7 new tests 258 -> 265 consistent with r22 (be/test/r20-fixes.test.ts).",
+    "KNOWN_LIMITATIONS items 10-14 read against sources: item 12 (R22-A-01: ~32 ms per extra scrypt; R22-A-02: exact-key row wins, otherwise lowest rowid, not guaranteed; dev DB 46 users) matches wave-A JSON. Item 14 matches prod-only.log (3 passed), watch logs, config. Backlog line references: KNOWN_LIMITATIONS.md:31 (AI guard), :10 (approval keyed by mission id), :43 (language fr), :7 (order/match partial signal) all point at the right bullet; :23 in C-12 is historical (past tense).",
+    "Code unchanged since the final chain: files newer than scratchpad/r23/DONE (12:31) in be/src, be/test, web/src, web/e2e, web/scripts, be/scripts and package/config files at be/ and web/ roots: none. Only be/README.md (documentation) and docs/README files are newer, plus be/data/escape-lab.db-shm (12:35, SQLite sidecar touched by earlier read-only queries; .db still 8 Oct 21:26, -wal 0 bytes). Screenshots (12:00) older than DONE and than every code file's last change.",
+    "Stray files: no *.bak, *.orig, *.rej, be/backups, test-results, *.tmp; empty files only .ci-artifacts/local-2026-10-09{,-first-attempt}/openapi-diff.log (an empty diff, expected, outside reports/); no empty file under reports/ or docs/. reports/test-e2e/r23 did not exist before this file.",
+    "Overclaim scan: 'production ready' only in negations; no 'validated' claim for content; README.md:22 and FINAL:9-12,17 keep 'not validated' and AI-agent-auditors disclaimers; verdict string 'DEMO-READY ACADEMIC MVP - TECHNICALLY VERIFIED LOCALLY' always paired with ESCALATE for production/science.",
+    "Not run: servers, browsers, Playwright, tests (only shasum, grep, find, node one-liners incl. node -v and the two 'bad option' probes on Node v18.20.7)."
+  ]
+}

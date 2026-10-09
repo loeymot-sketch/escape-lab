@@ -1,0 +1,184 @@
+{
+  "wave": "C",
+  "round": 36,
+  "states_reviewed": 58,
+  "findings": [
+    {
+      "id": "C36-001",
+      "state_artifact": "docs/KNOWN_LIMITATIONS.md:40 and :178 (Round 35 notes, 'Contested')",
+      "category": "doc_claim",
+      "severity": "P2",
+      "evidence": "KNOWN_LIMITATIONS.md:178 rejects finding A35-005 with: 'That item is scoped to AI-provider hints (LAB_ASSISTANT_*); the audit killed the server during a standard (faculty-text) hint, which is the documented R16-A-02 behaviour. Not changed.' The finding JSON (reports/test-e2e/r35/round-1/wave-A-findings.json, A35-005) says the opposite about the test: 'SIGKILL 500 ms into a 1.5 s assistant call, restart -> hint_log row (level 1, source standard, text ...) and hints_total 1' (wave A notes: assistant faked with a 0.4-1.5 s delay). So the AI-provider path WAS the one tested. Code confirms the auditor: be/src/game.ts hintLocked() inserts the hint_log row with the standard text in the same transaction as the charge (comment 'R16-A-02 ... A stop between the two steps leaves the learner with the standard hint'), and KNOWN_LIMITATIONS.md:120 (R16-A-02) says 'after a restart step.hintsGiven lists the standard hint'. Yet KNOWN_LIMITATIONS.md:40 still states that stopping the server during an AI hint 'keeps the hint penalty without delivering the text ... such a hint is counted but has no stored text, so it never appears in the list of earlier hints'. The document therefore contradicts itself (line 40 vs line 120), contradicts the code, and its 'Contested' paragraph misdescribes what the auditor did. Not P1: the stale line overstates a limitation, it hides nothing.",
+      "fix_hint": "Delete or rewrite line 40 (point to R16-A-02) and correct the 'Contested' bullet: A35-005 was right (it used an assistant call); mark it 'corrected' instead of 'not changed'.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-002",
+      "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:13, .ci-artifacts/local-2026-10-09-verify-r34/snapshot-id.sh, validation-manifest.json",
+      "category": "doc_claim",
+      "severity": "P2",
+      "evidence": "Report line 13 and the script header describe the snapshot id as covering 'code, tests, scripts, configurations, fichiers de verrouillage' (docs excluded on purpose) and sell it as the identity of the verified state. Reproduced: `sh snapshot-id.sh` gives 134 files and 843f0db7...ad275a (matches report and manifest). But the find list omits files that change what the build/typecheck/runtime do: be/tsconfig.json, web/tsconfig.json, be/Dockerfile, be/.env.example, .nvmrc (22.18.0, which the docs tell the presenter to use), .github/workflows/escape-lab-validation.yml. Computed with `find be web -type f` (excluding node_modules, dist*, data, reports) minus the script's list: be/.env.example, be/.gitignore, be/Dockerfile, be/tsconfig.json, web/tsconfig.json (+ generated tsbuildinfo). Editing e.g. `strict` in a tsconfig would leave the 'snapshot id' unchanged, so 'no source file changed' / 'configurations' is overstated for what a reviewer would read as a state identity.",
+      "fix_hint": "Add the missing files to the find list (and regenerate the id/manifest), or say explicitly in the report, the manifest and the script comment that tsconfig*.json, Dockerfile, .env.example, .nvmrc and the CI workflow are NOT covered.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-003",
+      "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:53,57 and :156",
+      "category": "doc_claim",
+      "severity": "P2",
+      "evidence": "The new top section (line 51) says the 'verdict final' is reserved until two consecutive rounds with P0 = P1 = 0 and that convergence is NOT reached at round 35. Right below, line 53 is still the H2 '## Verdict final (2026-10-09)' and line 57 is the bold verdict 'PROTOTYPE ACADEMIQUE DEMONTRABLE - VERIFIE TECHNIQUEMENT EN LOCAL.' The banner at line 55 points back to the top section, but the heading itself still reads as a final verdict. Line 156 (section 'Tour 20 / Tour 21 / Tour 22', right after the inserted C35-001 correction note) ends in the present tense: 'Les critères techniques (tests, deux passes Playwright, P0 = P1 = 0 sur deux tours consécutifs) sont remplis'. For the current audited state that is not true: round 35 has P1 = 1, round 34 has P2 = 7 (the report's own table, lines 40-43). The inserted note ('Phrase corrigée au tour 35 ... cette phrase valait pour l'état du tour 22 ; elle n'est plus vraie') does not quote which sentence it retracts, so a reader cannot tell whether 'sont remplis' is also retracted.",
+      "fix_hint": "Rename line 53 to 'Verdict archivé (passe du 03:04, tours 20-22)', put 'à l'époque des tours 21 à 23' in front of 'sont remplis' (line 156) and quote in the note the exact retracted sentence.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-004",
+      "state_artifact": "docs/FACULTY_DEMO_SCRIPT.md:106",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "Line 106: 'Vérifiez à la répétition que vous pouvez quitter la mission en cours sans blocage (non testé dans les rapports)'. Stale after the edits: B35-008 (wave-B r35) wrote 'Exit works without blocking (verified)', line 71 of the same script now relies on 'Exit mission', and I verified live (API 3951/Vite 5951): Fix the Sample replay, 'Exit mission' returns to the lobby, row shows 'Resume', GET /labs/hematology inProgress=true (shots C36-lobby-after-exit.png).",
+      "fix_hint": "Replace by 'quitter la mission fonctionne (tour 35, B35-008) ; elle reste ouverte et son compte à rebours continue'.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-005",
+      "state_artifact": "docs/FACULTY_DEMO_SCRIPT.md:74",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "Line 74: 'Chaque nouvel onglet ou changement d'invité en consomme un [POST /api/auth/demo] ... Ne rechargez pas l'application en boucle pendant les répétitions.' Measured with a request listener: first load = 1 call, 3 reloads = still 1, Faculty guest switch = 2, Return to student demo = 3. A reload consumes nothing (session kept in sessionStorage), so the advice protects against nothing; the budget is spent by new tabs and guest switches only (as C35-007 had measured: load=1, reload=0). The numeric claim itself (60 calls per 10 min per IP, 61st call = 429 'Demo laboratory unavailable ... Too many attempts. Try again in 9 minutes', button 'Reopen the laboratory') is correct (first 429 on the 61st counted call; shot C36-demo-429-gate.png).",
+      "fix_hint": "Say 'ouvrir beaucoup d'onglets ou changer d'invité en boucle' and drop the reload advice.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-006",
+      "state_artifact": "docs/FACULTY_DEMO_SCRIPT.md:71",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "Line 71: 'Une mission laissée seule se termine par « Time is up » après 4 minutes.' It follows '(Blood Smear Code 04:00, Fix the Sample 06:00)' and is stated for 'les missions'. Verified timers 04:00 (240 s) and 06:00 (360 s), countdown continuing after Exit mission (06:00 -> 05:59 on entry, 05:51 after ~8 s away and Resume), but only Blood Smear Code ends after 4 minutes; Fix the Sample ends after 6 (content.ts timeLimitSec: hem-01 240, hem-02 360, hem-03 480 ...).",
+      "fix_hint": "'... après 4 minutes (Blood Smear Code) ou 6 minutes (Fix the Sample)'.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-007",
+      "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:18 and .ci-artifacts/local-2026-10-09-verify-r34/exit-codes.log, frontend-test.log, started.txt",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "Report line 18 'Commandes exécutées (dans cet ordre, ...)' lists backend first, then frontend, then Playwright. The logs show the frontend ran first: exit-codes.log order is fe-test, fe-build, fe-audit, be-test, be-typecheck, be-audit, pw1, pw2; started.txt = 16:33:06 and frontend-test.log 'Start at 16:33:07', while backend-test.log reports duration_ms 15587 (so it cannot have preceded a test run that started one second after started.txt). Playwright pass 1 (4.7 min, log mtime 16:38) therefore started at about 16:33:2x, i.e. immediately after, possibly overlapping, the backend run. All results are exit 0 and the counts (265, 322, 411 x2, JS 359503/400000, CSS 66025/120000, 0 vulnerabilities, openapi f1dbd031...) match the logs exactly, so only the 'dans cet ordre' wording is wrong; `npm run openapi` has no entry in exit-codes.log (only openapi-after-regen.sha256).",
+      "fix_hint": "Say 'ordre réel : frontend puis backend puis Playwright' or drop 'dans cet ordre'; add the openapi exit code to the log.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-008",
+      "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:13; validation-manifest.json snapshot.lastSourceChange",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "Report line 13: 'dernière modification d'un fichier source : 2026-10-09 12:21'; manifest: 'no source file changed during the verification'. be/openapi.json is part of the 134-file snapshot and its mtime is 2026-10-09 16:33:24 (rewritten by `npm run openapi`, byte-identical: sha256 f1dbd031...c6c6 both before and after). Next newest snapshot file is be/src/routes.ts 12:21:04. Content claim holds (hash unchanged), the mtime claim as worded does not.",
+      "fix_hint": "Add 'hors be/openapi.json, régénéré à l'identique à 16:33' or speak about content, not mtime.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-009",
+      "state_artifact": "docs/KNOWN_LIMITATIONS.md:137 (Round 34 notes); docs/FINAL_VALIDATION_REPORT.md:7,38,107",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "KNOWN_LIMITATIONS:137: 'One of them ran `pkill -f src/server.ts`, which may have killed another auditor's API process once; auditor C reported restarting its own server once and continuing.' wave-B r34 notes say: 'early in the run I ran a broad pkill -f src/server.ts which terminated other auditors' API processes on this machine; they must be restarted' (definite, plural). The sentence about auditor C has no trace in wave-C-findings.json (grep 'restart' = 0 hits). Also r35 wave C discloses 'npx playwright test --list rewrote web/playwright-report/index.html'; the report still describes the auditors as 'lecture seule' (lines 7, 38, 107) and 'ports et bases isolés' without that exception.",
+      "fix_hint": "Quote the B note literally (definite, several processes), cite where the C restart claim comes from or drop it, and add the playwright-report rewrite to the 'read-only' caveat.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-010",
+      "state_artifact": "docs/EXTERNAL_REVIEW_REQUEST.md:3",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "Line 3: 'Document de préparation, **non audité** par un agent.' The document was in fact audited by an AI agent in round 35 (C35-002 quotes and disproves its line 24; r35 wave C lists it among the documents read), and its line 24 was then rewritten without a re-audit. The intent (no sign-off, no validation) is right; the literal statement is false.",
+      "fix_hint": "'Document de préparation, relu par des agents IA de l'équipe (tour 35) mais sans aucune validation externe.'",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-011",
+      "state_artifact": "docs/KNOWN_LIMITATIONS.md:3",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "Header line 3: 'notes added after adversarial rounds 10 to 17 and 20 to 23'. The file now carries 'Round 34 notes' (line 135) and 'Round 35 notes' (line 163). Also KNOWN_LIMITATIONS.md item 9/11 and be/.env.example 'Rate limits (defaults in parentheses)' still omit the POST /api/auth/demo limit (60 per 10 min per IP, routes.ts:183) that C35-007 asked to document; only the demo script mentions it.",
+      "fix_hint": "Update the header; add the demo sign-in limit to item 11 and to .env.example.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-012",
+      "state_artifact": "docs/KNOWN_LIMITATIONS.md:184 (Round 35 'Checked and clean')",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "'hand-built v1 to v6 databases migrate to v7 with all rows preserved'. The auditor's notes (wave-A r35 (c)) name v1, 'v1/v3/v5' (4 processes booting) and 'v4->v7'. v2 and v6 are not mentioned, so 'v1 to v6' generalises beyond the evidence. Same section, line 3 of the R34 clean list: 'axe-core: 0 violations on 14 desktop screens (phone run partial)' - wave-B r34 notes say 'on desktop and iPhone: 0 violations' (no 'partial').",
+      "fix_hint": "List the versions actually tested (v1, v3, v4, v5) and quote the axe scope as the auditor wrote it.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-013",
+      "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:109-182 (round tables) and :49 vs docs/KNOWN_LIMITATIONS.md:139-142",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "(a) The report's tables go from 'Tour 30' to 'Tour 34' with nothing for rounds 31-33, although reports/test-e2e/r31/round30-fixes-findings.json exists (0/0/0/1) and extra-passes-r32 / stress-r33 are cited at line 36. (b) The list 'P2 qui touchent la démonstration' (report line 49: B-001, B35-001, B35-002, C-002) differs from the KNOWN_LIMITATIONS list 'Relevant to the demonstration' (B-001, C-002, C-003, C-007): C-003 (Student detail sentence 'Master Lab is not part of class analytics' while XP/level include it; student detail is shown in script step 7) is in one list and not in the other, and B35-001/B35-002 are in the other. (c) GOAL_FINAL_MVP.md:17-21 still says 'Critères de sortie (tous requis)' including 'zéro P2 sur l'état audité en dernier', while lines 33-34 and report line 51 say the final verdict only waits for two rounds with P0 = P1 = 0 (P2 do not block). The documents agree that zero-P2 is NOT met, but not on which criteria gate the final verdict. README.md:39-41 says nothing about open P2 or non-convergence (C35-001 had flagged it).",
+      "fix_hint": "Add rounds 31-33 (or one line saying they were not audited), use one list of demo-relevant P2, and amend 'tous requis' in GOAL to the owner's current rule.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-014",
+      "state_artifact": "docs/FACULTY_DEMO_SCRIPT.md:20 and README.md:7",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "'seuls test, typecheck et build en ont un [contrôle de version]' / 'Only npm test, typecheck and build check the version'. web/package.json also has pretest:e2e (node scripts/check-node.mjs), as report line 73 itself says ('pretest, pretypecheck, prebuild, pretest:e2e'). Also, web has no typecheck script (be/ does).",
+      "fix_hint": "Add test:e2e or say 'npm start and seed:demo are the only npm scripts used in the demo without a check'.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    },
+    {
+      "id": "C36-015",
+      "state_artifact": "be/src/game.ts:954-958 (studentRow), GET /api/classes/:id/students for two classes",
+      "category": "numeric_integrity",
+      "severity": "P3",
+      "evidence": "Reproduced on a scratch DB (API 3951): student 'Idle Joiner' (no attempt at all) joined class Alpha and class Beta of the same teacher; I set Alpha membership joined_at to 10 days earlier. GET /classes/<Alpha>/students -> active:false, needsAttention:true, attentionReason 'No activity for 10 days', lastActiveAt:null; GET /classes/<Beta>/students -> active:true, needsAttention:false, reason null. Student detail agrees with its own roster in each class. The idle clock of a never-active student is the per-class joined_at, so the same person with identical data is flagged in one class (and in that class's cohort.needsAttention / activeStudents) and not in the other. By design (class-relative) but undocumented; the text 'No activity for 10 days' is shown with lastActiveAt null. No way for a student to leave or switch class (known item 8), so a wrongly joined class keeps counting the student.",
+      "fix_hint": "Document that idle time starts at the class join date, or show 'No activity since joining' for lastActiveAt = null.",
+      "status": "open",
+      "first_seen_round": 36,
+      "rounds_open": 1
+    }
+  ],
+  "summary": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 3,
+    "P3": 12,
+    "open_P0": 0,
+    "open_P1": 0,
+    "open_P2": 3,
+    "open_P3": 12
+  },
+  "verdict": "GREEN",
+  "notes": "READ-ONLY. Own servers: API 3951 (throw-away DB under scratchpad r36C, seeded as demo script 2.1; later NODE_ENV=test + invite code for registrations), Vite dev 5951; all stopped by recorded PID (api 58347, npm 57442, vite 57485; earlier api PIDs 57436/57743/57909/58234 stopped by PID, esbuild 57486 exited with its parent). No prod preview was needed. be/data untouched; nothing under be/ web/ docs/ sources/ edited; `playwright test --list` NOT run. Node v22.23.2 for everything.\n\nDOCUMENT TRUTH, verified OK: `sh snapshot-id.sh` -> '134 files', sha256 843f0db7dc455998c68c17404a810abaa74fcffeec418f051817b3b106ad275a (= report line 13 = manifest = snapshot-id.txt); shasum be/openapi.json f1dbd031...c6c6 (= report, manifest, openapi-after-regen.sha256); be/src/content.ts d4bd3b64...5a39 (= report, manifest). Severity totals recomputed from reports/test-e2e JSON: r34 A 0/0/3/5, B 0/0/1/7, C 0/0/3/7 = 0/0/7/19; r35 A 0/0/2/3, B 0/0/2/12, C 0/1/2/7 = 0/1/6/22 (report lines 42-43, KNOWN_LIMITATIONS 137/165, manifest, GOAL lines 33-34 all agree); audit-r34/audit-r35 copies in .ci-artifacts are byte-identical to reports/test-e2e/r34|r35/round-1 JSON; every r34/r35 finding id appears in KNOWN_LIMITATIONS (7 P2 + 19 P3, 6 P2 + 22 P3, none dropped); report round tables r9-r19 and r20-r30 rows recomputed from JSON: all equal. Logs: backend-test.log '# tests 265, pass 265, fail 0' (0 'not ok'); frontend-test.log 17 files / 322 passed, 13 literal + 12 dynamic contract operations; frontend-build.log 'JS 359503 / 400000, CSS 66025 / 120000, 2 raster images <= 300000' (webp 93000 and 166178); backend-audit/frontend-audit 'found 0 vulnerabilities'; exit-codes.log 8 x exit 0; playwright-pass1.log '411 passed (4.7m)', pass2 '411 passed (5.0m)' (two logs identical except pids and duration); node-version v22.23.2, npm 10.9.8; default shell node v18.20.7 (manifest). Archives cited by the report exist (final-r23 e2e1/e2e2 411 passed 4.8m/4.6m, extra-passes-r32 e2e1-3 411 passed, stress-r33 411 passed 5.9m; mtimes 12:31 and 16:02-16:28 are after the 12:21 last source change, so 'même code' is plausible). C35-001 correction text, 'C35-001' quote ('le code n'a plus de P2 connu non traité'), 7 and 6 open P2, 'Convergence: NON atteinte au tour 35', B35-002 'arguable P1 for bio-02' (report translates to 'discutable P1' for Lab Value Hacker = bio-02) all match the finding JSON. be/README.md:68 sentence matches game.ts:1043-1048 and rules.ts:17 (only the hardest mission, only < 70). EXTERNAL_REVIEW_REQUEST line 24 counts (2 consecutive e2e passes, backend/frontend once, final-r23/extra-passes-r32 earlier) match the logs; GOAL lines 33-34 do not claim criterion met. Overclaim scan ('independent', 'validated', 'production ready', 'clinical', 'diagnostic', 'zero', 'final', 'convergence'): README, report top, GOAL update, EXTERNAL_REVIEW_REQUEST, script section 6/Q&A and web/src/lib/demo-guide.ts (QUALITY_POINTS 'not an external or independent human review', ABOUT_FOOT) only negate or disclaim; the only residuals are C36-003 (heading/'sont remplis') and the 'independent' qualifier of report line 573 ('indépendants seulement au sens sans accès aux conclusions des autres'), which is now qualified (C35-009 corrected). demo-guide.ts steps sum 30+30+60+60+60+45+75+30 = 390 s as the script says.\n\nNEW DEMO-SCRIPT STATEMENTS re-verified live: countdowns Blood Smear Code 04:00 (remainingSec 240) and Fix the Sample 06:00 (360); 'Exit mission' leaves the attempt open, countdown continues (06:00 -> 05:59 -> 05:51 after Resume) and the lobby row shows 'Resume' (C36-lobby-after-exit.png); replay of Blood Smear Code (8 s) -> 'New personal best: +12 XP added to your total', total 8,240 -> 8,252 (script says +10 or +12 depending on speed: consistent; best is 168); POST /auth/demo: 60 calls then 429 rate_limited (counted 5 earlier + 55 = 60 allowed, 61st refused, retryAfter 512 s), UI gate 'Demo laboratory unavailable ... Too many attempts. Try again in 9 minutes.' with button 'Reopen the laboratory' (C36-demo-429-gate.png); Plan B: API stopped -> open screen shows 'This page could not be loaded' + 'Retry', fresh page shows only 'Reopen the laboratory' (shell.tsx:34); after restart without AUTH_SECRET, Retry lands on Mission control with 'Your guest session expired, so a new guest session was opened.' (script 2.5 wording correct); Master Lab locked for Alex, GET /labs lockedReason 'Clear 3 labs (1 of 3 cleared)' and the lab map shows the same string (C36-labmap-master-locked.png); canonical state 8,240 XP / level 6 / 5 of 9 / Hematology 3 of 3 / Microbiology 2 of 3 on a fresh seed. The 8 demo views are reachable as the script says (About concept; Open the lab map; Open the Hematology lab; replay Blood Smear Code and Fix the Sample; Open the Progress vault; Faculty guest -> Class intelligence, roster row -> Student detail, Content review; Go to quality / Go to roadmap); 0 console errors/warnings during that walk. Deleting only demo.db is safe after a clean stop: SIGINT and SIGTERM both leave no -wal/-shm.\n\nFACULTY DATA (second job): created 70 students + 2 teachers (second teacher with two classes Alpha 70 / Beta 14; 14 students in both of one teacher's classes; 7 of them also in the demo teacher's L3 class; duplicate join; two identical names 'Twin Student'; renames after joining; tied XP groups; abandoned attempts; hints; wrongs), plus Alex mutations (worse replay, open attempts, student reset). Independently recomputed from raw SQLite (my own node:sqlite script) for every class (X 70, Y 14, demo L3 now 45, empty L2): roster fields (xp, level, missionsCompleted, progressPct, accuracyPct, hintsUsed, labsEscaped, active, needsAttention, name, order xp desc then name), detail (xp, name, historyTotal, per-lab completed), cohort (students, active, needsAttention, avgAccuracy, avgCompletion, avgXp, avgMissions, labsEscaped), per-mission started/completed/success, per-lab completionPct, and the leaderboard of all 70 students for cohort class/all x scope all/week (total, rows = min(20,total), me.rank, me.xp): 0 differences before and after the Alex mutation and after the student reset. Large class: roster API is not truncated; UI says 'Showing 8 of 45 students. Show all 45' and 'Showing 8 of 10 missions'; leaderboard 'Showing 20 of 45 ranked students.' (no silent truncation). Ties: competition ranking (three students rank 1 at 1,260 XP), name tie-break; class leaderboard cohort is the union of all classes of the viewer. Rename is reflected in roster and leaderboard. Master-only progress is impossible (Master needs 3 exits, 403 lab_locked). The only inconsistency found is C36-015 (per-class idle clock). Known and re-observed, not re-reported: students cannot leave/switch class (KL item 8), teacher demo reset leaves visitor-joined students (C-008), C35-004/005 rounding.\n\nNot tested: prod preview 5952, real screen reader, WebKit, multi-process contention. Convergence: this round found 0 P0 / 0 P1 / 3 P2 / 12 P3, all documentary except C36-015; nothing here claims convergence."
+}

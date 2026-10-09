@@ -1,0 +1,140 @@
+{
+ "wave": "C",
+ "round": 37,
+ "states_reviewed": 46,
+ "findings": [
+  {
+   "id": "C37-001",
+   "state_artifact": "docs/EXTERNAL_REVIEW_REQUEST.md:20 and :24",
+   "category": "doc_claim",
+   "severity": "P1",
+   "evidence": "Line 20: \"Tests : cd be && npm test (265), cd web && npm test (322), cd web && CI=true npm run test:e2e (411 ...)\". Line 24: \"Sur le code actuel : les 411 tests e2e ont passé sur deux passes consécutives ... (.ci-artifacts/local-2026-10-09-verify-r34/), le backend (265/265) et le frontend (322/322)\". The file was last written 17:49, before the round-36 code changes. Current code (report top section, manifest, verify-r36-final logs): backend 267/267 (backend-test.log \"# tests 267\"), frontend 328/328 in 18 files (frontend-test.log), Playwright 413/413 x2 (playwright-pass1/2.log). An external human reviewer who follows section 3 will see 267/328/413, and the sentence \"Sur le code actuel\" cites evidence for the code BEFORE the A36-001/B36-001 changes. FINAL_VALIDATION_REPORT.md:9 itself says 265/322/411 \"ne sont plus ceux du code actuel\".",
+   "fix_hint": "Update to 267 / 328 / 413 and point to verify-r36-final, or (like be/README.md) say that counts live in FINAL_VALIDATION_REPORT.md and drop them here.",
+   "status": "open",
+   "first_seen_round": 37,
+   "rounds_open": 1
+  },
+  {
+   "id": "C37-002",
+   "state_artifact": "docs/KNOWN_LIMITATIONS.md Round 36 notes (A36-001 paragraph, last sentence); be/src/game.ts:1018",
+   "category": "doc_claim",
+   "severity": "P2",
+   "evidence": "Claim: \"No other occurrence of the pattern exists (grep over be/src)\". game.ts:1018 (Game.analytics) has a correlated subquery of the same shape: \"a.started_at = (SELECT MIN(b.started_at) FROM attempts b WHERE b.user_id = a.user_id AND b.mission_id = a.mission_id AND b.status = 'completed')\". Reproduced on an in-memory harness (be/test/helpers.ts): one student, GET /api/classes/:id/analytics: 1000 hem-01 + 1000 hem-02 completed attempts = 100 ms (vs 4 ms with 1000 hem-01 only, 1 ms at 250); 2000+2000 = 275 ms; 3000+3000 = 449 ms (synchronous in node:sqlite, so it blocks the event loop; same growth pattern, about 30x smaller constant than the old competencies() at equal N). Not a P1-level stall, but the sentence is false as worded.",
+   "fix_hint": "Reword (\"no other correlated MAX over step_results; analytics() has a smaller correlated MIN over attempts, quadratic in a student's mixed-mission attempts\") or rewrite it with ROW_NUMBER()/RANK() as for competencies().",
+   "status": "open",
+   "first_seen_round": 37,
+   "rounds_open": 1
+  },
+  {
+   "id": "C37-003",
+   "state_artifact": ".ci-artifacts/local-2026-10-09-verify-r34/validation-manifest.json (snapshot block), .../verify-r34/snapshot-id.txt, .../verify-r36-fix/snapshot-id.txt; docs/FINAL_VALIDATION_REPORT.md:13",
+   "category": "doc_claim",
+   "severity": "P2",
+   "evidence": "The verify-r34 manifest says method \"sh .ci-artifacts/local-2026-10-09-verify-r34/snapshot-id.sh\", files 134, sha256 843f0db7...ad275a; verify-r36-fix/snapshot-id.txt says 135 files d6b9b519.... That script was rewritten at 18:58 (mtime) with 6 more files in its find list (tsconfig x2, Dockerfile, .env.example, .nvmrc, .github workflow), so running it now gives 143 files / 89dee7e0... for the CURRENT code only; the 134- and 135-file ids cannot be reproduced anywhere. I ran it: 143 files, 89dee7e0116d3e7e27ccfd01f1a392604a354c301d4ac136d2f97cb1650a808d (= report line 13 = manifest = verify-r36-final/snapshot-id.txt, OK). The report does not say that older ids used a shorter list.",
+   "fix_hint": "Archive the old script version beside the old ids (snapshot-id-v1.sh) or add one sentence to the report/manifest: ids before the final gate used a 134-file list and are indicative only.",
+   "status": "open",
+   "first_seen_round": 37,
+   "rounds_open": 1
+  },
+  {
+   "id": "C37-004",
+   "state_artifact": ".ci-artifacts/local-2026-10-09-round21-22/validation-manifest.json (\"verdict\", README.md last paragraph); .ci-artifacts/local-2026-10-09/validation-manifest.json (verdict, open_P0/open_P1 0)",
+   "category": "doc_claim",
+   "severity": "P2",
+   "evidence": "These manifests are written in the present tense with \"verdict\": \"DEMO-READY ACADEMIC MVP - TECHNICALLY VERIFIED LOCALLY\" and the round21-22 README says the manifest \"décrit l'état final\". Neither carries a superseded marker. The report (top section, line 58) says that verdict \"n'est pas encore prononcé\" for the current code and that convergence is NOT achieved. A reviewer opening the archive folder alone reads a final DEMO-READY verdict for a code state that has since changed (be/src/game.ts, web/src/components/engines.tsx).",
+   "fix_hint": "Add \"superseded_by\": \"local-2026-10-09-verify-r36-final; verdict not pronounced for the current code\" to those manifests/README (evidence archive, not code).",
+   "status": "open",
+   "first_seen_round": 37,
+   "rounds_open": 1
+  },
+  {
+   "id": "C37-005",
+   "state_artifact": "docs/EXTERNAL_REVIEW_REQUEST.md:3",
+   "category": "doc_claim",
+   "severity": "P2",
+   "evidence": "Header still reads \"Document de préparation, **non audité** par un agent.\" C36-010 showed it was audited by an AI agent in round 35 (C35-002 quotes and disproves its old line 24). KNOWN_LIMITATIONS.md Round 36 notes (C36-004 to C36-014 bullet) lists \"the 'non audité' header of EXTERNAL_REVIEW_REQUEST.md\" as corrected, but the file mtime is 17:49, before the r36 wave-C JSON (18:14), and the text is unchanged. So the documents contradict each other and the \"corrected\" claim is false for this item.",
+   "fix_hint": "Apply the C36-010 fix text (\"relu par des agents IA de l'équipe (tour 35), sans aucune validation externe\") or remove the item from the \"corrected\" list.",
+   "status": "open",
+   "first_seen_round": 37,
+   "rounds_open": 1
+  },
+  {
+   "id": "C37-006",
+   "state_artifact": "README.md:7; docs/FACULTY_DEMO_SCRIPT.md:20",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "Both say \"Only/seuls npm test, typecheck and build check the Node version\". web/package.json:12 has \"pretest:e2e\": \"node scripts/check-node.mjs\" (and the report, line 15, lists it). C36-014 is listed as corrected in KNOWN_LIMITATIONS.md (\"where listed\") but both texts are unchanged.",
+   "fix_hint": "Say \"test, typecheck, build and test:e2e check it; npm start and seed:demo do not\".",
+   "status": "open",
+   "first_seen_round": 37,
+   "rounds_open": 1
+  },
+  {
+   "id": "C37-007",
+   "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:193 (also :62, :130)",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "Line 193: \"L'état courant est la partie « Verdict final (2026-10-09) » en haut de ce fichier\". After the heading rename (line 60 is now \"Verdict de la passe archivée du 03:04\") no such heading exists; the current state is under \"État vérifié le plus récent\". Line 130 (\"deux tours consécutifs sans P0 ni P1 sur le code final\") sits in a block whose banner says it is archived, but \"code final\" reads as the current code without that banner in view.",
+   "fix_hint": "Point line 193 to « État vérifié le plus récent »; write \"sur le code de l'époque\" at line 130.",
+   "status": "open",
+   "first_seen_round": 37,
+   "rounds_open": 1
+  },
+  {
+   "id": "C37-008",
+   "state_artifact": "docs/GOAL_FINAL_MVP.md (last section, lines 33-34; \"Critères de sortie (tous requis)\")",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "The last section is \"Mise à jour ... tours 34 et 35\" (file mtime 17:49): it does not mention round 36 (2 P1, 5 P2 open, code changed, convergence NOT achieved) and the list above it still says exit criteria \"tous requis\" including \"zéro P2 sur l'état audité en dernier\"; README.md:39-41 status \"technically verified (locally) academic prototype, demonstrable\" has no non-convergence caveat (C36-013 c, unchanged). Not a convergence overclaim, but the goal file is one round behind the report.",
+   "fix_hint": "Add a round-36 line and say which criteria gate the final verdict now.",
+   "status": "open",
+   "first_seen_round": 37,
+   "rounds_open": 1
+  },
+  {
+   "id": "C37-009",
+   "state_artifact": "web/src/lib/demo-guide.ts (About page), README.md, docs/GOAL_FINAL_MVP.md, docs/EXTERNAL_REVIEW_REQUEST.md (accessibility row)",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "Blood Smear Code (no text alternative, a student who cannot see the image cannot pass Hematology / reach Master Lab) is stated consistently and openly in FINAL_VALIDATION_REPORT.md:41/56, KNOWN_LIMITATIONS.md (Round 35 B35-002, Round 36 notes) and FACULTY_DEMO_SCRIPT.md:76 (verified live: hem-01 AX tree = button \"Select a point on the scientific image\", no \"Text version\" section; bio-02 has the group \"Text version of this image\" with 8 rows, 3 indices, buttons \"Select <Test> result\", as documented). It is NOT mentioned on the in-app About page (only \"no independent human security or accessibility review\"), README, GOAL or the accessibility row of EXTERNAL_REVIEW_REQUEST (\"lecteur d'écran (non testé)\"). No document claims the app is accessible (checked all key documents and the About text: no overclaim). Hidden from the audience that reads only those files.",
+   "fix_hint": "One sentence in EXTERNAL_REVIEW_REQUEST accessibility row and optionally the About page \"Not yet\" list.",
+   "status": "open",
+   "first_seen_round": 37,
+   "rounds_open": 1
+  },
+  {
+   "id": "C37-010",
+   "state_artifact": "docs/KNOWN_LIMITATIONS.md Round 34 notes, \"What the auditors found clean\"",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "\"axe-core: 0 violations on 14 desktop screens (the iPhone run stopped partway, per the auditor's final message)\". reports/test-e2e/r34/round-1/wave-B-findings.json notes say \"axe-core ... on dashboard, map, lobby, ... about on desktop and iPhone: 0 violations\"; neither \"14\" nor \"partway\" appears in any archived JSON; the source is an unarchived hand-back message (C36-012 asked to quote the auditor's scope as written).",
+   "fix_hint": "Quote the JSON wording or mark the figure as unarchived.",
+   "status": "open",
+   "first_seen_round": 37,
+   "rounds_open": 1
+  },
+  {
+   "id": "C37-011",
+   "state_artifact": "docs/KNOWN_LIMITATIONS.md Round 36 notes (B36-001 paragraph) vs docs/FINAL_VALIDATION_REPORT.md:7,38,43",
+   "category": "doc_claim",
+   "severity": "P3",
+   "evidence": "B36-001 paragraph: \"nothing in be/ or be/src/content.ts changed\" while be/src/game.ts (18:30) and be/test/r36-fixes.test.ts changed in the same round (true only for that fix; be/src/content.ts sha256 d4bd3b64...5a39 and be/openapi.json f1dbd031...c6c6 verified unchanged). Also the report still calls all auditors \"lecture seule\" without the r35 disclosure that an auditor's `playwright test --list` rewrote web/playwright-report/index.html (C36-009 asked to add it).",
+   "fix_hint": "Say \"no change to the server for this fix\"; add the playwright-report caveat.",
+   "status": "open",
+   "first_seen_round": 37,
+   "rounds_open": 1
+  }
+ ],
+ "summary": {
+  "P0": 0,
+  "P1": 1,
+  "P2": 4,
+  "P3": 6,
+  "open_P0": 0,
+  "open_P1": 1,
+  "open_P2": 4,
+  "open_P3": 6
+ },
+ "verdict": "AMBER",
+ "notes": "Snapshot id seen: 89dee7e0116d3e7e27ccfd01f1a392604a354c301d4ac136d2f97cb1650a808d, 143 files (= report line 13 = manifest = verify-r36-final/snapshot-id.txt). VERIFIED OK: be/openapi.json f1dbd031...c6c6 and be/src/content.ts d4bd3b64...5a39 (report, manifest, openapi-after-regen.sha256); no file under be/src, be/test, web/src, web/e2e newer than gate started.txt 18:56:13 (latest web/src/refine.css 18:55:56, engines.tsx 18:54:39); exit-codes.log 8x exit 0 + GATE-DONE; backend 267/267 (0 \"not ok\"), frontend 328/328 18 files, build budget JS 361866/400000 CSS 67066/120000 2 images, audits 0, Playwright 413/413 twice (4.7m/4.7m, logs identical modulo pid), verify-r34 (265/322/411) and verify-r36-fix (267/322/411) numbers in manifest match logs; +2 backend tests (r36-fixes), +6 vitest (assets.test.ts), +2 playwright (point-text.spec.ts) match. Severity sums recomputed from JSON: r34 0/0/7/19, r35 0/1/6/22, r36 0/2/5/24 (per wave and total) = report table = manifest = KNOWN_LIMITATIONS; audit-r34/35/36 copies byte-identical to reports/test-e2e; round tables r9-r31 recomputed: all equal. A36-001 re-measured (in-memory harness): old SQL 17/301/1271 ms at 250/1000/2000 attempts vs report 40/313/1256 (HTTP incl. overhead), new 0.5/1.3/2.3 ms direct (report 5/4/10 via HTTP); 687 ms at 1500 consistent with the interpolation; RANK() equivalence reviewed. Demo script verified live on own API 3951 / Vite 5951 (fresh seed): canonical Alex level 6, 8,240 XP, 5/9, Hematology 3/3, Microbiology 2/3, Master locked \"Clear 3 labs (1 of 3 cleared)\"; countdown 04:00 (hem-01), Exit mission -> lobby shows Resume; replay of Blood Smear Code gives +12 XP and \"New personal best\", result screen \"Server-calculated\"/\"Official timer\", Return to mission control goes to the dashboard; POST /auth/demo: 60 x 200 then 429 on the 61st (restarted API first), UI shows \"Too many attempts. Try again in 10 minutes.\" + \"Reopen the laboratory\"; first load = 1 demo sign-in, 3 reloads = 0, new tab = 1; Plan B: initial load button \"Reopen the laboratory\", on an open screen \"Retry\"; About page strings match demo-guide.ts and the script (buttons, 390 s total, 7 min); no accessibility/clinical/independent/production-ready overclaim in About text or the key documents; demo-screenshots README pixel sizes match the files (sips). be/README: 8 failed logins per account+IP and 60 demo sign-ins/10 min/IP (1000 under NODE_ENV=test) match routes.ts:153-183; hardest-mission rule (minSample min(3, students), <70%, Master excluded) matches game.ts:1041-1052. FACULTY DATA (second job), own DB with 2 teachers, 3 classes (5-way XP tie + zero-activity student + two same-name students after rename; a 1-student class; a student who played all 9 + Master Lab with replays and an abandoned attempt, joined to two teachers' classes): 383 aggregate checks recomputed from raw SQLite (roster, cohort, per-lab, per-mission, student detail, competencies, history counts, ordering) = 0 differences; the 38-student demo class (1558 checks) before and after a demo reset of Alex (8,420 -> 8,240 XP, 6 -> 5 missions): 0 differences; T2 vs T1 detail of the shared student identical; cross-teacher reads 404; leaderboard ties use competition ranking (rank 2 x6, then 8); XP identical across dashboard/profile/me/leaderboard/Faculty (1,990 incl. 520 Master XP; the \"Master Lab is not part of class analytics\" sentence next to it is the known C-003). Competencies: GET /competencies (latest per step, includes abandoned attempts) gave Hematology interpretation 83% (4 steps) / Clinical biochemistry 94% (8 steps) vs 100% (3) / 93% (7) in Faculty detail and Lab results (best attempts); the web UI draws competencies only from Lab results and Faculty detail (grep + AX tree), so the documented latest-vs-best difference (A-001/C-004, A35-004) is correctly described and never displayed side by side. Not defects, observed: hardestMission is returned even at 94% (only flagged below 70%); a 1-student class flags its hardest mission from one student (documented). Not run: real screen reader, WebKit, Docker, playwright test --list (not run). Processes: API 69207/70419/70617 and npm 69208 + vite 69251 stopped by exact PID; ports 3951/5951 free; be/data untouched. Screenshots in wave-C-shots/."
+}

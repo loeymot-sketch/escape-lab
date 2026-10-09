@@ -1,0 +1,12 @@
+{
+  "round": 21,
+  "wave": "V",
+  "id": "R21-V-INTERNAL-01",
+  "severity": "P1",
+  "category": "visual-overlap",
+  "where": "Faculty > Content review (screenshot 09, web/src/pages/faculty.tsx, web/src/polish.css)",
+  "what": "The new approval note was rendered on top of the 'Demonstration data' banner (the banner has margin -14px to sit under the page intro).",
+  "found_by": "screenshot agent (not by the e2e suite)",
+  "fix": "Note moved after the banner, class bar-note approval-note with margin 0 0 26px, geometry assertion added in web/e2e/escape-lab.spec.ts",
+  "status": "fixed and re-captured before the round-21 visual audit"
+}

@@ -1,0 +1,76 @@
+{
+  "wave": "B",
+  "round": 13,
+  "states_reviewed": 1900,
+  "findings": [
+    {
+      "id": "R13-B-01",
+      "severity": "P3",
+      "category": "copy / data_presentation",
+      "area": "Progress vault, leaderboard, student with 0 XP in a class that has ranked students",
+      "viewport": "320, 375, 1440 (all)",
+      "title": "An unranked 0-XP viewer is shown as a rank (\"#39 You 0 XP\") and counted in \"Showing 21 of 38 ranked students\"",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r13-B/lb3.mjs (fresh student joins demo class CG67C4, 38 ranked): API me.rank 39, total 38, rows 20; UI shows '... #20 Jade G. | ... | #39 | You | 0 XP | 0 labs | Showing 21 of 38 ranked students.'; screenshot /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r13-B/shots/lb3-unranked-bigclass.png; small class variant /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r13-B/shots/lb-tiny-peersZero.png ('#3 You 0 XP' under two ranked peers, other 0-XP classmate invisible).",
+      "repro": "node /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r13-B/lb3.mjs (or register, POST /classes/join {joinCode:'CG67C4'}, open Progress).",
+      "expected": "docs/KNOWN_LIMITATIONS (R12-C-08): a viewer without XP is not ranked; the client should not print a 'N of M ranked' line for them and should not present total+1 as a real rank (e.g. 'Not ranked yet').",
+      "actual": "BoardRow prints '#' + me.rank for everyone and describeBoard counts the unranked row in 'shown', so the line claims 21 of 38 ranked students include the viewer, and the viewer reads as 39th of 38. With total 2 and rows 2 the viewer shows '#3' and the count line is silently dropped.",
+      "fix_hint": "web/src/lib/progression.ts describeBoard (~line 110) and web/src/pages/progress.tsx BoardRow: when me.xp === 0 (or me.rank > total) render 'Not ranked yet' instead of '#rank', exclude the row from 'shown', keep the gap marker.",
+      "status": "open"
+    },
+    {
+      "id": "R13-B-02",
+      "severity": "P3",
+      "category": "copy",
+      "area": "Progress vault, leaderboard, class where nobody has XP yet",
+      "viewport": "all",
+      "title": "A student who IS in a class but nobody has XP is told the leaderboard appears 'when your learning group is set up'",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r13-B/lb1.mjs soloZero: API cohortAvailable true, total 0, me.rank 1; UI 'The leaderboard is not available yet / The class leaderboard appears when your learning group is set up.'; screenshot /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r13-B/shots/lb-phone-soloZero.png",
+      "repro": "node /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r13-B/lbmk.mjs then node /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r13-B/lb1.mjs (token soloZero: teacher creates a class, one fresh student joins, nobody earns XP).",
+      "expected": "A message that matches the situation, e.g. 'Nobody in your class has earned XP yet. Complete a mission to appear here.'",
+      "actual": "describeBoard folds total === 0 into 'unavailable', so a joined student is told their group is not set up yet.",
+      "fix_hint": "web/src/lib/progression.ts describeBoard: separate cohortAvailable === false from total === 0 and give the second its own copy (progress.tsx BoardPanel ~line 190).",
+      "status": "open"
+    },
+    {
+      "id": "R13-B-03",
+      "severity": "P3",
+      "category": "i18n / data_presentation",
+      "area": "Leaderboard abbreviated names (server shortName) for students with emoji, ZWJ, flag, ß or digraph initials",
+      "viewport": "all",
+      "title": "The abbreviated name takes the first code point of the last word, so initials break: 'Max 👨.' (family emoji cut), 'Zoe 🇫.' (half a flag), 'Ana ‍.' (zero-width joiner, blank initial), 'Hans SS.', 'Ali DŽ.'",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r13-B/nm2.mjs (API names printed with code points) and /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r13-B/shots/names-initials.png",
+      "repro": "Register students named 'Max 👨‍👩‍👧fam', 'Zoe 🇫🇷France', 'Ana ‍‍z', 'Hans ßtraße', join one class, earn XP, open Progress.",
+      "expected": "One user-perceived character (grapheme) as initial, never a joiner or a lone regional indicator.",
+      "actual": "Game.shortName spreads the string into code points ([...s][0]) and upper-cases it; the front end already has a grapheme helper for avatars (web/src/ui/common.tsx) but the backend does not use Intl.Segmenter.",
+      "fix_hint": "be/src/game.ts shortName (~line 789): use Intl.Segmenter('en',{granularity:'grapheme'}) and skip zero-width/joiner-only segments.",
+      "status": "open"
+    },
+    {
+      "id": "R13-B-04",
+      "severity": "P3",
+      "category": "keyboard_focus",
+      "area": "Mission player, hint focus restore at the 900px breakpoint",
+      "viewport": "768x1024 <-> 1100x900",
+      "title": "After the learner clicks an empty area (focus on BODY), crossing 900px still pulls focus onto the hint button",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r13-B/bp.mjs output: 'after click empty BODY' then 'empty-click then narrow: BUTTON.hint:Ask Lab Assistant'",
+      "repro": "Open a mission at 1100 wide, focus Ask Lab Assistant, click blank page area (focus goes to body), resize to 768.",
+      "expected": "Only focus that was ON the hint button when the layout flipped is restored; a learner who clicked away keeps no focus claim.",
+      "actual": "hintHadFocus is only cleared by a focusin elsewhere, never by a blur to body, so a stale 'had focus' flag steals focus (and may scroll) on the next crossing. Cosmetic: no keyboard trap, no wrong action.",
+      "fix_hint": "web/src/pages/mission.tsx ~line 90: also clear hintHadFocus on document 'focusout' when relatedTarget is null, but record it only if the hint button is the focusout target AND it is still in the document at the time of the media-query change (e.g. read document.activeElement inside the matchMedia handler before React unmounts).",
+      "status": "open"
+    }
+  ],
+  "summary": { "P0": 0, "P1": 0, "P2": 0, "P3": 4 },
+  "verdict": "GREEN",
+  "round12_fix_verification": {
+    "R12-B-01": "HOLDS",
+    "R12-B-02": "HOLDS",
+    "R12-B-03": "HOLDS",
+    "R12-B-04": "HOLDS",
+    "R12-B-05": "HOLDS (still deliberate: attempt gone after reload drops to the dashboard without notice; not re-reported)",
+    "R12-C-03": "HOLDS",
+    "R12-C-04": "HOLDS",
+    "R12-C-08": "PARTIAL (server figures correct; client still presents the unranked viewer as a rank and counts it in 'Showing n of m', see R13-B-01/02)"
+  },
+  "notes": "Stack: own API 5401 (DEMO_MODE, NODE_ENV=test, RATE_REGISTER_PER_HOUR=5000) + Vite 5402, headless Chromium via Playwright; everything in /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r13-B (scripts, shots, DB, logs). Servers stopped at the end; no file under be/ web/ docs/ sources/ touched, no stray repo files. R12-B-01 (focus to Restart on passive expiry / sync flip): exf.mjs (real countdown to 00:00, 1440x900, 5 mission/step positions x focus on body, engine control, hint, Exit mission, h1) -> body, engine, option, order button, select, hint all end on 'Restart mission'; Exit mission and h1 keep focus; exf2.mjs (375x812): sync flip to expired and to gone (attempt deleted) via focus/visibilitychange from engine, hint, Exit, body -> Restart, Exit keeps focus; match select and order button -> Restart; page.clock jump with server expired -> Restart; offline then online -> alert while offline, Restart after online; exf3.mjs: expire -> Restart -> new attempt (heading focus) three rounds in a row, each expiry again moves focus (wasClosed ref resets). Not reproduced: a focus steal from Exit mission or h1. R12-B-03 (hint remount at 900px): bp.mjs/bp2.mjs: crossing 899/900/901 repeatedly, 768<->1024, 1100: focus stays on the hint button, option focus is not stolen, mid-request crossing ends on the heading after the last hint (button disabled, by design), 1 and 2 hint steps keep every hint text across crossings and reloads, accessible name identical in both layouts ('Ask Lab Assistant' / 'No more hints on this step'); only the blur-to-body edge (R13-B-04) leaks. R12-B-02/04 (describeError): x1.mjs over 15 surfaces (dashboard, lab map, lobby, vault, badges, leaderboard, lab results, profile GET/PUT, rules, mission start, restore, answer, hint, plus unlock via unlk.mjs) x statuses 400/409/418/429 (header-only, body delay, 'Slow down' without period)/500/503 x empty/HTML/JSON bodies + invalid JSON/{}/null/empty 200: every case shows a role=alert/inline alert, no 'Request failed (n)', no plausible default, no stuck loading, no console error; 408/413/422 covered on dashboard and unlock; real server messages pass through; '429 Slow down + retryAfterSeconds 5' -> 'Slow down. Try again in 5 seconds.'; header-only 429 in the dev setup (header not CORS-exposed) -> 'Too many requests. Please wait a moment, then try again.'; with Access-Control-Expose-Headers the header is honoured ('Try again in 42 seconds'); real vault lockout -> 'Too many incorrect codes. Try again in 10 minutes.'; unlock 422 without a message keeps '3 attempts left before further tries are paused'. Payload-shape errors surface developer wording ('Invalid server vault payload: vaults'), which is pre-existing and was accepted earlier. Retry focus (rf.mjs): dashboard, lab map, progress, lab results, settings x 375/1440 x success / failed again: focus lands on the page h1 (error-panel h1 on the dashboard) every time; guest gate (gate.mjs): failed Reopen returns focus to 'Reopen the laboratory' (mouse and keyboard, slow failure), success lands on the dashboard h1, a user who clicked away is not pulled back. 401 on answer, hint, labs, attempt sync: notice + new guest + focus on h1. Leaderboard (lb1/lb2/lb3/nm2): 0-XP viewer in solo class, in small class, in the 38-student demo class; rank 1; three-way tie (#1 x3, alphabetical); 9 names incl. Arabic, Hebrew, Cyrillic, CJK, accented, emoji, 80 unbroken chars (wraps, no overflow at 320) all inside <bdi>, API rows == UI rows, dashboard XP == leaderboard XP == API at 375/320/1440. Full UI play (e2.mjs, from r12 harness) of all 10 missions to the Master Lab and exit unlock: 375 pointer, 1440 keyboard-only, 768 keyboard-only, 320 pointer reduced motion, wrong-first/hint/reload mixes: 0 mismatches of status card, hints, score, accuracy, ledger rows, XP delta, dashboard figures, vault digits, lab results versus the API; focus never on BODY; no console output. Sweeps (sweep.mjs, 31 states each: dashboard, lab map, progress, results, settings, leaderboard with names/unranked, 4 missions fresh/hint/picked/feedback/expired, gone, error panels, 429 panel, gate error) at 375, 320, 768, 1440, 720x450 (200% zoom), 320x256 (400% zoom) x light, dark, reduced motion, forced colors: 0 axe violations, no horizontal overflow, no off-screen control, no touch target < 44 except the known 24px settings checkbox inside a 59px label; two forced-colors axe contrast hits on lab cards were a mid-fade-in transient (cardinality changes by card, gone on a settled page, rendering legible in the screenshot): harness artifact, dropped. Lobby for every playable lab at 4 viewports: axe clean, h1 focused. Confused-user checks (conf.mjs, exh.mjs): rotation 375x812 <-> 812x375 keeps order/match/decision/point picks; idle past expiry then Submit -> expired panel + Restart focus; double-tap Submit and hint send exactly one request; exiting while a hint request is in flight keeps the paid hint (visible after resume, XP penalty -15 equals API). Harness artifacts discarded: zsh word splitting made my first e2/sweep batch run at the default 1440 viewport (re-run correctly), 'rules' scenario clicked a button on a screen that was already in the mission, 'Showing' fixtures with a mid-test locked student. Tried and could not break: plausible defaults, silent errors, answer leak in wrong feedback, double submission, stuck loading, dead buttons, tap targets, overflow, console errors/warnings (only the browser's own '404 resource' line for the intentional gone-attempt probe)."
+}

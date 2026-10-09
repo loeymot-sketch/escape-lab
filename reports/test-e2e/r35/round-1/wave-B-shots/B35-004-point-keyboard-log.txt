@@ -1,0 +1,4 @@
+hem-01 Blood Smear Code. Focus the image button, press ArrowRight, ArrowDown, Shift+ArrowRight with a MutationObserver on [role=alert],[role=status],[aria-live]:
+live regions after the three keys: []   (no announcement)
+#point-help (aria-describedby, read only when the control receives focus) afterwards reads "... Marker at 65% across, 55% down."
+Button has no aria-valuetext/role; state of the marker is only visible.

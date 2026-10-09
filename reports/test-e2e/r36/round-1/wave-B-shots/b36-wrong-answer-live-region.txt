@@ -1,0 +1,72 @@
+MutationObserver on .case-panel, hem-02 step 1, three wrong answers
+{
+ "wrong1": {
+  "n": 3,
+  "r": [
+   {
+    "type": "characterData",
+    "target": "primary submit",
+    "added": "",
+    "removed": "",
+    "data": "Checking…"
+   },
+   {
+    "type": "childList",
+    "target": "case-panel",
+    "added": "DIV",
+    "removed": ""
+   },
+   {
+    "type": "characterData",
+    "target": "primary submit",
+    "added": "",
+    "removed": "",
+    "data": "Submit answer"
+   }
+  ],
+  "alert": "Not quite.\n\nAsk whether any step in the lab can repair this specimen.\n\nXP penalty: -10."
+ },
+ "wrong2same": {
+  "n": 2,
+  "r": [
+   {
+    "type": "characterData",
+    "target": "primary submit",
+    "added": "",
+    "removed": "",
+    "data": "Checking…"
+   },
+   {
+    "type": "characterData",
+    "target": "primary submit",
+    "added": "",
+    "removed": "",
+    "data": "Submit answer"
+   }
+  ],
+  "alert": "Not quite.\n\nAsk whether any step in the lab can repair this specimen.\n\nXP penalty: -10.",
+  "wrongCount": "2"
+ },
+ "wrong3other": {
+  "n": 2,
+  "r": [
+   {
+    "type": "characterData",
+    "target": "primary submit",
+    "added": "",
+    "removed": "",
+    "data": "Checking…"
+   },
+   {
+    "type": "characterData",
+    "target": "primary submit",
+    "added": "",
+    "removed": "",
+    "data": "Submit answer"
+   }
+  ],
+  "alert": "Not quite.\n\nAsk whether any step in the lab can repair this specimen.\n\nXP penalty: -10.",
+  "wrongCount": "3",
+  "focus": "Submit answer"
+ }
+}

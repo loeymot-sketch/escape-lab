@@ -1,0 +1,118 @@
+{
+  "wave": "C",
+  "round": 38,
+  "states_reviewed": 62,
+  "findings": [
+    {
+      "id": "C38-001",
+      "state_artifact": "docs/KNOWN_LIMITATIONS.md:190",
+      "category": "doc_claim",
+      "severity": "P2",
+      "evidence": "Round 36 notes, A36-001 paragraph: \"A grep over be/src for correlated subqueries now finds only a migration (db.ts) and the demo reset (demo.ts).\" Reproduced: grep -n \"(SELECT\" be/src/*.ts also returns be/src/game.ts:929 (listClasses: \"(SELECT COUNT(*) FROM class_members m WHERE m.class_id = c.id) AS n\", a correlated scalar subquery; indexed and bounded by 50 classes so harmless, measured GET /classes 2 ms). It is the same kind of exhaustive \"no other occurrence\" sentence that was false at round 36 (C37-002) and was corrected into another exhaustive sentence.",
+      "fix_hint": "State the scope precisely (for example: \"the two quadratic correlated subqueries known to the team are fixed; others, such as the class member count in game.ts:929, are linear\") or drop the exhaustive grep sentence.",
+      "status": "open",
+      "first_seen_round": 38,
+      "rounds_open": 1
+    },
+    {
+      "id": "C38-002",
+      "state_artifact": "docs/FINAL_VALIDATION_REPORT.md:61",
+      "category": "doc_claim",
+      "severity": "P2",
+      "evidence": "The list headed \"P2 qui touchent la demonstration\" contains \"Blood Smear Code n'a pas d'alternative textuelle (B36-001, residuel)\" i.e. S-1 filed under P2, while lines 41, 55 and KNOWN_LIMITATIONS.md:213 (B37-001) state it is a standing P1 (rated P1 by two auditors). The same list also includes \"rejouer une mission change les chiffres affiches (C35-006)\" but C35-006 is P3 in reports/test-e2e/r35/round-1/wave-C-findings.json (and B35-014 is P3). A reader of the list sees S-1 as a P2.",
+      "fix_hint": "Move S-1 out of the P2 list (or label it \"S-1, P1 standing\") and label C35-006 as P3.",
+      "status": "open",
+      "first_seen_round": 38,
+      "rounds_open": 1
+    },
+    {
+      "id": "C38-003",
+      "state_artifact": "web/src/lib/demo-guide.ts (QUALITY_POINTS, QUALITY_PENDING, ABOUT_FOOT) + docs/FACULTY_DEMO_SCRIPT.md:76 and section 6",
+      "category": "doc_claim",
+      "severity": "P2",
+      "evidence": "The in-app About & demo guide (what the committee reads) and the script's section 6 \"Limites a annoncer en ouverture\" never state that Blood Smear Code has no non-visual path and gates the rest of Hematology and the Master Lab; the only accessibility sentence of the About page is \"no independent human security or accessibility review\". The script (line 76) says to disclose it only \"si on vous le demande\". The report calls this a standing P1 (S-1). Live check: hem-01 ariaSnapshot = only button \"Select a point on the scientific image\"; bio-02 has the group \"Text version of this image\". No false statement, but the limit the report treats as the main open P1 is invisible on the demo page.",
+      "fix_hint": "Add one sentence to QUALITY_PENDING/About and to script section 6 (\"Blood Smear Code has no non-visual alternative; accessibility not verified with a screen reader\").",
+      "status": "open",
+      "first_seen_round": 38,
+      "rounds_open": 1
+    },
+    {
+      "id": "C38-004",
+      "state_artifact": "docs/{API_CONTRACT_MATRIX,API_CONTRACT_MATRIX_2026-10-05,AUDIT_EVIDENCE_2026-10-04,CLAUDE_CODE_EXECUTION_BRIEF,CODEX_INITIAL_AUDIT,E2E_VALIDATION_REPORT_2026-10-04,GATE_TRACEABILITY_MATRIX,HUMAN_REVIEW_HANDOFF_2026-10-05,INDEPENDENT_REVIEW_REPORT_2026-10-04,RELEASE_GATE_DECISION_2026-10-05,ULTRA_STRICT_EXECUTION_PLAN}.md:3",
+      "category": "doc_claim",
+      "severity": "P2",
+      "evidence": "Eleven historical documents carry the banner: \"L'etat de reference est dans docs/FINAL_VALIDATION_REPORT.md : ses chiffres datent de la passe archivee du 2026-10-09 ; l'etat apres les corrections du tour 20 est dans sa section Tour 20 / Tour 21 / Tour 22.\" That section (report line 166) is itself superseded (265/322/411, \"tours 20 a 30\", convergence wording), and the current state is the top section (tours 34-37, 269/328/415). The banner sends a reader to stale numbers as \"the state after the corrections\".",
+      "fix_hint": "Replace the pointer with \"section 'Etat verifie le plus recent' at the top of the report (tours 34 a 37 et suivants)\".",
+      "status": "open",
+      "first_seen_round": 38,
+      "rounds_open": 1
+    },
+    {
+      "id": "C38-005",
+      "state_artifact": "be/src/demo.ts:238 (playAlex) + be/README.md:79 + docs/KNOWN_LIMITATIONS.md item 5",
+      "category": "other",
+      "severity": "P2",
+      "evidence": "POST /api/demo/reset as the demo student deletes Alex's membership in every class except the seeded demo class, including classes of OTHER (real) teachers. Reproduced on a throw-away DB (API 3951): teacher \"Prof Zeno Quarry\" class \"Dual Class\" (id 6) with Alex + one student; Alex also in demo class 1. Before reset: cohort {students:2, avgXp:4190, avgCompletionPct:34}; after reset: Alex removed from class 6 (class_members rows 2 -> 1), cohort {students:1, avgXp:140, avgCompletionPct:11}, GET /classes/6/students/<alexId> -> 404; demo class 1 unchanged and its analytics equal the raw recompute (0 diffs). It is intentional (code comment) but unlisted: be/README only says \"replays Alex's story from scratch\" and KNOWN_LIMITATIONS item 5 lists the in-flight-attempt loss but not this cross-teacher roster change. Demo mode only, passwordless call, fictional account.",
+      "fix_hint": "Document it in KNOWN_LIMITATIONS item 5 and be/README (demo mode: a reset removes the demo student from classes of other teachers), or keep memberships outside the demo class.",
+      "status": "open",
+      "first_seen_round": 38,
+      "rounds_open": 1
+    },
+    {
+      "id": "C38-006",
+      "state_artifact": "docs/KNOWN_LIMITATIONS.md:182 (C35-004/005 sentence)",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "\"C35-004/005 Faculty class aggregates round twice (... a mean of 12.5% shown as 12%)\". C35-005 is not double rounding: it is a floating-point artefact at an exact .5 (Math.round(100*sum/n) with sum 0.3749999...). Reproduced through the real API: class of 4 students on hem-01 with 1,2,2,2 wrong answers -> API missions[hem-01].successPct = 37 and hardestMission.successPct = 37, exact rational mean 37.5 (raw JS value 37.49999999999999) which half-up rounds to 38. Exhaustive check: 246 equal-mission combinations of 2-6 students with wrong <= 8 differ from exact half-up; 110,879 student-accuracy combinations over the 9 standard missions (wrong <= 5). Same family as A37-005 (competencies). A student-level flag threshold (59.5 vs 60) and the hardest-mission threshold (69.5 vs 70) can sit on the same boundary.",
+      "fix_hint": "Describe the cause correctly (float sum, one rounding) and say it can move a displayed percentage by 1 point and, at the 60/70 thresholds, a flag; fix with integer arithmetic.",
+      "status": "open",
+      "first_seen_round": 38,
+      "rounds_open": 1
+    },
+    {
+      "id": "C38-007",
+      "state_artifact": "be/src/game.ts:1052-1055 (hardest mission) + be/README.md:68 + web UI \"Needs attention\" chip",
+      "category": "other",
+      "severity": "P3",
+      "evidence": "The hardest mission is chosen with reduce(b < a ? b : a) on the ROUNDED successPct, so ties keep the first mission in catalogue order. Deterministic, but the flagged mission is not the lowest one. Reproduced on class \"UI Tie Class\" (id 9; 3 students, hem-01 wrong answers 0,1,3 and hem-02 wrong answers 1,2,5): raw hem-01 = 58.33 (rounds 58), raw hem-02 = 57.5 (API 58); hardestMission = Blood Smear Code 58% and only that row carries \"Needs attention\"; Fix the Sample, the lower one, shows \"accuracy 58%\" unflagged. Documented rule says \"the lowest mission is the hardest\".",
+      "fix_hint": "Break ties on the unrounded mean (then on catalogue order) and mention the tie rule in be/README.",
+      "status": "open",
+      "first_seen_round": 38,
+      "rounds_open": 1
+    },
+    {
+      "id": "C38-008",
+      "state_artifact": ".ci-artifacts/local-2026-10-09-verify-r37-final/validation-manifest.json",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "Final evidence package completeness: the manifest has snapshot, environment, scope, counts, audits per round and the convergence note, but no release verdict field (the verdict ESCALATE exists only in the report), no list of the exact npm commands (only the run-gate.sh path; the report and run-gate.sh do list them), no shellDefaultNode/last-source-change fields that the r36-final manifest had, and no single count of P2/P3 still open for the current snapshot (the r37 row 7/11 mixes fixed and open items; audit-r37 copies keep status \"open\" for the fixed A37-001/C37-001). The phrase \"Local validation only.\" appears only as \"LOCAL ONLY...\" in the manifest and in French in the report.",
+      "fix_hint": "Add verdict, commands, open P2/P3 counts and a fixed/open status per r37 finding to the manifest.",
+      "status": "open",
+      "first_seen_round": 38,
+      "rounds_open": 1
+    },
+    {
+      "id": "C38-009",
+      "state_artifact": "docs/GOAL_FINAL_MVP.md:33-36 and docs/FINAL_VALIDATION_REPORT.md:198",
+      "category": "doc_claim",
+      "severity": "P3",
+      "evidence": "GOAL_FINAL_MVP.md \"Mise a jour ... tours 34 a 37\" quotes only \"le tour 34 laisse 7 P2 ouverts et le tour 35 en laisse 6\" and omits rounds 36 (5) and 37 (7 P2, 3 P1 incl. S-1); S-1 appears as \"un element d'accessibilite reste ouvert\" without its P1 label or the working criterion. Report line 198 repeats a phrase: \"section ... en haut de ce fichier en haut de ce fichier\".",
+      "fix_hint": "Quote all four rounds or point to the report table; label S-1 as P1; remove the duplicated phrase.",
+      "status": "open",
+      "first_seen_round": 38,
+      "rounds_open": 1
+    }
+  ],
+  "summary": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 5,
+    "P3": 4,
+    "open_P0": 0,
+    "open_P1": 0,
+    "open_P2": 5,
+    "open_P3": 4
+  },
+  "verdict": "GREEN",
+  "notes": "Snapshot seen at start AND end: 96233cf7caabeb02b0d9cf871892151627ae48bf3bbc20b7cd2974def258c81d (143 files), equal to report, manifest and snapshot-id.txt. Node v22.23.2. Verified TRUE: backend 269/269 (log \"# tests 269\", 4 tests in r36-fixes.test.ts), frontend 328/328 (18 files), Playwright 415/415 twice (4.6m each; point-text.spec.ts adds 4 tests = 411+4), exit-codes all 0, budget JS 362040/CSS 67448 equals dist/assets file sizes, openapi sha f1dbd031... equals be/openapi.json, content.ts d4bd3b64... unchanged, node v22.23.2/npm 10.9.8; no source file changed after started.txt (only be/openapi.json regenerated, byte-identical; last source mtime 19:38:01 < 19:38:36); snapshot covers 143 of 145 non-generated be/web/.github files (excluded: be/README.md, be/.gitignore). P sums recomputed from JSON for r9-r31 and r34-r37 (r34 0/0/7/19, r35 0/1/6/22, r36 0/2/5/24, r37 0/3/7/11): all match the report tables, manifests and audit-rNN copies (byte-identical). SUPERSEDED.md present in 7 older folders. Timings reproduced with be/test/helpers.ts: A36 old SQL 26/305/1261 ms for 250/1000/2000 (report 40/313/1256), A37 old 68/274/620/1093 ms (report 68/272/617/1094) vs new 2.7/4.1/6.1/7.7 (report 3/4/6/8); A36 post-fix measured 0.6/1.1/2.3 ms vs report 5/4/10 (same order, report is an upper bound). Demo script re-verified live: timers 240/360 s, replay of hem-01 +12 XP (8240->8252) and hem-02 replay +0, reset restores 8240, Master Lab locked \"Clear 3 labs (1 of 3 cleared)\", /auth/demo 429 at call 61 with 60/10 min (harness), reload consumes no sign-in (1,1,1,1 then +1 per switch/new tab), \"Reopen the laboratory\" with API stopped, accessibility paragraph, canonical Alex/class numbers (level 6, 8240 XP, 38/31/81/73/5, Acid-Base 59%, Hematology 435 XP 92% 09:08), be/README rate-limit and hardest-mission rules, About-page strings vs script, 10 demo-screenshot PNG sizes (all equal README), SCIENTIFIC_REVIEW_BACKLOG 1/12/12 = 25. Faculty mutation patterns: 5000 block-shaped attempts (2500 hem-01 + 2500 hem-02) analytics 7-9 ms, cleanFirstTryPct and every per-mission field equal to an independent raw-SQL exact recompute (0 diffs), roster/detail/student endpoints 2-4 ms, detail shows \"Showing the latest 20 of 5,000 attempts.\"; class where each of 12 students completed exactly one mission (completion 11%, 0 diffs); tie and .5 classes (0 diffs vs exact except the known float artefact); student in two teachers' classes + demo reset (C38-005); UI at 1440 and 390 for 4 classes: no horizontal overflow, no console error, UI numbers equal API. Not tested: real screen reader, WebKit, Docker, public IPv6. Stale-number sweep: 265/267/269/322/328/411/413/415 and byte budgets and snapshot ids: every occurrence is either current (report top, r37 manifest), marked historical (report old sections, SUPERSEDED folders) or a non-count (HTTP status lists, line refs); C38-004 is the one stale pointer. No document claims convergence, zero-P2, production readiness or accessibility; S-1 is stated in README, report, KNOWN_LIMITATIONS, EXTERNAL_REVIEW_REQUEST and the script (see C38-002/003 for gaps). All own processes (API 3951, Vite 5951) stopped by PID; be/data/*.db untouched."
+}

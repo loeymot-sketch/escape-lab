@@ -1,0 +1,31 @@
+{
+ "round": 31,
+ "scope": "Verification of the post-r30 edits to docs/GOAL_FINAL_MVP.md (line 21 + note) and docs/FINAL_VALIDATION_REPORT.md (line 108, heading, rows Tour 29/30, Non reaudite row). Read-only: find, shasum, grep, python json recount.",
+ "counts": {
+  "P0": 0,
+  "P1": 0,
+  "P2": 0,
+  "P3": 1
+ },
+ "findings": [
+  {
+   "id": "R31-01",
+   "severity": "P3",
+   "category": "wording / path",
+   "where": "docs/FINAL_VALIDATION_REPORT.md row 'Modifications depuis local-2026-10-09' (line 113): `playwright.config.ts`",
+   "what": "Bare file name; the file exists only as web/playwright.config.ts. Not an r30 edit (pre-existing, unchanged), no missing file.",
+   "suggested_fix": "Optional: write `web/playwright.config.ts`."
+  }
+ ],
+ "checked": [
+  "GOAL line 21 and Note de reformulation: every statement true. R21-A-01 is a P2 in r21/wave-A ('after the R20-A-01 fix', regression for pre-fix data), fixed with test be/test/r20-fixes.test.ts:136, r22/wave-A lists it under resolved_from_r21 (50 logins, pairs and triples) => 'corrigee avec test et reauditee au tour 22' true. Document P2 recount from JSON: r22 D=4, r23 D=2, r25 D=2, r27 final-state=1, r28=1 (r24=0, r26=0, r29=0, r22 A=0, r25 V=0) => 'tours 22, 23, 25, 27 et 28' exact; all in documents.",
+  "Scopes: r22 wave-A (backend/API, final_state, 3100 probes) + wave-D (docs and captures); r26 scope 'final targeted audit... verification of R25-D... plus structural sweep' = documents, cible; r29 scope 'Verification of the last edits after the r28 findings JSON' = dernieres modifications. Counts r22 A 0/0/0/2, r26 0/0/0/4, r29 0/0/0/2 match.",
+  "FINAL_VALIDATION_REPORT line 108: '(tours 22, 26 et 29, chacun pour sa portee : voir les lignes de tours)' and '22, 23, 25, 27 et 28' correct; consistent with the goal doc; no dangling or contradictory text. Heading line 106 says 'tours 23 a 30' and rows exist through Tour 30.",
+  "Table rows Tour 20..30 present in order (lines 122-132). My recount (all P0=P1=0, no P0/P1 findings in any file): r20 A 2/9 D 7/9 V 4/6 = 0/0/13/24; r21 A 1/3 D 2/7 V 0/6 = 0/0/3/16; r22 A 0/2, D 4/7; r23 2/8; r24 0/2; r25 D 2/8, V 0/7; r26 0/4; r27 1/10; r28 1/1; r29 0/2; r30 2/2. All equal the report.",
+  "'Non reaudite' row (line 133) accurate as a statement of the time it was written: round-30 corrections had been checked by script only. Fact, not an error: round 31 (this agent audit) now checks them. Scope listed (note, line 108, rows 29/30, heading) matches the diff; no code changed since final-r23.",
+  "Cited paths exist: reports/test-e2e/r20..r30 files and dirs, r21/internal-p1-overlap.json, .ci-artifacts/local-2026-10-09-round21-22/ with final-r23/{e2e1,e2e2}.log, r21-failed-pass/prod-only.log, watch.log (3 copies), be/test/r20-fixes.test.ts, docs/KNOWN_LIMITATIONS.md (point 14 names the 3 watch.log; A-02 documented as item 10). Apparent 'missing' items were relative names inside the archive or the endpoint demo/reset.",
+  "find -newer r30 JSON (excluding node_modules, dist*, playwright-report, ./reports): only docs/FINAL_VALIDATION_REPORT.md and docs/GOAL_FINAL_MVP.md (both 15:53:53). find -newer scratchpad r23/DONE (also excluding .ci-artifacts): only README.md, be/README.md, docs/*.md and be/data/escape-lab.db-shm (SQLite runtime file, not newer than r30 JSON); no .ts/.tsx/.css/.json source, test, config, openapi or content file.",
+  "shasum -a 256: be/openapi.json = f1dbd031f6c1ee65ddec55d9d22bc7c98b86004c4e9abcdf00d4949bec48c6c6, be/src/content.ts = d4bd3b647676886062b914b9b50c50600dc39bba3e63984037f4849badd85a39; both equal the report rows 120-121.",
+  "Not verifiable by me: the user's acceptance of the reformulation (transcript not visible); not counted as an error."
+ ]
+}

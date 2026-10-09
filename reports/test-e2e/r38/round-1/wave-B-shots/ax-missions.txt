@@ -1,0 +1,171 @@
+=== hem-03 s1
+- banner:
+  - button "← Exit mission"
+  - text: CASE FILE · Hematology Anemia Detective
+  - timer "Time left 08:00"
+- main:
+  - region "Classify the anemia by red cell size.":
+    - text: STEP 1 / 3 Reason it through
+    - paragraph: Educational scenario — not clinical guidance
+    - heading "Classify the anemia by red cell size." [level=1]
+    - paragraph: 34-year-old woman, fatigue for three months.
+    - text: EVIDENCE REVEALED SO FAR
+    - list:
+      - listitem:
+        - text: Hb 8.9 g/dL
+        - emphasis: Reference 12.0-15.5
+        - strong: Low
+      - listitem:
+        - text: MCV 72 fL
+        - emphasis: Reference 80-100
+        - strong: Low
+    - group "Answer options":
+      - button "Microcytic"
+      - button "Normocytic"
+      - button "Macrocytic"
+      - button "Cannot be classified"
+    - button "Submit answer" [disabled]
+  - complementary "Lab assistant and case status":
+    - text: LAB ASSISTANT · BETA
+    - heading "Observe before you decide." [level=2]
+    - paragraph: Request a contextual hint when you need a new angle. Each hint costs 15 XP.
+    - button "Ask Lab Assistant"
+    - paragraph: "Hints used on this step: 0 of 1."
+    - text: CASE STATUS
+    - term: Wrong answers
+    - definition: "0"
+    - term: Hints used
+    - definition: "0"
+    - term: XP penalty so far
+    - definition: "0"
+
+=== mic-02
+- banner:
+  - button "← Exit mission"
+  - text: CASE FILE · Microbiology Gram Stain Challenge
+  - timer "Time left 04:00"
+- main:
+  - region "Put the Gram stain steps in the correct order (air-drying and the water rinses between reagents are left out).":
+    - text: STEP 1 / 1 Put in order
+    - paragraph: Educational scenario — not clinical guidance
+    - heading "Put the Gram stain steps in the correct order (air-drying and the water rinses between reagents are left out)." [level=1]
+    - list "Order the items. Use the move buttons to change a position.":
+      - listitem:
+        - text: Gram iodine (mordant)
+        - 'button "Move up: Gram iodine (mordant)" [disabled]'
+        - 'button "Move down: Gram iodine (mordant)"'
+      - listitem:
+        - text: Heat-fix the smear
+        - 'button "Move up: Heat-fix the smear"'
+        - 'button "Move down: Heat-fix the smear"'
+      - listitem:
+        - text: Safranin counterstain
+        - 'button "Move up: Safranin counterstain"'
+        - 'button "Move down: Safranin counterstain"'
+      - listitem:
+        - text: Crystal violet (primary stain)
+        - 'button "Move up: Crystal violet (primary stain)"'
+        - 'button "Move down: Crystal violet (primary stain)"'
+      - listitem:
+        - text: Decolorize with alcohol or acetone
+        - 'button "Move up: Decolorize with alcohol or acetone"'
+        - 'button "Move down: Decolorize with alcohol or acetone" [disabled]'
+    - status
+    - button "Submit answer"
+  - complementary "Lab assistant and case status":
+    - text: LAB ASSISTANT · BETA
+    - heading "Observe before you decide." [level=2]
+    - paragraph: Request a contextual hint when you need a new angle. Each hint costs 15 XP.
+    - button "Ask Lab Assistant"
+    - paragraph: "Hints used on this step: 0 of 1."
+    - text: CASE STATUS
+    - term: Wrong answers
+    - definition: "0"
+    - term: Hints used
+    - definition: "0"
+    - term: XP penalty so far
+    - definition: "0"
+
+=== mic-03
+- banner:
+  - button "← Exit mission"
+  - text: CASE FILE · Microbiology Petri Dish Mystery
+  - timer "Time left 06:00"
+- main:
+  - region "Match each plate observation to the organism it most suggests (presumptive identification).":
+    - text: STEP 1 / 1 Match the pairs
+    - paragraph: Educational scenario — not clinical guidance
+    - heading "Match each plate observation to the organism it most suggests (presumptive identification)." [level=1]
+    - text: Pink colonies on MacConkey agar
+    - combobox "Association for Pink colonies on MacConkey agar":
+      - option "Choose association…" [selected]
+      - option "Proteus mirabilis"
+      - option "Escherichia coli"
+      - option "Pseudomonas aeruginosa"
+      - option "Streptococcus pyogenes"
+    - text: Clear zone of beta-hemolysis on blood agar, Gram-positive cocci in chains
+    - combobox "Association for Clear zone of beta-hemolysis on blood agar, Gram-positive cocci in chains":
+      - option "Choose association…" [selected]
+      - option "Proteus mirabilis"
+      - option "Escherichia coli"
+      - option "Pseudomonas aeruginosa"
+      - option "Streptococcus pyogenes"
+    - text: Swarming growth that spreads across the blood agar plate
+    - combobox "Association for Swarming growth that spreads across the blood agar plate":
+      - option "Choose association…" [selected]
+      - option "Proteus mirabilis"
+      - option "Escherichia coli"
+      - option "Pseudomonas aeruginosa"
+      - option "Streptococcus pyogenes"
+    - text: Green pigment with a sweet, fruity odor
+    - combobox "Association for Green pigment with a sweet, fruity odor":
+      - option "Choose association…" [selected]
+      - option "Proteus mirabilis"
+      - option "Escherichia coli"
+      - option "Pseudomonas aeruginosa"
+      - option "Streptococcus pyogenes"
+    - status: 0 of 4 matched. Match every item to enable Submit.
+    - button "Submit answer" [disabled]
+  - complementary "Lab assistant and case status":
+    - text: LAB ASSISTANT · BETA
+    - heading "Observe before you decide." [level=2]
+    - paragraph: Request a contextual hint when you need a new angle. Each hint costs 15 XP.
+    - button "Ask Lab Assistant"
+    - paragraph: "Hints used on this step: 0 of 2."
+    - text: CASE STATUS
+    - term: Wrong answers
+    - definition: "0"
+    - term: Hints used
+    - definition: "0"
+    - term: XP penalty so far
+    - definition: "0"
+
+=== hem-01
+- banner:
+  - button "← Exit mission"
+  - text: CASE FILE · Hematology Blood Smear Code
+  - timer "Time left 04:00"
+- main:
+  - region "Click the schistocyte (fragmented red cell).":
+    - text: STEP 1 / 1 Spot the finding
+    - paragraph: Educational scenario — not clinical guidance
+    - heading "Click the schistocyte (fragmented red cell)." [level=1]
+    - paragraph: Peripheral blood smear, 100x oil. Hemolytic anemia work-up, post-mechanical valve.
+    - button "Select a point on the scientific image"
+    - text: Illustrative training image
+    - paragraph: Click the image, or focus it and use the arrow keys (Shift for larger steps) to mark the suspected finding.
+    - paragraph: "Stylised blood smear: illustrative training material, not a real specimen, not a validated image and not for clinical use."
+    - button "Submit answer" [disabled]
+  - complementary "Lab assistant and case status":
+    - text: LAB ASSISTANT · BETA
+    - heading "Observe before you decide." [level=2]
+    - paragraph: Request a contextual hint when you need a new angle. Each hint costs 15 XP.
+    - button "Ask Lab Assistant"
+    - paragraph: "Hints used on this step: 0 of 2."
+    - text: CASE STATUS
+    - term: Wrong answers
+    - definition: "0"
+    - term: Hints used
+    - definition: "0"
+    - term: XP penalty so far
+    - definition: "0"

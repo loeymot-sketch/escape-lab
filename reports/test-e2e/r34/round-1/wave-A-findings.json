@@ -1,0 +1,99 @@
+{
+  "wave": "A",
+  "round": 1,
+  "states_reviewed": 36,
+  "findings": [
+    {
+      "id": "A-001",
+      "category": "Faculty/student number consistency (competencies)",
+      "severity": "P2",
+      "evidence": "Reproduced on a fresh DB. Student plays hem-01 three times: 1st with 3 wrong + 2 hints (score 70), 2nd perfect (score 180, best), 3rd with 1 wrong (score 140, not best). GET /api/competencies (student) and GET /api/attempts/<3rd>/result -> competencies [{\"name\":\"Hematology interpretation\",\"pct\":66,\"steps\":1}] (latest solved result per step, game.ts:575-596). The teacher's GET /api/classes/<id>/students/<id> -> competencies [{... \"pct\":100 ...}] and GET /api/labs/hematology/results use best attempts (game.ts:678-687). Same student, same moment, 66% vs 100%. The student's competency can DROP after a worse replay while XP, accuracy, lab results and the Faculty view stay at the best attempt. Not listed in docs/KNOWN_LIMITATIONS.md. The shipped web UI only draws the lab-results and Faculty variants, so the API-only variants are not currently on screen.",
+      "fix_hint": "Pick one definition (best attempt per step, like every other metric: XP, accuracy, ledger, Faculty) for competencies() and document it in /api/rules; or label the latest-attempt variant explicitly.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "A-002",
+      "category": "Hint persistence / idempotency",
+      "severity": "P2",
+      "evidence": "Reproduced. Fresh student, POST /api/missions/hem-01/start, then 6 parallel POST /api/attempts/<id>/hint {\"stepId\":\"hem-01-s1\"} -> 200 level 1, 200 level 2, then four 409 no_more_hints; GET attempt -> hintsUsed 2, penaltyXp -30, hintsGiven has both levels. A concurrent double-click (two requests in flight) therefore buys and charges TWO hints (-30 XP, loses the no-hint bonus, reveals the level-2 hint) instead of one. Cause: the per-attempt hintInFlight guard (game.ts:486-490) only covers the async provider call; with the default StandardOnlyProvider the guarded window is a single microtask, so a second request that arrives a few ms later is processed as a brand-new hint. The request body carries only stepId (routes.ts:53), so the server cannot recognise a duplicate. The web client masks it with a hinting ref (pages/mission.tsx:261/295), but two tabs or any API client still double-charge. With LAB_ASSISTANT_* configured the guard works (verified with a fake provider: second hint and answer -> 409 hint_in_progress).",
+      "fix_hint": "Make the hint call idempotent: accept the level the client believes it is buying (expectedLevel = hintsOnStep+1, or an Idempotency-Key) and return the already-delivered hint without charging when the level exists; keep rejecting a mismatch with 409.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "A-003",
+      "category": "Production-mode refusal (seed script guard)",
+      "severity": "P2",
+      "evidence": "Reproduced. NODE_ENV=production DB_PATH=<tmp> node scripts/seed-demo.ts -> 'Refusing to seed public demo credentials with NODE_ENV=production.' rc=1. NODE_ENV=Production (and NODE_ENV=' production') -> 'Seeded the demo (plan #461): 38 students...' rc=0, DB created with a teacher + 38 students sharing the published password demo-password-1. scripts/seed-demo.ts:7 compares NODE_ENV with === 'production', while the server's own guard lowercases it (src/app.ts:35 .toLowerCase()), so the server treats NODE_ENV=Production as production but the seed refusal does not. The seeded accounts are refused at sign-in when DEMO_MODE is off (is_demo_account), so this is data pollution (38 fake students visible in GET /api/leaderboard?cohort=all, a fake reserved teacher name) rather than an auth bypass, but it defeats the documented refuse-by-default guard.",
+      "fix_hint": "Use the same normalisation as configFromEnv in scripts/seed-demo.ts (trim + toLowerCase), ideally by importing one shared isProduction(env) helper; also trim NODE_ENV in configFromEnv.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "A-004",
+      "category": "db:check behaviour on corrupt/non-database file",
+      "severity": "P3",
+      "evidence": "Reproduced. DB_PATH=<non-sqlite file> node scripts/db-check.ts, DB_PATH=<truncated copy> and DB_PATH=<directory> all end with an uncaught exception and a Node stack trace (e.g. 'Error: file is not a database' at scripts/db-check.ts:9, 'database disk image is malformed') and exit code 1, instead of the tool's own JSON report with a populated problems[] (the whole point of the tool). Missing file is handled (rc 2); db:backup handles the same inputs with a one-line message (rc 1) and leaves no partial output file.",
+      "fix_hint": "Wrap new DatabaseSync / PRAGMA calls in try/catch in scripts/db-check.ts and print {path, problems:[reason]} with exit 1.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "A-005",
+      "category": "Server configuration tolerance",
+      "severity": "P3",
+      "evidence": "Reproduced with src/server.ts start-ups. (a) NODE_ENV=' production' (leading space) + AUTH_SECRET=short starts normally and is NOT treated as production (src/app.ts:35 lowercases but does not trim) -> random/short secret, CORS '*', demo allowed. (b) NODE_ENV=production with AUTH_SECRET of 40 spaces passes the >=32 length check (app.ts:36). (c) CORS_ORIGIN='https://x.example/' (trailing slash) is accepted in production and then never matches any browser Origin (app.ts:107), silently blocking every cross-origin call. (d) TRUST_PROXY=yes/true-ish unknown values silently mean 0 hops (app.ts:39-40), so behind a proxy all clients share one IP and one rate-limit bucket. (e) DEMO_MODE=true is silently ignored (only '1'). None of these print a warning.",
+      "fix_hint": "Trim NODE_ENV and AUTH_SECRET, require >=32 non-whitespace characters, normalise/validate CORS_ORIGIN as an origin (no path), fail on unrecognised TRUST_PROXY/DEMO_MODE values in production.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "A-006",
+      "category": "OpenAPI completeness",
+      "severity": "P3",
+      "evidence": "Regenerated with npm run openapi to a scratch path: byte-identical to be/openapi.json and to GET /api/openapi.json (no drift), and all 31 operations exist in the server. Fuzzing every operation (6,417 requests, valid/wrong-role/no token, malformed params and bodies) produced 0 statuses that are not declared in the spec and 0 5xx. Remaining contract gaps: success responses only say 'Success' (no response schemas; acknowledged in docs/KNOWN_LIMITATIONS.md); integer path ids (/classes/{id}, {studentId}) are typed string although the server answers 400 unless ^\\d{1,9}$ (routes.ts:95-98); servers[] is hard-coded to http://localhost:3000; GET /api/openapi.json and HEAD are served but not described.",
+      "fix_hint": "Add response schemas (or at least the key payload shapes), type integer ids as integer with a pattern, and derive servers[] from the request/config.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "A-007",
+      "category": "Deployment artefacts (Dockerfile)",
+      "severity": "P3",
+      "evidence": "be/Dockerfile copies only package.json and src/ (lines 3-4): scripts/ is absent from the image, so the documented npm run db:backup / db:check / openapi cannot run inside the container that holds the only copy of the SQLite volume; there is no HEALTHCHECK although /api/health exists. be/README.md:109 already says the image was never built.",
+      "fix_hint": "COPY scripts ./scripts and add HEALTHCHECK CMD node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1))\"; build it once in CI.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    },
+    {
+      "id": "A-008",
+      "category": "Rate limiting (login)",
+      "severity": "P3",
+      "evidence": "Reproduced. 30 concurrent POST /api/auth/login with the CORRECT password for one account from one IP -> 8 x 200 and 22 x 429 rate_limited. login reserves a failure slot (loginfail:ip:email, max 8) before the awaited scrypt check (routes.ts:156-159), so valid credentials are refused whenever more than 8 logins for the same e-mail are in flight; a later login works again (slots are released) and nothing persists. Related to the documented shared-NAT lockout (KNOWN_LIMITATIONS items 9 and 11); the in-flight variant is not documented.",
+      "fix_hint": "Count a failure only after the password check fails (keep a small separate in-flight cap), or document the in-flight limit.",
+      "status": "open",
+      "first_seen_round": 34,
+      "rounds_open": 1
+    }
+  ],
+  "summary": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 3,
+    "P3": 5,
+    "open_P0": 0,
+    "open_P1": 0,
+    "open_P2": 3,
+    "open_P3": 5
+  },
+  "verdict": "GREEN",
+  "notes": "Scope: ~22,000 real HTTP requests against 4 private instances (ports 39417 DEMO_MODE with seeded DB, 39418 plain, 39419 low rate limits, 39422 same DB with demo off) plus an in-process app with a fake Anthropic fetch (39421) and a kill -9 / SIGTERM durability instance (39423); all throw-away DBs under the auditA scratchpad, be/data never touched, no file under be/ web/ docs/ modified, all my servers killed. Attacked and found sound: (1) Auth: missing/garbage/alg-none/forged-signature/truncated/padded tokens, expired exp, sub as string/float/huge/nonexistent, role claim teacher on a student account (role comes from the DB), token from another server secret, lower-case bearer, token in query string, wrong role on every teacher/student route, mass-assignment of role on register/profile, invite-code errors; demo accounts: demo tokens and seeded passwords are refused when DEMO_MODE is off, /auth/demo and /demo/reset 404 without demo mode. (2) Scoring authority: extra fields (score/xp) rejected, NaN/Infinity/negative/string/array/null/deep-nested/oversized (413) bodies, __proto__/constructor keys, wrong content types (415), replayed correct answers (409 attempt_finished), submit after completion, out of order (409 wrong_step), 3 parallel correct answers on a 3-step mission (exactly one applies), replays never add XP beyond the best score (xpAwarded 0), concurrent starts return a single attempt, hint+answer+wrong races produce counters that equal the ledger. (3) Timer: server clock authoritative, remainingSec counts down from startedAt, at the limit (240 s wait) the attempt flips to expired, answer/hint/result all 409 time_expired, restart creates a fresh attempt, resume returns same startedAt. (4) Unlock rules: later missions locked until the previous is completed, Master Lab locked until 3 exits, vault_incomplete before fragments, 5 wrong codes then 429 (also under 12 parallel wrong codes: exactly 5 counted), badge granted once under 6 parallel correct unlocks, Master code only after escape; full 3-lab + Master playthrough scores 570 and matches profile/badges. (5) Hints: standard hint text persisted at charge time and listed in step.hintsGiven after re-request and after kill -9 + restart; AI provider timeout/hang/throw/non-200/leak all fall back to the standard hint with a single charge; answer and second hint get 409 hint_in_progress during an async provider call (finding A-002 concerns only the non-overlapping/fast case). (6) Reset boundaries: student reset 403 not_demo for real accounts, demo student/teacher reset leave a real teacher's class, content review, and a real student's profile byte-identical; 4 parallel resets + concurrent reads all 200 and final state canonical; mutate-then-reset returns exactly the prepared state (XP 8240, vault, dashboard). (7) Names: 40+ teacher-name variants (case, ZWSP, fullwidth, Cyrillic/Greek homoglyphs, math alphanumerics, tag chars, fillers, braille blank, bidi RLO, #N / numero patterns, 80/81 chars incl. astral, zalgo, lone surrogate, control chars, html/sql strings), rename chains, 6 parallel registrations of one name (exactly one 201), plus 60,000 random-unicode fuzz of shortName/nameKey/classNameKey with 0 exceptions. (8) Migrations: v1 DB with data upgraded to v7 (badge ids renamed, xp_events backfilled, hint_log.text added, FK check clean), reopen idempotent, newer schema refused, garbage/truncated/directory/foreign-schema files refused with one line. (9) Integrity SQL invariants over the 3 DBs after a 2,240-call randomized concurrent stress (20 users x 2 workers): xp_events == best scores, hints/wrong counters == step_results == hint_log rows, completed attempts have result_json, best_score == max completed score, completions count, exits imply fragments and badges, at most one in-progress attempt per mission: 0 violations, 0 5xx. (10) Faculty vs student numbers on the 38-student demo class: roster vs detail vs analytics roster vs cohort aggregates vs Alex's own profile/dashboard/leaderboard: 0 mismatches (only the competency variants differ, A-001). (11) Secrets/answer leakage: scanned lobby, start, attempt, wrong-answer, hint and result payloads of all 9 standard missions for explanations, unrequested hints, future-step prompts/values and order/match keys: 0 leaks. (12) HTTP robustness: partial body + reset, CL/TE conflict, CL mismatch, chunked 192 KB (413), bad request line, 20 KB URL (431), CRLF in path, Expect: 100-continue, HEAD never mutates, 405/OPTIONS/CORS headers, SIGTERM exit 0, kill -9 durability, 200 concurrent logins do not block /api/health. (13) Start-up/config: production refusals (no secret, short secret, CORS *, DEMO_MODE), bad HOST/PORT, port in use, directory/garbage/truncated DB path all exit 1 with one line; DEMO_MODE binds 127.0.0.1. (14) db:backup/db:check on missing/garbage/truncated/dir/overwrite/quote-in-path/empty-arg: verified backups pass integrity and are 0600. (15) Web: grep of web/src shows timer/score/hints/fragments/unlock are display of server payloads (countdown is a monotonic snapshot of remainingSec; found-fragment counts are display only); every api() path the client calls exists in the server and spec; no innerHTML, no localStorage for tokens. Known documented items re-observed and NOT counted as new: shared guest user, cohort=all leaderboard, point-step brute force, order/match progress hint, shared-NAT lockout, no success schemas. Not tested: multi-process write contention (covered by repo race-worker tests), real LLM provider, Docker build, npm test suite."
+}

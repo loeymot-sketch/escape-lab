@@ -1,0 +1,89 @@
+{
+  "wave": "A",
+  "round": 39,
+  "states_reviewed": 40500,
+  "findings": [
+    {
+      "id": "A39-001",
+      "category": "test-quality (vacuous assertion)",
+      "severity": "P3",
+      "evidence": "be/test/r36-fixes.test.ts first test ('the latest-solved-result rule is unchanged, ties on solved_at included') plays hem-01 twice at the same instant (a tie) but then plays hem-01 a third time 60 s later, so the tied pair is superseded and the tie is not part of the final expected result. Reproduced in scratch (mut1.ts, same scenario through the harness): RANK(), ROW_NUMBER() and DENSE_RANK() variants of the competencies() query all return the identical [{Hematology interpretation, 32%, 1 step}, {Pre-analytical quality, 100%, 3 steps}]. So a regression from RANK() to ROW_NUMBER() (tie handling) passes this test, although the test title, KNOWN_LIMITATIONS 'Round 36 notes' and FINAL_VALIDATION_REPORT say it pins ties. A pure tie scenario (mut3.ts: hem-01 with 1 miss and hem-01 clean at the same ms, no replay) separates them: RANK -> 2 steps / 83%, ROW_NUMBER -> 1 step / 66%. By contrast the analytics tie test (Cy tied) DOES discriminate (mut2.ts: RANK 4 rows/2 clean, ROW_NUMBER 3 rows/1 clean). The scaling tests are meaningful: old SQL on 500/1500/3000/6000 single-step attempts took 283/1921/7043/28272 ms vs new 2/5/10/19 ms (perf1.ts). Differential run of old vs new SQL on 400 random users with heavy solved_at ties, NULL solved_at, in-progress/expired attempts: 2,564 rows, 0 mismatching users (diff1.ts).",
+      "fix_hint": "Add a competencies test whose final state is a tie (two attempts of one step solved at the same ms, different wrong/hints, no later replay) and assert steps=2 and the averaged pct; or drop the 'ties included' claim from the test title and the docs.",
+      "status": "open",
+      "first_seen_round": 39,
+      "rounds_open": 1
+    },
+    {
+      "id": "A39-002",
+      "category": "time handling (backwards clock, future timestamps)",
+      "severity": "P3",
+      "evidence": "Server-clock only, no client control. (1) Reproduced with the harness clock (time1.ts): start hem-01, step the clock back 10 min, answer correctly: attempt view stays remainingSec 240 / elapsedSec 0 (an attempt started 'in the future' never expires until the clock catches up: game.ts expireStale/answer test `now - started_at > limit` is never true), the result carries a full time bonus (30 pts, 'Finished in 00:00'), and attempts.completed_at < started_at. Aggregates then leak NEGATIVE durations in JSON: GET /api/profile stats.avgMissionSec = -600 (avgMissionTime '00:00' because mmss clamps), teacher roster students[].avgMissionSec = -600, GET analytics missions[].avgSec = -600 (Game.sec() has no clamp, game.ts:676). Same clock stepped back 3 days: roster idleDays = -3, active true. (2) Reproduced without a clock step (mid.ts): seedDemo/demo reset within the first minute after UTC midnight (base = 00:00:10 UTC) writes Alex's 'today' activity at dayStart+60 s, i.e. 50 s in the future, so roster lastActiveAt > now and idleDays = -1 (demo.ts alexPlan: Math.max(60_000, ...)). The web UI does not read idleDays/lastActiveAt/avg*Sec as numbers (grep), so only the API contract shows it. (3) Token lifetime: exp = floor(now/1000)+604800 and `exp > nowSec`, so a token is dead for the last (ms part of issue time) ms of day 7 (tested: dead at T0+7d-123ms for T0 ending .123); harmless.",
+      "fix_hint": "Clamp Game.sec() at 0 (as complete() already does for elapsedSec) and idleDays at 0; in alexPlan use Math.min(base, ...) for 'today'.",
+      "status": "open",
+      "first_seen_round": 39,
+      "rounds_open": 1
+    },
+    {
+      "id": "A39-003",
+      "category": "time handling (rate-limit and vault lockout vs backwards clock)",
+      "severity": "P3",
+      "evidence": "Reproduced with the harness clock (time2.ts). RateLimiter.hit() keeps raw Date.now() stamps and filters with `t - x < windowMs`; a backwards step makes old stamps look recent and Retry-After is computed from arr[0], which is no longer the oldest after a step. After 8 failed logins (account bucket, 10 min window) and a 1 h backwards clock step, a correct login answers 429 with Retry-After: 4200 (1 h 10 min instead of at most 10 min). The vault lockout has the same shape (game.ts:235-237 `created_at > since`, retry from wrongs[0].created_at + window - now, stored in the DB so it survives restarts). Needs an NTP/VM-restore step of at least minutes to matter; a forward step is harmless (all windows expire). Unlocks and logins recover by themselves after the step has elapsed. Everything else rolling-window: leaderboard 'week' is a rolling 168 h window (`at > now-7d`), not a calendar week: XP at exactly now-7d is excluded, now-7d+1ms included (tested), XP stamped in the future counts until the clock catches up; there is no timezone or DST dependence anywhere (UTC epoch arithmetic only; streak days are UTC, already documented).",
+      "fix_hint": "Use a monotonic source for in-memory limiter windows (performance.now()/process.hrtime) and clamp retry values to the window length; for the DB-stored vault window ignore created_at > now.",
+      "status": "open",
+      "first_seen_round": 39,
+      "rounds_open": 1
+    },
+    {
+      "id": "A39-004",
+      "category": "performance/memory (challenge of listed item A37-004: worse than described)",
+      "severity": "P3",
+      "evidence": "KNOWN_LIMITATIONS A37-004 says only that the prepared-statement cache 'keeps every statement'. Measured (stmtmem.ts, in-process Game, a class that grows by one student and has analytics() called at each size): cached statements 308 / 1508 / 3008 / 6008 / 9008 and RSS 105 / 213 / 456 / 1135 / 1317 MB at class sizes 100 / 500 / 1000 / 2000 / 3000 (baseline 95 MB); SQL text alone 0.09 / 1.05 / 3.6 / 13.2 / 28.8 MB. So memory is quadratic in the largest class size ever analysed (about 0.36 GB at 1,000 sizes, 1.0 GB at 2,000) and is never released until restart. Realistic classes (38 to 300) cost under 30 MB. Reaching the high end needs the class to grow through every size with the teacher opening analytics each time, i.e. 1,000+ accounts (registration limit 100/h per raw address, A36-002 voids it for IPv6); in DEMO_MODE the passwordless demo teacher token plus the readable join code make the demo class growable by anyone. Stays P3 (many accounts, hours) but the same fix would also close A38-002 (variable limit) and A37-004.",
+      "fix_hint": "Replace `IN (?,?,...)` by one fixed statement: `WHERE user_id IN (SELECT value FROM json_each(?))` with a JSON array parameter (or a temp table of member ids). One statement per query, no 32766-variable ceiling.",
+      "status": "open",
+      "first_seen_round": 39,
+      "rounds_open": 1
+    },
+    {
+      "id": "A39-005",
+      "category": "configuration (be/.env.example vs config parsing)",
+      "severity": "P3",
+      "evidence": "intEnv() accepts '0' (app.ts:32) and the limits then use `?? default` (routes.ts), so RATE_*=0 is a limit of zero, not 'disabled' or 'default'. Reproduced (cfg0.ts): configFromEnv({RATE_LOGIN_FAILURES_PER_IP:'0', RATE_REGISTER_PER_HOUR:'0', RATE_ANSWER_PER_MINUTE:'0'}) gives limits {0,0,0}; the first POST /api/auth/register answers 429 rate_limited and every POST /api/auth/login answers 429 (hit() runs before the password check) even with the right password. .env.example documents defaults in parentheses but not the meaning of 0. Other verified facts of the matrix: every variable read in be/src (PORT, HOST, AUTH_SECRET, DB_PATH, CORS_ORIGIN, TEACHER_INVITE_CODE, LAB_ASSISTANT_API_KEY, LAB_ASSISTANT_MODEL, DEMO_MODE, NODE_ENV, TRUST_PROXY, ALLOW_DEMO_IN_PRODUCTION, 7 RATE_*) is in .env.example, none misspelled, listed defaults (100/60/10/120/30/60/60) equal the code; ALLOW_DEMO_IN_PRODUCTION sits under the 'Database tools' heading (cosmetic). Start-up refusals tested on the real server.ts under env -i: NODE_ENV=production without/short AUTH_SECRET exit 1, CORS_ORIGIN unset or '*' exit 1, DEMO_MODE=1 exit 1 (also with NODE_ENV=Production), DEMO_MODE=1 + ALLOW_DEMO_IN_PRODUCTION=1 starts on 127.0.0.1; DEMO_MODE=true is silently ignored (A-005 known); a container-equivalent tree (package.json + src only, NODE_ENV=production, HOST=0.0.0.0, non-root-style data dir) starts and serves /api/health with CORS limited to the configured origin.",
+      "fix_hint": "Treat 0 as invalid (fall back to the default) or document it; same for TRUST_PROXY=' 1' (not trimmed, silently 0).",
+      "status": "open",
+      "first_seen_round": 39,
+      "rounds_open": 1
+    },
+    {
+      "id": "A39-006",
+      "category": "deployment (.github/workflows/escape-lab-validation.yml)",
+      "severity": "P3",
+      "evidence": "Static review (no remote CI exists). (1) upload-artifact@v4 name is `escape-lab-validation-${{ github.run_id }}` without run_attempt: a 're-run' keeps run_id, and v4 refuses a second artifact with the same name in a run (409 Conflict, widely reported), so a re-run of the job would end red at the `if: always()` archive step even when the tests pass (not reproducible here). (2) The manifest step lists 8 log names but omits frontend-audit.log (written by the 'Frontend dependency audit' step); the file is still uploaded via the whole .ci-artifacts/ folder, so only the manifest is incomplete. (3) No `permissions:` block (default token scope), actions pinned by tag not SHA, both `push` and `pull_request` triggers run the job twice per PR commit. (4) timeout-minutes: 15 for npm ci x2 + playwright install --with-deps + 3 vite builds + the e2e suite that took 4.6 min on this machine (415 tests); GitHub runners are 2-3x slower, so the margin is thin. (5) All documented evidence was produced on Node v22.23.2 but CI pins 22.18.0: I ran my own fuzz (1,500 steps, window functions, db.isTransaction, type stripping, node:sqlite 3.50.2) on a downloaded Node 22.18.0 (sha256 2c12913c...dfc0): 0 problems, and `npm audit signatures` verifies 3 and 159 packages; tsc -p --noEmit is clean for be and web. (6) `git diff --exit-code -- openapi.json` is correct as written (cwd be/, tee paths ../.ci-artifacts exist) provided be/openapi.json is tracked; regenerated openapi is byte-identical to be/openapi.json (cmp, in a scratch copy where `npm run seed:demo` also created ./data itself).",
+      "fix_hint": "Name the artifact with run_id-run_attempt (or overwrite: true), add frontend-audit.log to the manifest, add `permissions: contents: read`, consider timeout 25-30 min.",
+      "status": "open",
+      "first_seen_round": 39,
+      "rounds_open": 1
+    },
+    {
+      "id": "A39-007",
+      "category": "repository hygiene / supply chain",
+      "severity": "P3",
+      "evidence": "find shows .gitignore only in be/ (ignores node_modules, data/, *.db*, .env) and in the stale .mission-input/be; there is no root .gitignore and no web/.gitignore. web/ currently holds node_modules (124 dirs), dist, dist-e2e, dist-e2e-unconfigured, playwright-report, test-results and tsconfig.tsbuildinfo, and sources/ and .mission-input/ sit at the root. A first `git add .` for the remote CI the workflow expects would commit all of it (CI would still work because npm ci replaces node_modules). Supply chain otherwise clean: npm audit at --audit-level=info reports 0 vulnerabilities for be and web; lockfiles v3, all `resolved` on registry.npmjs.org, 0 entries without integrity, root deps equal package.json; install scripts only for esbuild and fsevents (web); be has 3 dev-only packages and no runtime dependency; `npm ci --dry-run` lists only OS-specific optional packages (@esbuild/*, @rollup/*, one @napi-rs/lzma-linux-x64-gnu whose engines ^22.20 is above CI's 22.18.0: optional, rollup does not require it at runtime); the built bundle (dist and a fresh build) contains no CDN/font/script URL, only w3.org namespaces, react.dev error text and the baked http://localhost:3000/api default. be/Dockerfile (not buildable here: colima daemon down; README says never built): runs as USER node, no scripts/ and no HEALTHCHECK (A-007 known), `VOLUME /data` is declared before `RUN mkdir -p /data && chown node:node /data` (changes after VOLUME are discarded by the classic builder; kept by BuildKit, which Docker 29 uses), no .dockerignore (be/data/*.db would be sent to the build context but is not COPY'd).",
+      "fix_hint": "Add a root .gitignore (node_modules, dist*, playwright-report, test-results, *.tsbuildinfo) and a .dockerignore for be/; move the chown/mkdir above VOLUME.",
+      "status": "open",
+      "first_seen_round": 39,
+      "rounds_open": 1
+    }
+  ],
+  "summary": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0,
+    "P3": 7,
+    "open_P0": 0,
+    "open_P1": 0,
+    "open_P2": 0,
+    "open_P3": 7
+  },
+  "verdict": "GREEN",
+  "notes": "Snapshot seen at start and end: 96233cf7caabeb02b0d9cf871892151627ae48bf3bbc20b7cd2974def258c81d (143 files), unchanged. Read-only: nothing under be/, web/, docs/, sources/ touched; no use of ports 3000/5173/4173/4174/39xx/59xx; own listeners only on 3811-3830 (all stopped by exact PID, verified no listener left in 3801-3830); scratch under scratchpad/r39A (own DBs, a vite build of web into scratch, a downloaded Node 22.18.0). No pattern-based kills. Existing npm test suites not run. ATTACKED: (a) full review of Game.competencies() and Game.analytics() RANK() queries (partition/order/ties/NULL solved_at, IN-list limits: only the analytics inList and competenciesOf (<=9 ids), SQL injection: all values bound, dynamic SQL is placeholders or constants), old-vs-new differential on 400 random users with forced ties (0 mismatches), scaling of old vs new SQL, mutation checks (ROW_NUMBER/DENSE_RANK) of r36-fixes.test.ts (competencies tie test is vacuous = A39-001; analytics tie test and both scaling tests would fail on the pre-fix code: old SQL 283-28272 ms vs 150 ms bound), assets.ts/assets.test.ts/point-text.spec.ts/engines.tsx PointTextAlternative+ImageIdentify (useId/aria-labelledby, keys, hook order, key={step.id} on GameEngine, row hit distances vs key radius 5.5, selected-row logic), refine.css .point-text rules, built bundle and measured the text table in Chromium at 12 widths 320-1280 (no page overflow; the 'swipe sideways' hint is shown at every width where the table scrolls: 440 px min table, hint on <=560 px, table fits from 561 px up), HEAD on all touched endpoints (200). (b) CI workflow line by line against real commands and docs, openapi regeneration byte-identical, seed:demo from an empty dir, Dockerfile read plus container-equivalent run, env-var matrix, production start-up refusals, HOST/TRUST_PROXY parsing. (c) harness clock: token expiry boundary, backwards/forwards jumps, negative elapsed, future attempts, week window edges, lockout windows, UTC-midnight seed, DST/month/year (none: pure epoch arithmetic). (d) stateful fuzz, ~40,500 steps over 16 runs (4 random-mix runs of 300-1,500 steps, 6 of 4,000 steps incl. 2 with random backwards clock steps, 3 deep-play runs of 3,000 steps reaching Master Lab exits, 1 deep run on Node 22.18.0), operations: unicode-colliding student/teacher registration and renames, e-mail case/NFC variants, class create with colliding names, joins (valid, lower-case, invalid), 3+ teachers cross-reading each other's classes (404 required), content transitions (legal and illegal) with audit-chain check, settings changes, vault attempts (right and wrong codes, lockout oracle), demo student and teacher reset interleaved with everything, play with hints/wrong/malformed answers and expiry, plus a parallel burst test (6 teacher registrations, 6 e-mail spellings, 6 class names, 4x12 content transitions, 8 starts, 10 answers, 6 unlocks, 10 joins). Invariants after every 50 steps and cross-views every 150: integrity_check/foreign_key_check, e-mail and teacher-name and class-name key uniqueness, audit chain and content_status agreement, attempt counters vs step_results vs hint_log vs answer_log, ledger sum = score = payload, completed attempts immutable, best score = max completed, completions, xp_events = best scores, fragments only for solved steps/completed missions, exits need all fragments + ok code try, master needs 3 exits, unlock order, roster/analytics/dashboard/profile/leaderboard/competencies/badges recomputed from raw SQLite with exact rational arithmetic. Result: 0 invariant violations and 0 responses >= 500 in all runs; the only deviations are the known exact-.5 rounding items (competency .5 ties, A37-005) and the documented [demo reset] audit rows (reviewed->draft written by the reset, outside the legal cycle by design). (e) npm audit (info level) 0/0, audit signatures verified, lockfile integrity, install scripts, no CDN in bundle. NOT challenged upward: connection caps A36-007/A38-001, uncapped class size, unthrottled GETs, badges() write lock, float .5 rounding, latent tie accumulation: each re-read and found as described, except A37-004 which is quantified in A39-004. NOT done: Docker build (daemon down, would have required starting colima), real screen reader, WebKit, real LLM provider, remote CI. Honest result: 0 P0 / 0 P1 / 0 P2 / 7 P3."
+}

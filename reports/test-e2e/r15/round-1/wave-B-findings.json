@@ -1,0 +1,70 @@
+{
+  "wave": "B",
+  "round": 15,
+  "states_reviewed": 340,
+  "findings": [
+    {
+      "id": "R15-B-01",
+      "severity": "P3",
+      "category": "copy",
+      "area": "describeError / spokenWait (web/src/ui/state.tsx)",
+      "viewport": "any",
+      "title": "A wait of 7141-7199 s prints \"120 minutes\" instead of \"2 hours\"; 3600 s prints \"60 minutes\"",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r15-B/t9.mjs (output: hdr 7199 -> \"Try again in 120 minutes.\", hdr 7200 -> \"2 hours\", hdr 3600 -> \"60 minutes\")",
+      "repro": "node t9.mjs (esbuild bundle ra.mjs of api.ts + state.tsx, fetch stub returning 429 with Retry-After 7199)",
+      "expected": "Boundary reads naturally (2 hours) or the minute branch stops before it rounds to 120",
+      "actual": "\"Try again in 120 minutes.\" next to \"Try again in 2 hours.\" one second later; the spec in the brief (minutes under 2 h) is met literally",
+      "fix_hint": "web/src/ui/state.tsx spokenWait: use Math.ceil(whole/60) < 120 as the branch test, or switch to hours from 3600 on",
+      "status": "open"
+    },
+    {
+      "id": "R15-B-02",
+      "severity": "P3",
+      "category": "identity",
+      "area": "nameTags / foldName (web/src/lib/faculty.ts)",
+      "viewport": "any",
+      "title": "Two clearly different names are tagged as namesakes: Cyrillic \"Андрей\"/\"Андреи\" (й vs и) and Vietnamese \"Lê Thị Hà\"/\"Lê Thị Hạ\"",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r15-B/t10.mjs (54 pairs, 3 mismatches, one of them my own typo)",
+      "repro": "node t10.mjs; or register the two students in one class and open the faculty roster: both rows get a #id tag",
+      "expected": "Distinct letters (Cyrillic й is a letter of its own, as docs/KNOWN_LIMITATIONS.md says for the server key) stay untagged",
+      "actual": "Both rows carry #id. Harmless (a tag only adds the id) but it tags two different people",
+      "fix_hint": "faculty.ts foldName: do not strip U+0306 after Cyrillic и/у/і and U+0308 after Cyrillic е (keep ё=е if wanted); Vietnamese tone marks are deliberately folded server side, so that half is by design",
+      "status": "open"
+    },
+    {
+      "id": "R15-B-03",
+      "severity": "P3",
+      "category": "layout",
+      "area": "sidebar in landscape phones (web/src/styles.css .app>aside)",
+      "viewport": "667x375, 812x375, 844x390 touch",
+      "title": "The sidebar scrolls away with the page; in a 375px-high landscape viewport the fifth nav item (Learning settings, 56px) starts below the fold and the nav is gone as soon as the page is scrolled",
+      "evidence": "/private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r15-B/shots/s2-667x375-Labmap.png, s3b.mjs (aside static, 2653px tall)",
+      "repro": "open Lab map at 667x375 with touch; the nav ends at y=396 of 375",
+      "expected": "all five items reachable without scrolling back to the top, or at least visible at once",
+      "actual": "reachable only by scrolling to the top; no overlap, clipping or horizontal scroll, every item is >= 44px",
+      "fix_hint": "make the landscape aside position:sticky/top:0 with overflow-y:auto and max-height:100vh (pre-existing, not a regression of round 14)",
+      "status": "open"
+    }
+  ],
+  "summary": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0,
+    "P3": 3
+  },
+  "verdict": "GREEN",
+  "round14_fix_verification": {
+    "R14-B-01": "HOLDS",
+    "R14-B-02": "HOLDS",
+    "R14-B-03": "PARTIAL (known, not fixed on purpose)",
+    "R14-B-04": "HOLDS",
+    "R14-B-05": "HOLDS",
+    "R14-C-01": "HOLDS",
+    "R14-C-02": "HOLDS",
+    "R14-C-03": "HOLDS",
+    "R14-C-05": "HOLDS",
+    "R14-C-07": "HOLDS",
+    "R14-C-06": "HOLDS"
+  },
+  "notes": "Stack: own API 6001 (DEMO_MODE, NODE_ENV=test), second API 6003 with default limits, Vite 6002; scratch /private/tmp/claude-501/-Users-1millnonstop-Downloads-escape-lab/d79a1deb-bec6-4b63-a442-e495d3f790d1/scratchpad/r15-B. 1) Normalizers vs REAL backend: esbuild bundle of normalizeLeaderboard/describeBoard/normalizeStudentDetail/normalizeFacultyDashboard/normalizeRoster run on every response: t3.mjs (127 students in 11 classes: ties of 2/5/25 incl. rank 1, ties spanning the 20-row edge (rank 19 and 20), 21 distinct students with viewers at rank 20 and 21, all-zero class, mixed zero/positive, zero-score completions (xp 0 with a mission done), class of 1, class of 1 with zero XP, no class, empty class, week/all x class/all = 4 boards per student), t4.mjs (fresh 0-XP student in the 38-student demo class (rank 39 of 38), empty demo class, student with 9 standard + 3 exits + Master + 24 replays: history 20, historyTotal 34, missionsCompleted 9 = 3+3+3), t6.mjs (240 random students, 3 teachers/6 classes, 0-2 class memberships each, random hints/wrongs/exits/master/replays, 3128 board fetches DURING play with 4 parallel workers + a racer fetching boards while XP is awarded, then 4330 total checks incl. every roster/detail/dashboard): 0 rejections. Demo guest before/after POST /demo/reset: ok. Dashboard studentsCompleted <= cohort.students held for every class including 100% completion and class of 0/1. Server computes a board in one synchronous pass so a mid-request XP change cannot produce a contradictory payload; I could not construct a legitimate state the strict checks reject. Deleted students: FK ON DELETE CASCADE removes class_members rows, no orphan path. Residual design risk (not a defect): loadProgress() is one Promise.all, so a rejected leaderboard payload takes down the vault and badges panels as well. 2) Retry-After: real 429s from 6003 (answer 120/min, hint 30/min, start 60/min, join 10/10min, vault 5 wrong codes, per-account login 8, guest sign-in 60/10min): bodies all carry retryAfterSeconds; UI reads \"Too many attempts. Try again in 60 seconds.\" (start), \"Too many incorrect codes. Try again in 10 minutes.\" (vault, keeps focus on the input), gate \"Too many attempts. Try again in 10 minutes.\"; exactly one alert each, never 0/NaN/duplicated. 38 synthetic header/body combinations (t9.mjs): header used when body has no positive numeric delay (empty/HTML body, details {} or array, string \"30\", 0, negative), header > 86400 ignored, HTTP-date handled, past date and garbage ignored, body > 1 day -> \"Try again later.\", 1e999 falls back to header, server sentences containing retry/trying again replaced once. 3) Layout: 14 viewports x 5 pages (s2.mjs): 280-1600 step 10 (s4.mjs) no horizontal scroll, no card overflow or overlap, Lab map cards fluid (248/268/288 px at 280/300/320); all aside buttons >= 44px when (max-width:900px) or pointer:coarse (incl. 1180x820 touch), not on a mouse desktop (41px, by design); mission player at 667x375/812x375/844x390 with a wrong-answer alert: no overflow, all targets >= 44. 4) Names: Alex/Álex/ALEX/NBSP/zero-width/fullwidth/fillers (U+3164, U+115F, U+1160, U+FFA0, Braille blank) tagged; Devanagari, Thai, Hangul, kana (が/か) pairs untagged; Arabic harakat and Hebrew niqqud folded; leaderboard names isolated (bdi), flag avatar kept (🇫🇷 Fran Dupont -> flag), \"Showing 1 of 1 ranked student.\" singular, unranked viewer row correct, content-review reviewer lines intact with (teacher #id) for RTL/Arabic/filler teacher names at 1440. 5) HEAD routes (200 no body, 405 Allow lists HEAD for GET routes and POST/OPTIONS for POST), password policy 400 shapes (short, spaces, NBSP, NFD, missing, number, > 200) fine; AI hints: the real provider cannot be reached (URL hard coded), so t13.mjs drives AnthropicHintProvider with a fake fetch: options are sent as A./B./C. by position (default decisions included), the guard caught 8/9 letter/ordinal leak phrasings on all 14 choice/decision steps (only lowercase \"Choose a.\" for option A missed, the documented article rule) and 0 false positives; UI chips are A.. by position and equal the server order on every choice/decision step of both full plays; 2 hints bought on hem-03 step 2 (375 touch) persist after reload with identical text and -30 equal to the API. 6) Full UI plays of 9 missions + 3 exits + Master Lab + exit at 375 touch and 1440 keyboard (full.mjs): score, totalXp, dashboard XP/level, leaderboard rank/XP equal to API after every mission (rank 41->37 of 42), case status (wrong/hints/penalty) equal to API after every step, 39 axe states per run: 0 violations, console clean, exactly one alert on wrong answers. Error injection (inj.mjs, 401/429/500/503 empty/200 empty/200 invalid JSON) on leaderboard, dashboard, hint, answer, teacher dashboard and student detail: exactly one role=alert each (401 -> silent guest recovery, loop guard alert after 3), Retry moves focus to the page h1, hint/answer failures keep focus on the triggering button; a REAL 250 s wait on hem-01 produced the expiry alert with focus on Restart, Restart focuses the question h1. Not testable here: real AI provider text, unanswered ports other than 6001-6003. Console only shows the browser own \"Failed to load resource\" lines for deliberate 4xx."
+}
