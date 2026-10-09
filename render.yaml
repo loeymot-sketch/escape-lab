@@ -1,0 +1,22 @@
+# Render blueprint for the demonstration API (docs/DEPLOY.md explains every step and the risk).
+# The API runs in DEMO mode: anyone who can reach it can open the guest and the teacher demo sessions. Only fictitious data is served.
+services:
+  - type: web
+    name: escape-lab-api
+    runtime: docker
+    rootDir: be
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: AUTH_SECRET
+        generateValue: true
+      # The exact origin of the Vercel site, without a trailing slash, for example https://escape-lab.vercel.app
+      - key: CORS_ORIGIN
+        sync: false
+      - key: DEMO_MODE
+        value: "1"
+      # Render puts one proxy in front of the container: the rate limits then see the visitor's address.
+      - key: TRUST_PROXY
+        value: "1"
+      # ALLOW_DEMO_IN_PRODUCTION is deliberately NOT set here. The API refuses to start in production with DEMO_MODE=1 until YOU add
+      # ALLOW_DEMO_IN_PRODUCTION=1 in the Render dashboard, knowing that this exposes passwordless demo sessions (see docs/DEPLOY.md).

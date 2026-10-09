@@ -4,6 +4,10 @@ Escape Lab is a biomedical learning MVP with a server-authoritative Node/SQLite 
 
 > **Status (read first).** Local academic prototype. Technically verified **locally only** (no remote CI, no independent human review; the audit rounds were run by AI agents of the same team). **Not biomedically validated**: questions, answers, explanations, hints, values and images are unreviewed by experts, and the images are illustrative, not clinical references. **Not production ready.** Not yet fully accessible: no real screen-reader test has been done, and the Blood Smear Code mission has no non-visual alternative. Convergence of the audit loop is **not** claimed: see `docs/FINAL_VALIDATION_REPORT.md` (top section) for the current numbers and `docs/KNOWN_LIMITATIONS.md` for open items.
 
+## Putting it online
+
+The site builds on Vercel from `web/`; the API needs its own host. Read `docs/DEPLOY.md` first: it explains the three settings and the risk of a public demonstration API (FR / EN).
+
 ## Run locally
 
 **Step 0, in every terminal:** run `node -v`; it must print **v22.18 or higher** (`nvm use 22`, or `export PATH=$HOME/.nvm/versions/node/v22.23.2/bin:$PATH`). The default shell Node on the machine that produced the evidence is 18. Only the test, typecheck, build and end-to-end commands check the version (`pretest`, `pretypecheck`, `prebuild`, `pretest:e2e`); `npm start` and `npm run seed:demo` have **no version preflight**, so on Node 18 they fail with a raw `node: bad option: --disable-warning=ExperimentalWarning` instead of a friendly message.
