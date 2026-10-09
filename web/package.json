@@ -7,7 +7,7 @@
     "node": ">=22.18.0"
   },
   "scripts": {
-    "pretest": "node scripts/check-node.mjs && node scripts/check-api-contract.mjs && node scripts/check-client-boundaries.mjs",
+    "pretest": "node scripts/check-node.mjs && node scripts/check-api-contract.mjs && node scripts/check-client-boundaries.mjs && tsc -p tsconfig.tests.json",
     "prebuild": "node scripts/check-node.mjs && node scripts/check-client-boundaries.mjs",
     "pretest:e2e": "node scripts/check-node.mjs",
     "dev": "vite",
@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:prod": "playwright test --project=production-bundle",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck:tests": "tsc -p tsconfig.tests.json"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.52.0",
+    "@types/node": "^22.20.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "jsdom": "^25.0.1",

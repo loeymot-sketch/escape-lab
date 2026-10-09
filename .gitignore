@@ -1,0 +1,19 @@
+# Dependencies and build output: rebuilt by `npm ci` / `npm run build`, never committed (they hold machine-specific binaries).
+node_modules/
+web/dist/
+web/dist-e2e/
+web/dist-e2e-unconfigured/
+web/playwright-report/
+web/test-results/
+*.tsbuildinfo
+
+# Local data and secrets
+be/data/
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.local
+
+# macOS
+.DS_Store
