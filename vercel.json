@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "web": {
+      "root": "web",
+      "framework": "vite",
+      "buildCommand": "VITE_API_URL=/api npm run build"
+    },
+    "be": {
+      "root": "be",
+      "runtime": "container",
+      "entrypoint": "Dockerfile.vercel"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "be" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
+}

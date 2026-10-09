@@ -1,0 +1,17 @@
+# Image of the demonstration API for a Vercel "service" (vercel.json, service "be"). The other Dockerfile (be/Dockerfile) is for Render, Fly.io or Railway.
+FROM node:22-alpine
+WORKDIR /app
+COPY package.json ./
+COPY src ./src
+# scripts/ holds the demo seed used by the entrypoint.
+COPY scripts ./scripts
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
+# Vercel sends traffic to PORT (default 80), so this image listens on 80 (it therefore runs as root inside Vercel's isolated container; port 80 cannot be bound by a normal user).
+# The disk is ephemeral: the fictitious demo database lives in /tmp and is rebuilt (about half a second) every time an instance starts.
+# DEMO_MODE=1 is the only way the interface can sign in, but the server REFUSES to start in production with it until the owner sets ALLOW_DEMO_IN_PRODUCTION=1 in the Vercel project settings.
+# AUTH_SECRET (at least 32 characters) and CORS_ORIGIN (the public https origin of the site) must also come from the project settings: see docs/DEPLOY.md.
+ENV NODE_ENV=production PORT=80 HOST=0.0.0.0 DB_PATH=/tmp/escape-lab.db DEMO_MODE=1 TRUST_PROXY=1
+EXPOSE 80
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["node", "--disable-warning=ExperimentalWarning", "src/server.ts"]
