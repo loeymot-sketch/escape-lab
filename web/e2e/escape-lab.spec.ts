@@ -205,10 +205,11 @@ test.describe('Escape Lab critical paths', () => {
     await resetDemoStudent(page);
     await openMission(page, 'mic-02');
     await expect(page.getByText(/Put the Gram stain steps/)).toBeVisible();
-    await page.getByRole('button', { name: 'Move down' }).first().click();
+    await page.locator('.drag-row').filter({ hasText: 'Decolorize' }).getByRole('button', { name: 'Move down' }).click();
     await page.locator('.drag-row').filter({ hasText: 'Crystal violet' }).getByRole('button', { name: 'Move up' }).click();
     await page.locator('.drag-row').filter({ hasText: 'Crystal violet' }).getByRole('button', { name: 'Move up' }).click();
-    await page.locator('.drag-row').filter({ hasText: 'Decolorize' }).getByRole('button', { name: 'Move up' }).click();
+    await page.locator('.drag-row').filter({ hasText: 'Lugol' }).getByRole('button', { name: 'Move up' }).click();
+    await page.locator('.drag-row').filter({ hasText: 'Lugol' }).getByRole('button', { name: 'Move up' }).click();
     await expect(page.getByRole('button', { name: 'Submit answer' })).toBeEnabled();
     await page.getByRole('button', { name: 'Submit answer' }).click();
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();

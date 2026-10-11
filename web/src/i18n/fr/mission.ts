@@ -42,6 +42,7 @@ export default {
   'Restarting…': 'Relance…',
   'Restart mission': 'Relancer la mission',
   'Return to mission control': 'Retourner au Centre de mission',
+  'Back to the laboratory': 'Retour au laboratoire',
   'This case is no longer available.': 'Ce dossier n’est plus disponible.',
   'The server no longer has this attempt, most likely because the guest session was reset (possibly in another tab). Nothing more can be submitted here. Start the mission again for a fresh attempt.':
     'Le serveur ne connaît plus cette tentative, très probablement parce que la session invitée a été réinitialisée (peut-être dans un autre onglet). Plus rien ne peut être validé ici. Relancez la mission pour commencer une nouvelle tentative.',

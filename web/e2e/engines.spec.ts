@@ -139,7 +139,7 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await expect(page.getByRole('button', { name: `Move up: ${before[0]}` })).toBeDisabled();
     await expect(page.getByRole('button', { name: `Move down: ${before.at(-1)}` })).toBeDisabled();
     await page.getByRole('button', { name: `Move down: ${before[0]}` }).click();
-    await expect(page.locator('p.sr-only[role="status"]')).toHaveText(`${before[0]} moved to position 2 of 5.`);
+    await expect(page.locator('p.sr-only[role="status"]')).toHaveText(`${before[0]} moved to position 2 of 6.`);
     await page.getByRole('button', { name: `Move up: ${before[0]}` }).click();
     expect(await rows.allTextContents()).toEqual(before);
 
@@ -147,7 +147,7 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await expect(submit(page)).toBeEnabled();
     await submit(page).click();
     await expect(page.getByRole('alert')).toContainText('Not quite.');
-    await expect(page.getByRole('alert')).toContainText(/\d of 5 in the right place/);
+    await expect(page.getByRole('alert')).toContainText(/\d of 6 in the right place/);
     expect(await rows.allTextContents()).toEqual(before);
     await expect(submit(page)).toBeEnabled();
     await expect(wrongAnswers(page)).toHaveText('1');

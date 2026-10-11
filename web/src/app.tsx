@@ -248,9 +248,18 @@ function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student,
     requestShellFocus();
     demoSession.clearAttempt();
     setPlay(null);
-    // Returning after a completed mission keeps the learner in that laboratory's mission list. The dashboard remains available
-    // through the shell navigation, while the same-room return preserves the mission sequence and makes the next case obvious.
-    if (toHome) setView(play?.labSlug ? 'lab' : 'home');
+    if (toHome) setView('home');
+    setEpoch((n) => n + 1);
+  };
+
+  const returnToLab = () => {
+    const slug = play?.labSlug;
+    if (!slug) return exitMission(true);
+    requestShellFocus();
+    demoSession.clearAttempt();
+    setPlay(null);
+    setLabSlug(slug);
+    setView('lab');
     setEpoch((n) => n + 1);
   };
 
@@ -320,7 +329,7 @@ function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student,
       </main>
     );
   }
-  if (play) return <ErrorBoundary><Mission key={play.attemptId} initial={play} onExit={() => exitMission()} onDone={() => exitMission(true)} /></ErrorBoundary>;
+  if (play) return <ErrorBoundary><Mission key={play.attemptId} initial={play} onExit={() => exitMission()} onDone={() => exitMission(true)} onReturnToLab={returnToLab} /></ErrorBoundary>;
 
   const page = (() => {
     switch (view) {

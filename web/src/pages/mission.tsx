@@ -20,7 +20,7 @@ const isExpiry = (e: unknown) => e instanceof ApiError && e.status === 409 && e.
 /** Refusals that prove this screen shows an out-of-date attempt (finished or moved on elsewhere, hints bought in another tab): the attempt is re-read. */
 const STALE_CODES = ['attempt_finished', 'wrong_step', 'no_more_hints', 'hint_in_progress'];
 
-export function Mission({ initial, onExit, onDone }: { initial: Attempt; onExit: () => void; onDone: () => void }) {
+export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: Attempt; onExit: () => void; onDone: () => void; onReturnToLab?: () => void }) {
   // Re-renders the whole screen when the display language is switched; the attempt, the answer and the timer live in state and are kept.
   const lang = useLang();
   const [attempt, setAttempt] = useState(initial);
@@ -349,7 +349,7 @@ export function Mission({ initial, onExit, onDone }: { initial: Attempt; onExit:
     }
   };
 
-  if (result) return <ResultScreen result={result} newFragments={fragments} onExit={onDone} />;
+  if (result) return <ResultScreen result={result} newFragments={fragments} onExit={onDone} onReturnToLab={onReturnToLab} />;
   if (!step) {
     // A completed attempt whose result has not been fetched yet (for example completed in another tab).
     return <CompletedFetch attemptId={attempt.attemptId} onResult={setResult} onExit={onDone} />;
@@ -559,7 +559,7 @@ export function resultXpNote(result: Pick<MissionResult, 'newBest' | 'xpAwarded'
   return t('New personal best: {sign}{xp} XP added to your total.', { sign: result.xpAwarded > 0 ? '+' : '', xp: formatInt(result.xpAwarded) });
 }
 
-export function ResultScreen({ result, newFragments, onExit }: { result: MissionResult; newFragments: Fragment[]; onExit: () => void }) {
+export function ResultScreen({ result, newFragments, onExit, onReturnToLab }: { result: MissionResult; newFragments: Fragment[]; onExit: () => void; onReturnToLab?: () => void }) {
   const lang = useLang();
   // The result replaces a long case page: start at its top, not wherever the Submit button was.
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -604,7 +604,8 @@ export function ResultScreen({ result, newFragments, onExit }: { result: Mission
           </ul>
         </div>
       )}
-      <button type="button" className="primary" onClick={onExit}>{t('Return to mission control')} <ArrowRight size={16} aria-hidden="true" /></button>
+      {onReturnToLab && <button type="button" className="primary" onClick={onReturnToLab}>{t('Back to the laboratory')} <ArrowRight size={16} aria-hidden="true" /></button>}
+      <button type="button" className={onReturnToLab ? 'ghost' : 'primary'} onClick={onExit}>{t('Return to mission control')} <ArrowRight size={16} aria-hidden="true" /></button>
     </main>
   );
 }
