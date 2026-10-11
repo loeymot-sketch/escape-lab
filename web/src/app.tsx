@@ -23,6 +23,7 @@ import './visual-refresh.css';
 import './polish.css';
 import './about.css';
 import './refine.css';
+import './neon-theme.css';
 
 type Role = 'student' | 'teacher';
 
