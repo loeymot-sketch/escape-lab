@@ -44,6 +44,9 @@ aside, .app>aside {
 .brand, .mobile-brand { color: #f3fbff; }
 .brand-mark { background: #0a3854; color: var(--teal); box-shadow: 0 0 18px rgba(25,216,255,.28); }
 .brand>span:last-child>span, .mobile-brand span { color: var(--teal); }
+.author-credit { margin: 10px 4px 0; color: #a9c4d8; font-size: 10px; line-height: 1.45; }
+.author-credit strong { color: #ffc83d; font-weight: 800; }
+.landing .author-credit { margin: 14px 0 0; font-size: 12px; }
 .eyebrow { color: #71dfff; }
 .side-status { color: #86abc5; }
 .pulse { background: #50e6a0; box-shadow: 0 0 0 4px rgba(80,230,160,.15), 0 0 14px rgba(80,230,160,.7); }
@@ -148,5 +151,6 @@ header { border-color: rgba(35, 117, 157, .55); }
 @media (max-width: 600px) {
   .app>aside { background: rgba(4, 25, 43, .98); }
   .app>aside nav button.active, .app>aside nav button:hover { background: rgba(15, 105, 143, .5); }
+  .app>aside .author-credit { margin: 8px 0 0; text-align: center; font-size: 10px; }
   .landing-inner { background: linear-gradient(180deg, rgba(4,21,34,.12), rgba(4,21,34,.98) 28%); }
 }

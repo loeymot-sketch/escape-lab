@@ -23,6 +23,7 @@ export function GuestGate({ loading, error, retry }: { loading: boolean; error: 
       <div className="landing-lang" role="region" aria-label="Langue / Language"><LanguageSwitch /></div>
       <main className="landing-inner">
         <div className="brand large"><span className="brand-mark"><FlaskConical size={24} aria-hidden="true" /></span><span>ESCAPE<span>LAB</span></span></div>
+        <div className="author-credit"><span>{t('Project conceived and developed with passion by')}</span> <strong>Sawssen Jemaiel</strong></div>
         <div className="landing-kicker">{t('LabEscape · virtual laboratory')}</div>
         {loading
           ? <div role="status" aria-live="polite"><h1>{t('Preparing your investigation…')}</h1><p>{t('Opening a guided biomedical investigation with a guest demo session.')}</p></div>
@@ -236,6 +237,7 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
       <aside aria-label={t('Primary')}>
         <div className="brand"><span className="brand-mark"><FlaskConical size={19} aria-hidden="true" /></span><span>ESCAPE<span>LAB</span></span></div>
         <div className="eyebrow">{t('BIOMEDICAL TRAINING')}</div>
+        <div className="author-credit"><span>{t('Project conceived and developed with passion by')}</span> <strong>Sawssen Jemaiel</strong></div>
         <nav aria-label={t('Sections')}>
           {teacher
             ? (

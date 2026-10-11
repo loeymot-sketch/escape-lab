@@ -37,6 +37,7 @@ export default {
   'Skip to main content': 'Aller au contenu principal',
   'Primary': 'Principale',
   'BIOMEDICAL TRAINING': 'FORMATION BIOMÉDICALE',
+  'Project conceived and developed with passion by': 'Projet conçu et développé avec passion par',
   'Sections': 'Rubriques',
   'Faculty': 'Enseignant',
   'Investigations': 'Enquêtes',
