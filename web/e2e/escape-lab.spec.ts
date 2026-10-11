@@ -210,6 +210,7 @@ test.describe('Escape Lab critical paths', () => {
     await page.locator('.drag-row').filter({ hasText: 'Crystal violet' }).getByRole('button', { name: 'Move up' }).click();
     await page.locator('.drag-row').filter({ hasText: 'Lugol' }).getByRole('button', { name: 'Move up' }).click();
     await page.locator('.drag-row').filter({ hasText: 'Lugol' }).getByRole('button', { name: 'Move up' }).click();
+    await page.locator('.drag-row').filter({ hasText: 'Lugol' }).getByRole('button', { name: 'Move up' }).click();
     await expect(page.getByRole('button', { name: 'Submit answer' })).toBeEnabled();
     await page.getByRole('button', { name: 'Submit answer' }).click();
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
