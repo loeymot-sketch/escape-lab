@@ -116,6 +116,15 @@ test('missions unlock in order; the Master Lab needs three cleared labs', async 
   assert.equal(labs.filter((l: any) => l.state === 'current').length, 1);
 });
 
+test('the Master Lab unlocks after all standard missions, before exit codes are entered', async () => {
+  const u = await h.signup('Mission Finisher');
+  for (const id of ['hem-01', 'hem-02', 'hem-03', 'mic-01', 'mic-02', 'mic-03', 'bio-01', 'bio-02', 'bio-03']) await solve(h, u.token, id);
+  const labs = (await h.call('GET', '/api/labs', { token: u.token })).body.labs;
+  assert.equal(labs.find((l: any) => l.slug === 'master').state, 'available');
+  assert.equal((await h.call('GET', '/api/dashboard', { token: u.token })).body.labsCompleted, 3);
+  assert.equal((await h.call('POST', '/api/missions/master-01/start', { token: u.token })).status, 201);
+});
+
 test('answers must target the current step and be well-formed', async () => {
   const u = await h.signup('Shape');
   const m = mission('bio-01');

@@ -248,8 +248,9 @@ function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student,
     requestShellFocus();
     demoSession.clearAttempt();
     setPlay(null);
-    // The result screen offers "Return to mission control": that is the dashboard, whichever screen the mission was started from.
-    if (toHome) setView('home');
+    // Returning after a completed mission keeps the learner in that laboratory's mission list. The dashboard remains available
+    // through the shell navigation, while the same-room return preserves the mission sequence and makes the next case obvious.
+    if (toHome) setView(play?.labSlug ? 'lab' : 'home');
     setEpoch((n) => n + 1);
   };
 

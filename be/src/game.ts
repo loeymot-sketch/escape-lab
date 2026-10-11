@@ -113,10 +113,11 @@ export class Game {
     return new Set(this.all<{ mission_id: string }>('SELECT mission_id FROM mission_best WHERE user_id = ?', uid).map((r) => r.mission_id));
   }
 
-  /** "Labs completed": the standard labs (hematology, microbiology, biochemistry) whose exit code was entered, out of STANDARD_LAB_SLUGS.length.
-   *  The Master Lab is the capstone with its own badge and is not counted, so every view (dashboard, profile, leaderboard, roster, analytics) agrees. */
-  private labsCompleted(exits: Set<string>): number {
-    return STANDARD_LAB_SLUGS.filter((s) => exits.has(s)).length;
+  /** "Labs completed": standard labs whose complete mission sequence is finished, out of STANDARD_LAB_SLUGS.length.
+   *  Entering the exit code remains a separate escape action; it must not keep the Master Lab locked after all missions are done. */
+  private labsCompleted(uid: number): number {
+    const done = this.completedIds(uid);
+    return STANDARD_LAB_SLUGS.filter((slug) => missionsOf(slug).every((m) => done.has(m.id))).length;
   }
 
   private exits(uid: number): Set<string> {
@@ -136,7 +137,7 @@ export class Game {
     if (!lab.playable) return { state: 'coming_soon' };
     if (exits.has(lab.slug)) return { state: 'completed' };
     if (lab.slug === 'master') {
-      const n = STANDARD_LAB_SLUGS.filter((s) => exits.has(s)).length;
+      const n = this.labsCompleted(uid);
       if (n < STANDARD_LAB_SLUGS.length) return { state: 'locked', lockedReason: `Clear ${STANDARD_LAB_SLUGS.length} labs (${n} of ${STANDARD_LAB_SLUGS.length} cleared)` };
     }
     return { state: 'available' };
@@ -656,7 +657,7 @@ export class Game {
       user: { name: me.name, level: me.level, xp: me.xp, levelProgress: { into: me.into, size: me.size } },
       overall: { completedMissions: standardDone, totalMissions, pct: Math.round((100 * standardDone) / totalMissions) },
       streakDays: this.streak(uid),
-      labsCompleted: this.labsCompleted(exits),
+      labsCompleted: this.labsCompleted(uid),
       continue: cont,
       labs: labs.map((l) => ({ slug: l.slug, name: l.name, state: l.state, completed: l.missions.completed, total: l.missions.total, pct: Math.round((100 * l.missions.completed) / l.missions.total) })),
       badges: { earned: badges.filter((b) => b.earned).length, total: badges.length },
@@ -745,7 +746,7 @@ export class Game {
       xp: { total: xp, earned: this.earnedXp(uid), carriedOver: u.xp_carry, ...levelProgress(xp) },
       stats: {
         accuracyPct: Game.meanPct(rows), avgMissionSec: avgSec, avgMissionTime: avgSec === null ? null : mmss(avgSec),
-        labsCompleted: this.labsCompleted(exits), labsTotal: STANDARD_LAB_SLUGS.length,
+        labsCompleted: this.labsCompleted(uid), labsTotal: STANDARD_LAB_SLUGS.length,
         badgesEarned: badges.filter((b) => b.earned).length, badgesTotal: badges.length,
       },
       settings: { language: u.language as 'en' | 'fr', sound: u.sound === 1, reduceMotion: u.reduce_motion === 1, notifications: u.notifications === 1 },
@@ -879,7 +880,7 @@ export class Game {
     const all = ids.map((id) => {
       const xp = scope === 'all' ? this.totalXp(id) : (this.one<{ s: number | null }>('SELECT SUM(delta) AS s FROM xp_events WHERE user_id = ? AND at > ?', id, since)?.s ?? 0);
       const exits = this.exits(id);
-      return { id, name: Game.shortName(names.get(id) ?? '?'), xp, labs: this.labsCompleted(exits), accuracyPct: Game.meanPct(this.standardRows(this.bestRows(id))), you: id === uid };
+      return { id, name: Game.shortName(names.get(id) ?? '?'), xp, labs: this.labsCompleted(id), accuracyPct: Game.meanPct(this.standardRows(this.bestRows(id))), you: id === uid };
     }).filter((r) => r.xp > 0);
     // `total` is the number of students in the cohort who have XP in the window: the same figure for every viewer. A viewer without XP is not
     // ranked (they are not in `rows` and not counted); their own row comes back as `me`, placed below everyone who is ranked.
@@ -893,7 +894,7 @@ export class Game {
     if (!me) {
       const xp = scope === 'all' ? this.totalXp(uid) : (this.one<{ s: number | null }>('SELECT SUM(delta) AS s FROM xp_events WHERE user_id = ? AND at > ?', uid, since)?.s ?? 0);
       const exits = this.exits(uid);
-      me = { rank: ranked.filter((r) => r.xp > xp).length + 1, id: uid, name: Game.shortName(names.get(uid) ?? '?'), xp, labs: this.labsCompleted(exits), accuracyPct: Game.meanPct(this.standardRows(this.bestRows(uid))), you: true };
+      me = { rank: ranked.filter((r) => r.xp > xp).length + 1, id: uid, name: Game.shortName(names.get(uid) ?? '?'), xp, labs: this.labsCompleted(uid), accuracyPct: Game.meanPct(this.standardRows(this.bestRows(uid))), you: true };
     }
     return { scope, cohort, rows: top.map(({ id: _id, ...r }) => r), me: { ...me, id: undefined }, total: ranked.length, cohortAvailable: cohort === 'all' || ids.length > 0 };
   }
@@ -962,7 +963,7 @@ export class Game {
       id: s.id, name: s.name, xp, level: levelProgress(xp).level,
       missionsCompleted: rows.length, progressPct, accuracyPct,
       hintsUsed: rows.reduce((a, r) => a + r.hints_total, 0), avgMissionSec: avgSec, avgMissionTime: avgSec === null ? null : mmss(avgSec),
-      labsEscaped: this.labsCompleted(this.exits(s.id)), lastActiveAt: last, idleDays: last === null ? null : Math.floor((this.now() - last) / DAY),
+      labsEscaped: this.labsCompleted(s.id), lastActiveAt: last, idleDays: last === null ? null : Math.floor((this.now() - last) / DAY),
       active: !inactive, needsAttention,
       attentionReason: needsAttention ? (accuracyPct !== null && accuracyPct < ATTENTION_ACCURACY ? `Accuracy under ${ATTENTION_ACCURACY}%` : `No activity for ${idleDays} days`) : null,
     };

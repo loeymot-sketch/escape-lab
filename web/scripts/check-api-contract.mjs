@@ -53,8 +53,10 @@ function findApiCalls(text) {
 /** Every reference to the client must be a direct call: an alias (`const a = api`) or a callback would hide its route from this scan. */
 function countClientReferences(text) {
   const code = text
-    .replace(/import[\s\S]*?from\s*['"][^'"]+['"]/g, '')
-    .replace(/(['"`])(?:\\.|(?!\1)[^\\])*\1/g, '""')
+    .replace(/import\s+(?:type\s+)?(?:\{[^}]*\}|[^;\n]+)\s+from\s*['"][^'"]+['"]\s*;?/g, '')
+    // Keep string removal line-bounded: the old expression could start at an apostrophe in prose and swallow a later api() call.
+    .replace(/(['"])(?:\\.|(?!\1)[^\\\r\n])*\1/g, '""')
+    .replace(/`(?:\\.|[^`])*`/g, '""')
     .replace(/\bfunction\s+api\b/g, '');
   return [...code.matchAll(/(?<![.\w$])api\b(?!\s*:)/g)].length;
 }
