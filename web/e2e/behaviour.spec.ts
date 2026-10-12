@@ -326,6 +326,9 @@ test.describe('session recovery', () => {
 
 test.describe('dashboard call to action follows the server', () => {
   test.beforeEach(async ({ page }) => { await resetDemo(page); });
+  // StrictMode can leave a second mocked dashboard request in flight after the heading is ready.
+  // Finish those handlers before the page fixture closes, so a late route.fetch never contaminates the next scenario.
+  test.afterEach(async ({ page }) => { await page.unrouteAll({ behavior: 'wait' }); });
 
   test('no continue target: "Explore laboratory map" really opens the map', async ({ page }) => {
     await page.route('**/api/dashboard', (route) => patchJson(route, (d) => ({ ...d, continue: null })));
@@ -345,11 +348,11 @@ test.describe('dashboard call to action follows the server', () => {
     await expect(page.getByRole('button', { name: 'Start the next investigation' })).toBeVisible();
     await startMissionViaUi(page, 'Microbiology Lab', 'Petri Dish Mystery');
     const id = await attemptId(page);
-    await page.getByRole('button', { name: '← Exit mission' }).click();
+    await page.getByRole('button', { name: /Exit mission/ }).click();
     await page.getByRole('button', { name: 'Investigations', exact: true }).click();
     await expect(homeHeading(page)).toBeVisible();
     await page.getByRole('button', { name: 'Resume active investigation' }).click();
-    await expect(page.getByText(/CASE FILE · Microbiology/)).toBeVisible();
+    await expect(page.getByText('CASE FILE · Microbiology', { exact: true })).toBeVisible();
     expect(await attemptId(page)).toBe(id);
   });
 });
@@ -367,8 +370,8 @@ test.describe('lab lobby, map and leaderboard', () => {
 
   test('the lobby lets the learner pick any available mission, not always the first', async ({ page }) => {
     await startMissionViaUi(page, 'Hematology Lab', 'Anemia Detective');
-    await expect(page.getByText(/CASE FILE · Hematology/)).toBeVisible();
-    await page.getByRole('button', { name: '← Exit mission' }).click();
+    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: /Exit mission/ }).click();
     await page.getByRole('button', { name: 'Lab map' }).click();
     await page.getByRole('button', { name: 'Enter Clinical Biochemistry Lab' }).click();
     await expect(page.getByText('Complete mission 01 to unlock')).toHaveCount(1);
@@ -517,7 +520,7 @@ test.describe('rate limits (429) are shown as an alert with a retry hint, and no
     expect(await attemptId(page)).toBeNull();
     await page.unroute('**/api/missions/hem-01/start');
     await page.getByRole('button', { name: 'Replay Blood Smear Code' }).click();
-    await expect(page.getByText(/CASE FILE · Hematology/)).toBeVisible();
+    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
   });
 });
 
@@ -539,14 +542,14 @@ test.describe('buttons that start something say so and cannot be pressed twice',
     await expect(page.locator('.picker-row button:enabled')).toHaveCount(0);
     await busy.click({ force: true });
     gate.release();
-    await expect(page.getByText(/CASE FILE · Hematology/)).toBeVisible();
+    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     expect(starts).toBe(1);
   });
 
   test('dashboard: the main button says "Starting…" and the lab cards are disabled until the mission opens', async ({ page }) => {
     const gate = await slow(page, /\/api\/missions\/[^/]+\/start$/);
     await page.getByRole('button', { name: 'Start the next investigation' }).click();
-    const cta = page.locator('.hero .primary');
+    const cta = page.locator('.dashboard-next-step .primary');
     await expect(cta).toHaveText('Starting…');
     await expect(cta).toBeDisabled();
     await expect(page.locator('.lab-card-foot button:enabled')).toHaveCount(0);

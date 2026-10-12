@@ -1,6 +1,7 @@
 /** Mission screen (pages/mission.tsx): player, case file, feedback, hints, timer, and result. */
 export default {
   'Mission progress': 'Progression de la mission',
+  'Mission overview': 'Vue d’ensemble de la mission',
   'Step {ordinal} of {total}': 'Étape {ordinal} sur {total}',
   'Educational simulation': 'Simulation pédagogique',
   'Step {ordinal} complete': 'Étape {ordinal} terminée',
@@ -13,7 +14,6 @@ export default {
   'IN ANALYSIS': 'EN ANALYSE',
   '{count} indicators': '{count} indicateurs',
   'YOUR RESPONSE': 'VOTRE RÉPONSE',
-  'Validate my answer': 'Valider ma réponse',
   'Educational scenario — not clinical guidance': 'Simulation pédagogique — ne constitue pas un conseil médical.',
   'SCORE': 'POINTS OBTENUS',
   'Mission score': 'Score de la mission',
@@ -83,7 +83,7 @@ export default {
   'New personal best: {sign}{xp} XP added to your total.': 'Nouveau record personnel : {sign}{xp} XP ajoutés à votre total.',
   'CASE COMPLETE': 'DOSSIER TERMINÉ',
   'Investigation complete.': 'Enquête terminée.',
-  'The backend has recorded your result for “{title}”.': 'Le serveur a enregistré votre résultat pour « {title} ».',
+  'Case archived. Here is your mission debrief.': 'Dossier archivé. Voici le bilan de votre mission.',
   'Score': 'Score',
   '{score} of {max} XP': '{score} sur {max} XP',
   'Server-calculated': 'Calculé par le serveur',

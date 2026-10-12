@@ -12,9 +12,9 @@ export const ARTWORK = {
 };
 
 /** The dashboard heading depends on the learner: a fresh one is invited to start, one with progress to continue. */
-export const FIRST_VISIT_HEADING = /Choose your first investigation/;
-export const CONTINUE_HEADING = /Continue your investigations/;
-export const HOME_HEADING = /Choose your first investigation|Continue your investigations|All investigations complete/;
+export const FIRST_VISIT_HEADING = /Choose a laboratory/;
+export const CONTINUE_HEADING = /Choose a laboratory/;
+export const HOME_HEADING = /Choose a laboratory/;
 export const homeHeading = (page: Page) => page.getByRole('heading', { name: HOME_HEADING });
 
 /** The three decision options as the learner reads them (the backend's authored labels; the option ids are never shown). */

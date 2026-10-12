@@ -425,7 +425,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
     <div className={`player mission-${attempt.labSlug}`}>
       <header>
         {/* Leaving while an answer is being checked would drop its outcome (a recorded answer whose result the learner never sees). */}
-        <button type="button" className="back-button" disabled={busy} onClick={onExit}><ArrowLeft size={18} aria-hidden="true" /><span className="back-label">{t('Exit mission')}</span></button>
+        <button type="button" className="back-button" aria-label={t('Exit mission')} disabled={busy} onClick={onExit}><ArrowLeft size={18} aria-hidden="true" /><span className="back-label">{t('Exit mission')}</span></button>
         <div className="player-title">
           <span className="eyebrow">{t('CASE FILE · {lab}', { lab: t(labName(attempt.labSlug)) })}</span>
           <b>{t(attempt.missionTitle)}</b>
@@ -435,6 +435,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
         </div>
         <LanguageSwitch />
       </header>
+      <section className="mission-overview" aria-label={t('Mission overview')}>
       <div className="player-progress" role="progressbar" aria-label={t('Mission progress')} aria-valuemin={1} aria-valuemax={step.of} aria-valuenow={step.ordinal} aria-valuetext={t('Step {ordinal} of {total}', { ordinal: step.ordinal, total: step.of })}><span style={{ width: `${pct}%` }} /></div>
       <section className="mission-hero" aria-labelledby="mission-title">
         <img src={labArtwork(attempt.labSlug)} alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
@@ -453,6 +454,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
           return <li className={`mission-step ${state}`} aria-current={state === 'current' ? 'step' : undefined} aria-label={t(state === 'done' ? 'Step {ordinal} complete' : state === 'current' ? 'Current step {ordinal}' : 'Upcoming step {ordinal}', { ordinal })} key={ordinal}>{state === 'done' ? <Check size={14} aria-hidden="true" /> : <span>{String(ordinal).padStart(2, '0')}</span>}</li>;
         })}
       </ol>
+      </section>
       <main className="case-layout">
         <section className="case-panel" aria-labelledby="case-prompt">
           <div className="question-section-label"><span><Activity size={15} aria-hidden="true" />{t('YOUR INVESTIGATION')}</span><span>{t('QUESTION {ordinal}', { ordinal: step.ordinal })}</span></div>
@@ -538,7 +540,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
           {narrow && assistant}
 
           <button type="button" className="primary submit" ref={submitRef} disabled={inFlight || closed || !ready} onClick={() => void submit()}>
-            {busy ? t('Checking…') : t('Validate my answer')} <ArrowRight size={17} aria-hidden="true" />
+            {busy ? t('Checking…') : t('Submit answer')} <ArrowRight size={17} aria-hidden="true" />
           </button>
           <p className="mission-disclaimer">{t('Educational scenario — not clinical guidance')}</p>
         </section>
@@ -606,7 +608,7 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onRe
           <p>{t(result.mission.title)}</p>
         </div>
       </section>
-      <p className="result-lede result-record">{t('The backend has recorded your result for “{title}”.', { title: t(result.mission.title) })}</p>
+      <p className="result-lede result-record">{t('Case archived. Here is your mission debrief.')}</p>
       <section className="result-score-card" aria-label={t('Mission score')}>
         <div className="result-score-top"><span><Sparkles size={18} aria-hidden="true" />{t('SCORE')}</span><b>{formatInt(result.score)} <small>/ {formatInt(result.maxScore)} XP</small></b></div>
         <div className="result-score-bar" role="progressbar" aria-label={t('Score')} aria-valuemin={0} aria-valuemax={result.maxScore} aria-valuenow={Math.min(result.maxScore, result.score)}><i style={{ width: `${result.maxScore > 0 ? Math.max(0, Math.min(100, (result.score / result.maxScore) * 100)) : 0}%` }} /></div>

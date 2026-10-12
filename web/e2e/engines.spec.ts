@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ARTWORK, arrangeOrder, caseStatus, clickArtwork, completeMissionViaApi, freshStudent, openAs, resetDemo, startMissionViaUi, submit, DECISION } from './support/helpers';
+import { ARTWORK, arrangeOrder, caseStatus, chooseCorrectOption, clickArtwork, completeMissionViaApi, freshStudent, openAs, resetDemo, startMissionViaUi, submit, DECISION } from './support/helpers';
 import { MISSION_BY_ID } from './support/content';
 
 const wrongAnswers = (page: Page) => caseStatus(page, 'Wrong answers');
@@ -24,7 +24,7 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await expect(submit(page)).toBeEnabled();
 
     await page.reload();
-    await expect(page.getByText(/CASE FILE · Hematology/)).toBeVisible();
+    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     await expect(wrongAnswers(page)).toHaveText('1');
     await expect(penalty(page)).toHaveText('-10');
     await expect(submit(page)).toBeDisabled();
@@ -68,7 +68,7 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await expect(submit(page)).toBeEnabled();
 
     await page.reload();
-    await expect(page.getByText(/CASE FILE · Clinical Biochemistry/)).toBeVisible();
+    await expect(page.getByText('CASE FILE · Clinical Biochemistry', { exact: true })).toBeVisible();
     await expect(wrongAnswers(page)).toHaveText('1');
     await expect(penalty(page)).toHaveText('-10');
     await option(page, 'Kidney').click();
@@ -166,6 +166,17 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await startMissionViaUi(page, 'Microbiology Lab', 'Petri Dish Mystery');
     const selects = page.locator('select');
     await expect(selects).toHaveCount(4);
+    const evidence = page.locator('.match-evidence img');
+    await expect(evidence).toHaveCount(4);
+    await expect(evidence.nth(0)).toHaveAttribute('alt', 'Pink MacConkey agar plate with pink colonies.');
+    await expect(evidence.nth(1)).toHaveAttribute('alt', 'Blood agar plate with pale colonies and clear halos.');
+    await expect(evidence.nth(2)).toHaveAttribute('alt', 'Red blood agar with concentric rings of spreading growth.');
+    await expect(evidence.nth(3)).toHaveAttribute('alt', 'Green agar plate with green-pigmented colonies.');
+    for (let i = 0; i < 4; i += 1) {
+      const image = evidence.nth(i);
+      await image.scrollIntoViewIfNeeded();
+      await expect.poll(() => image.evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true);
+    }
     const lefts = step.data.left!.map((l) => l.id);
     const rights = lefts.map((l) => key[l]!);
     // A deliberately wrong but valid (distinct) assignment: rotate the correct rights.
@@ -185,5 +196,26 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await expect(submit(page)).toBeEnabled();
     await submit(page).click();
     await complete(page);
+  });
+
+  test('a completed biochemistry mission returns to its laboratory and stays saved after reload', async ({ page }) => {
+    await startMissionViaUi(page, 'Clinical Biochemistry Lab', 'Organ Rescue Mission');
+    for (const [index] of MISSION_BY_ID.get('bio-01')!.steps.entries()) {
+      await chooseCorrectOption(page, 'bio-01', index);
+      await submit(page).click();
+      if (index < 2) await page.getByRole('button', { name: 'Continue to next step' }).click();
+    }
+    await complete(page);
+    await page.getByRole('button', { name: 'Back to the laboratory' }).click();
+    const savedMission = page.locator('.picker-row').filter({ hasText: 'Organ Rescue Mission' });
+    await expect(page.getByRole('heading', { name: 'Clinical Biochemistry Lab', exact: true })).toBeVisible();
+    await expect(savedMission).toContainText('Completed');
+    await expect(savedMission.getByRole('button', { name: 'Replay Organ Rescue Mission' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start Lab Value Hacker' })).toBeEnabled();
+    await page.reload();
+    await page.getByRole('button', { name: 'Lab map', exact: true }).click();
+    await page.getByRole('button', { name: 'Enter Clinical Biochemistry Lab' }).click();
+    await expect(savedMission).toContainText('Completed');
+    await expect(page.getByRole('button', { name: 'Start Lab Value Hacker' })).toBeEnabled();
   });
 });

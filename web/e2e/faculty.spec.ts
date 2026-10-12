@@ -16,11 +16,11 @@ test.describe('faculty roster, detail and class scope', () => {
     await page.getByRole('button', { name: `Open ${target}` }).click();
     await expect(page.getByRole('heading', { name: 'Student detail' })).toBeVisible();
     await expect(page.locator('.profile-card h2')).toHaveText(target);
-    await expect(page.getByLabel('Student')).toHaveValue(/\d+/);
+    await expect(page.getByLabel('Student', { exact: true })).toHaveValue(/\d+/);
     await expect(page.getByText('ATTEMPT HISTORY')).toBeVisible();
     // The picker switches student without leaving the page.
     const other = names[0]!;
-    await page.getByLabel('Student').selectOption({ label: other });
+    await page.getByLabel('Student', { exact: true }).selectOption({ label: other });
     await expect(page.locator('.profile-card h2')).toHaveText(other);
     // No invented program or level.
     await expect(page.locator('.profile-card')).not.toContainText('Biomedical');
@@ -43,7 +43,7 @@ test.describe('faculty roster, detail and class scope', () => {
     page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') warnings.push(m.text()); });
     await nav(page, 'Student detail');
     await expect(page.getByText('ATTEMPT HISTORY')).toBeVisible();
-    await page.getByLabel('Student').selectOption({ index: 1 });
+    await page.getByLabel('Student', { exact: true }).selectOption({ index: 1 });
     await expect(page.getByText('ATTEMPT HISTORY')).toBeVisible();
     expect(warnings.filter((w) => /key/i.test(w))).toEqual([]);
   });

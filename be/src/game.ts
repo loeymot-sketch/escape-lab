@@ -5,7 +5,7 @@ import { StandardOnlyProvider, exceedsHintLimit, hasSubstance, leaksAnswer } fro
 import { LABS, LAB_BY_SLUG, MISSIONS, MISSION_BY_ID, STANDARD_LAB_SLUGS, STEP_COMPETENCIES, exitCode, fragmentSlots, missionsOf } from './content.ts';
 import type { DB } from './db.ts';
 import { tx } from './db.ts';
-import { checkResponse, publicStep, revealedValues } from './engines.ts';
+import { checkResponse, publicStep, recheckForResponse, revealedValues } from './engines.ts';
 import { ApiError, bad, conflict, forbidden, hasVisibleCharacter, notFound, visibleLength } from './http.ts';
 import { classNameKey, hasBidiControl, imitatesReviewerSuffix, isBlankName, nameKey, sameName } from './names.ts';
 import { HINT_PENALTY, WRONG_PENALTY, computeScore, levelProgress, maxScore, mmss } from './scoring.ts';
@@ -411,7 +411,7 @@ export class Game {
         const fresh = this.attemptRow(a.id, uid);
         return {
           correct: false,
-          feedback: { verdict: 'Incorrect' as const, message: `Not quite. ${step.recheck}` },
+          feedback: { verdict: 'Incorrect' as const, message: `Not quite. ${recheckForResponse(step, response)}` },
           progress: verdict.progress ?? null,
           penaltyXp: -WRONG_PENALTY,
           attempt: this.attemptView(fresh),

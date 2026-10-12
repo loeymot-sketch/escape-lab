@@ -16,6 +16,14 @@ export const DEFAULT_DECISIONS: Option[] = [
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
+/** A server-authored pointer for the selected distractor, never a client-derived correction. */
+export function recheckForResponse(step: Step, response: unknown): string {
+  if (!isObj(response) || (step.kind !== 'choice' && step.kind !== 'decision')) return step.recheck;
+  const selected = response[step.kind];
+  const message = typeof selected === 'string' ? step.recheckByOption?.[selected] : undefined;
+  return typeof message === 'string' ? message : step.recheck;
+}
+
 export function checkResponse(step: Step, response: unknown): Verdict {
   if (!isObj(response)) throw bad('response must be an object');
   const key = step.key;

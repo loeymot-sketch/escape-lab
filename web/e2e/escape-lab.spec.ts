@@ -81,10 +81,10 @@ test.describe('Escape Lab critical paths', () => {
     await page.goto('/');
     await resetDemoStudent(page);
     await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
-    await expect(page.getByText(/CASE FILE · Hematology/)).toBeVisible();
+    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     await expect(page.getByText('STEP 1 / 1')).toBeVisible();
     await page.reload();
-    await expect(page.getByText(/CASE FILE · Hematology/)).toBeVisible();
+    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     await expect(page.getByText('STEP 1 / 1')).toBeVisible();
   });
 
@@ -131,7 +131,7 @@ test.describe('Escape Lab critical paths', () => {
     await clickArtwork(page, ARTWORK.smear);
     await page.getByRole('button', { name: 'Submit answer' }).click();
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
-    await expect(page.getByText('Server-calculated')).toBeVisible();
+    await expect(page.locator('.result-score-card .result-score-top > b')).toBeVisible();
   });
 
   test('browser requests cannot forge score, timer or lab unlock state', async ({ page }) => {
@@ -300,7 +300,7 @@ test.describe('Escape Lab critical paths', () => {
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations).toEqual([]);
     await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
-    await expect(page.getByText(/CASE FILE · Hematology/)).toBeVisible();
+    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     const missionResults = await new AxeBuilder({ page }).analyze();
     expect(missionResults.violations).toEqual([]);
   });

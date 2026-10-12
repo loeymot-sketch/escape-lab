@@ -52,11 +52,11 @@ test.describe('friendly wording instead of step-type jargon', () => {
     expect(lobby).toContain('Make the call');
     expect(lobby).not.toMatch(/Image identify|Stepper|Decision ·|Matching|Choice ·/);
     await page.getByRole('button', { name: /^Replay Blood Smear Code$/ }).click();
-    await expect(page.locator('.case-meta span').last()).toHaveText('Spot the finding');
-    await page.getByRole('button', { name: '← Exit mission' }).click();
+    await expect(page.locator('.response-heading > span:last-child')).toHaveText('Spot the finding');
+    await page.getByRole('button', { name: /Exit mission/ }).click();
     for (const [mission, step, label] of [['hem-02', 0, 'Make the call'], ['mic-02', 0, 'Put in order'], ['mic-03', 0, 'Match the pairs'], ['mic-01', 0, 'Reason it through']] as const) {
       await openAttemptAt(page, mission, step);
-      await expect(page.locator('.case-meta span').last()).toHaveText(label);
+      await expect(page.locator('.response-heading > span:last-child')).toHaveText(label);
     }
   });
 });
@@ -129,17 +129,44 @@ test.describe('leaderboard never prints arithmetic that is false', () => {
   });
 });
 
-test.describe('dashboard heading follows the learner', () => {
-  test('a fresh learner is invited to start', async ({ page }) => {
+test.describe('dashboard opens directly on the laboratory map', () => {
+  test('a fresh learner sees the laboratory choices immediately', async ({ page }) => {
     await openAs(page, await freshStudent());
     await expect(page.getByRole('heading', { name: FIRST_VISIT_HEADING })).toBeVisible();
-    await expect(page.getByRole('heading', { name: CONTINUE_HEADING })).toHaveCount(0);
+    await expect(page.locator('.lab-strip .lab-card')).toHaveCount(4);
+    await expect(page.locator('.hero-science')).toHaveCount(0);
   });
 
-  test('the demo learner, who has progress, is invited to continue', async ({ page }) => {
+  test('the demo learner still has the next mission action after the rooms', async ({ page }) => {
     await resetDemo(page);
     await expect(page.getByRole('heading', { name: CONTINUE_HEADING })).toBeVisible();
-    await expect(page.getByRole('heading', { name: FIRST_VISIT_HEADING })).toHaveCount(0);
+    await expect(page.locator('.lab-strip .lab-card')).toHaveCount(4);
+    await expect(page.locator('.dashboard-next-step button')).toBeVisible();
+  });
+
+  test('dashboard metrics are compact and the guest demo note sits at the bottom', async ({ page }) => {
+    await resetDemo(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const stats = page.locator('.dashboard-stats');
+    const cards = page.locator('.lab-strip .lab-card');
+    await expect(cards).toHaveCount(4);
+    await expect(stats).toBeVisible();
+    const layout = await page.evaluate(() => {
+      const labs = document.querySelector('.lab-strip')!.getBoundingClientRect();
+      const stats = document.querySelector('.dashboard-stats')!.getBoundingClientRect();
+      const note = document.querySelector('.demo-note')!.getBoundingClientRect();
+      const guide = document.querySelector('.how-it-works')!.getBoundingClientRect();
+      return {
+        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        roomsBeforeStats: labs.bottom <= stats.top,
+        tallestMetric: Math.max(...Array.from(document.querySelectorAll('.dashboard-stats .stat'), (el) => el.getBoundingClientRect().height)),
+        noteAfterGuide: note.top >= guide.bottom,
+      };
+    });
+    expect(layout.overflow).toBe(false);
+    expect(layout.roomsBeforeStats).toBe(true);
+    expect(layout.tallestMetric).toBeLessThanOrEqual(110);
+    expect(layout.noteAfterGuide).toBe(true);
   });
 });
 

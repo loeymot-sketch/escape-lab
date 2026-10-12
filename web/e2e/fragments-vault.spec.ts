@@ -41,7 +41,7 @@ test.describe('Code Vault: fragments, unlock and results', () => {
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
-    await expect(page.getByText('Server-calculated')).toBeVisible();
+    await expect(page.locator('.result-score-card')).toBeVisible();
     await expect(page.getByText(/Vault progress for this laboratory: 7 4 2/)).toBeVisible();
     await page.getByRole('button', { name: 'Return to mission control' }).click();
     await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible();

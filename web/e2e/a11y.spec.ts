@@ -118,21 +118,21 @@ test.describe('axe: zero violations on every screen', () => {
     await expect(page.getByText('STEP 2 / 3')).toBeVisible();
     await expect(page.getByRole('status').filter({ hasText: 'Correct.' })).toBeVisible();
     await clean(page, 'stepper step 2 with revealed values and a correct status');
-    await page.getByRole('button', { name: '← Exit mission' }).click();
+    await page.getByRole('button', { name: /Exit mission/ }).click();
 
     await startMissionViaUi(page, 'Hematology Lab', 'Fix the Sample');
     await clean(page, 'decision engine');
-    await page.getByRole('button', { name: '← Exit mission' }).click();
+    await page.getByRole('button', { name: /Exit mission/ }).click();
 
     await startMissionViaUi(page, 'Microbiology Lab', 'Gram Stain Challenge');
     await clean(page, 'order engine');
-    await page.getByRole('button', { name: '← Exit mission' }).click();
+    await page.getByRole('button', { name: /Exit mission/ }).click();
     await startMissionViaUi(page, 'Microbiology Lab', 'Petri Dish Mystery');
     await clean(page, 'matching engine');
     await page.locator('select').nth(0).selectOption('ecoli');
     await page.locator('select').nth(1).selectOption('ecoli');
     await clean(page, 'matching engine with a duplicate association');
-    await page.getByRole('button', { name: '← Exit mission' }).click();
+    await page.getByRole('button', { name: /Exit mission/ }).click();
 
     await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
     expireAttemptInDb((await page.evaluate(() => sessionStorage.getItem('escape-demo-attempt')))!);
@@ -265,15 +265,15 @@ test.describe('semantics and conventions', () => {
     expect(await controlBorders(page, '.answer-options button')).toHaveLength(3);
     await page.locator('.answer-options button').first().click();
     expect(await controlBorders(page, '.answer-options button')).toHaveLength(3);
-    await page.getByRole('button', { name: '← Exit mission' }).click();
+    await page.getByRole('button', { name: /Exit mission/ }).click();
 
     await startMissionViaUi(page, 'Microbiology Lab', 'Gram Stain Challenge');
     expect((await controlBorders(page, '.move-buttons button')).length).toBeGreaterThanOrEqual(4);
-    await page.getByRole('button', { name: '← Exit mission' }).click();
+    await page.getByRole('button', { name: /Exit mission/ }).click();
 
     await startMissionViaUi(page, 'Microbiology Lab', 'Petri Dish Mystery');
     expect(await controlBorders(page, '.match-row select')).toHaveLength(4);
-    await page.getByRole('button', { name: '← Exit mission' }).click();
+    await page.getByRole('button', { name: /Exit mission/ }).click();
 
     await openFaculty(page);
     await nav(page, 'Student detail');
@@ -290,7 +290,8 @@ test.describe('semantics and conventions', () => {
 
   test('images are always labelled illustrative and copy never implies clinical validity', async ({ page }) => {
     await resetDemo(page);
-    await expect(page.locator('.hero-science .illustrative-tag')).toHaveText('Illustrative image');
+    await expect(page.locator('.dashboard-labs-head h1')).toHaveText('Choose a laboratory');
+    await expect(page.locator('.hero-science')).toHaveCount(0);
     expect(await page.locator('body').innerText()).not.toMatch(/specimen to diagnosis|Clinical investigation|Wright-Giemsa/i);
     await nav(page, 'Lab map');
     expect(await page.locator('body').innerText()).not.toMatch(/specimen to diagnosis|clinical detective/i);
@@ -299,8 +300,8 @@ test.describe('semantics and conventions', () => {
     await expect(page.locator('.image-caption')).toContainText('not a real specimen');
     await expect(page.locator('.image-caption')).toContainText('not for clinical use');
     // The case header carries a visible one-line disclaimer, directly under the step/kind line.
-    await expect(page.locator('.case-meta + .scenario-note')).toBeVisible();
-    await expect(page.locator('.case-meta + .scenario-note')).toHaveText('Educational scenario — not clinical guidance');
+    await expect(page.locator('.mission-disclaimer')).toBeVisible();
+    await expect(page.locator('.mission-disclaimer')).toHaveText('Educational scenario — not clinical guidance');
     expect(await page.locator('body').innerText()).not.toMatch(/Wright-Giemsa|Clinical investigation/);
   });
 
@@ -313,11 +314,12 @@ test.describe('semantics and conventions', () => {
   test('mission images keep their natural aspect ratio so percentages map 1:1', async ({ page }) => {
     await resetDemo(page);
     await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
-    const box = (await page.locator('.scientific-image').boundingBox())!;
-    expect(Math.abs(box.width / box.height - ARTWORK.smear.width / ARTWORK.smear.height)).toBeLessThan(0.01);
     expect(await page.locator('.scientific-image').evaluate((el) => getComputedStyle(el).objectFit)).toBe('contain');
     // Clicking the visible schistocyte puts the marker on it: the marker centre is the clicked artwork point.
     await clickArtwork(page, ARTWORK.smear);
+    // Locator clicks may scroll the page; measure image and marker after that scroll in the same viewport.
+    const box = (await page.locator('.scientific-image').boundingBox())!;
+    expect(Math.abs(box.width / box.height - ARTWORK.smear.width / ARTWORK.smear.height)).toBeLessThan(0.01);
     const marker = (await page.locator('.marker').boundingBox())!;
     expect(Math.abs(marker.x + marker.width / 2 - (box.x + (box.width * ARTWORK.smear.x) / ARTWORK.smear.width))).toBeLessThan(2);
     expect(Math.abs(marker.y + marker.height / 2 - (box.y + (box.height * ARTWORK.smear.y) / ARTWORK.smear.height))).toBeLessThan(2);
@@ -338,9 +340,9 @@ test.describe('motion', () => {
     await expect(page.getByRole('status').filter({ hasText: 'Preferences saved' })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('data-reduce-motion', 'true');
     await nav(page, 'Investigations');
-    await expect(page.locator('.hero-science img')).toBeVisible();
+    await expect(page.locator('.lab-strip .lab-card-scene img').first()).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
-    expect(await page.locator('.hero-science img').evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
+    expect(await page.locator('.lab-strip .lab-card').first().evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
     // The server owns the setting: it survives a reload.
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-reduce-motion', 'true');
@@ -353,7 +355,7 @@ test.describe('motion', () => {
   test('the operating-system preference also stops animation', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await resetDemo(page);
-    await expect(page.locator('.hero-science img')).toBeVisible();
+    await expect(page.locator('.lab-strip .lab-card-scene img').first()).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running' && (a as CSSAnimation).animationName).length)).toBe(0);
   });
 });
@@ -426,7 +428,7 @@ test.describe('keyboard operability, engine by engine', () => {
       seen.push(await page.evaluate(() => document.activeElement?.textContent?.trim().slice(0, 30) ?? ''));
     }
     expect(seen.slice(0, 5).join('|')).toContain('Investigations');
-    expect(seen.join('|')).toContain('Start the next investigation');
+    expect(seen.join('|')).toContain('Review lab');
     expect(seen.join('|')).toContain('View full map');
   });
 });

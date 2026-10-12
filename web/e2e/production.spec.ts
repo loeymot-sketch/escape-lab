@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { ARTWORK, apiCall, clickArtwork, resetDemo, sessionToken, startMissionViaUi, submit, HOME_HEADING } from './support/helpers';
 
 test.describe('production bundle', () => {
-  test('landing: the served page is the built bundle, the hero is a small WebP, and every API call goes to the configured API', async ({ page }) => {
+  test('landing: the served page opens on named laboratory cards with optimized art and configured API calls', async ({ page }) => {
     const problems: string[] = [];
     const apiOrigins = new Set<string>();
     const requested: string[] = [];
@@ -15,7 +15,7 @@ test.describe('production bundle', () => {
       requested.push(request.url());
       if (request.url().includes('/api/')) apiOrigins.add(new URL(request.url()).origin);
     });
-    const image = page.waitForResponse((response) => /labescape-investigation-hero-[\w-]+\.webp$/.test(response.url()));
+    const image = page.waitForResponse((response) => /lab-hematology-[\w-]+\.webp$/.test(response.url()));
     await resetDemo(page);
 
     // Built, hashed, minified assets: not the dev server.
@@ -24,15 +24,15 @@ test.describe('production bundle', () => {
     expect(scripts[0]).toMatch(/^\/assets\/index-[\w-]+\.js$/);
     expect(requested.some((url) => url.includes('/@vite/') || url.includes('/src/'))).toBe(false);
 
-    // The hero is the optimised WebP, decoded, labelled, and within the image budget.
-    const hero = await image;
-    expect(hero.headers()['content-type']).toContain('image/webp');
-    expect(Number(hero.headers()['content-length'])).toBeLessThanOrEqual(300_000);
-    const decoded = await page.locator('.hero-science img').evaluate((el) => ({ width: (el as HTMLImageElement).naturalWidth, alt: (el as HTMLImageElement).alt }));
+    // The first named room's art is a decoded, optimised WebP within the image budget.
+    const roomArt = await image;
+    expect(roomArt.headers()['content-type']).toContain('image/webp');
+    expect(Number(roomArt.headers()['content-length'])).toBeLessThanOrEqual(300_000);
+    const decoded = await page.locator('.lab-strip .lab-card-scene img').first().evaluate((el) => ({ width: (el as HTMLImageElement).naturalWidth, alt: (el as HTMLImageElement).alt }));
     expect(decoded.width).toBeGreaterThan(0);
-    expect(decoded.alt).toContain('Illustrative');
-    await expect(page.locator('.hero-science .illustrative-tag')).toHaveText('Illustrative image');
     await expect(page.locator('.lab-strip .lab-card').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Choose a laboratory' })).toBeVisible();
+    await expect(page.locator('.hero-science')).toHaveCount(0);
     // Smoke budget for the shipped bundle (the dev server's unbundled module graph says nothing about it); ~15x headroom.
     const domContentLoaded = await page.evaluate(() => (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming).domContentLoadedEventEnd);
     expect(domContentLoaded).toBeLessThan(3_000);
@@ -53,10 +53,14 @@ test.describe('production bundle', () => {
     await clickArtwork(page, ARTWORK.smear);
     await submit(page).click();
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
+    await expect(page.locator('.result-record')).toHaveText('Case archived. Here is your mission debrief.');
     const stored = (await apiCall(await sessionToken(page), `/attempts/${id}/result`)).body as { score: number; maxScore: number };
     await expect(page.locator('.result-score-top')).toContainText(`${stored.score}`);
     await expect(page.locator('.result-score-top')).toContainText(`${stored.maxScore} XP`);
     await expect(page.getByRole('button', { name: 'Replay mission' })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileWidths = await page.evaluate(() => ({ document: document.documentElement.scrollWidth, viewport: window.innerWidth }));
+    expect(mobileWidths.document).toBeLessThanOrEqual(mobileWidths.viewport);
     const replay = page.waitForResponse((r) => r.url().endsWith('/missions/hem-01/start') && r.request().method() === 'POST');
     await page.getByRole('button', { name: 'Replay mission' }).click();
     await replay;

@@ -29,7 +29,7 @@ for (const width of [768, 375, 1440]) {
       await noOverflow(page, 'mission');
       await expect(page.getByRole('button', { name: 'Ask Lab Assistant' })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Submit answer' })).toBeVisible();
-      await expect(page.getByRole('button', { name: '← Exit mission' })).toBeVisible();
+      await expect(page.getByRole('button', { name: /Exit mission/ })).toBeVisible();
     });
 
     test('faculty pages have no horizontal overflow and their actions are reachable', async ({ page }) => {

@@ -1,6 +1,10 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
-import { ArrowDown, ArrowUp, GripVertical } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, ImageOff, X, ZoomIn } from 'lucide-react';
 import { SCIENTIFIC_ASSETS } from '../lib/assets';
+import cultureObservation1 from '../assets/culture-observation-01.webp';
+import cultureObservation2 from '../assets/culture-observation-02.webp';
+import cultureObservation3 from '../assets/culture-observation-03.webp';
+import cultureObservation4 from '../assets/culture-observation-04.webp';
 import type { AssetTextAlternative } from '../lib/assets';
 import type { PublicStep } from '../lib/attempt';
 import { optionLetter } from '../lib/labels';
@@ -38,6 +42,98 @@ export function isAnswerReady(step: PublicStep, answer: EngineAnswer): boolean {
 }
 
 export type EngineProps = { step: PublicStep; answer: EngineAnswer; setAnswer: (next: EngineAnswer) => void; disabled: boolean };
+
+const matchingEvidence: Record<string, { src: string; alt: string }> = {
+  'pink-mac': { src: cultureObservation1, alt: 'Pink MacConkey agar plate with pink colonies.' },
+  'beta-hemo': { src: cultureObservation2, alt: 'Blood agar plate with pale colonies and clear halos.' },
+  swarm: { src: cultureObservation3, alt: 'Red blood agar with concentric rings of spreading growth.' },
+  green: { src: cultureObservation4, alt: 'Green agar plate with green-pigmented colonies.' },
+};
+
+/** Inspect the supplied observation without changing or submitting the learner's answer. */
+function CultureEvidence({ evidence, observation }: { evidence: { src: string; alt: string }; observation: string }) {
+  const viewer = useRef<HTMLDialogElement>(null);
+  const opener = useRef<HTMLButtonElement>(null);
+  const scrollStyles = useRef<{ overflow: string; gutter: string } | null>(null);
+  const titleId = useId();
+  const [open, setOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const source = retryCount === 0 ? evidence.src : `${evidence.src}${evidence.src.includes('?') ? '&' : '?'}image-retry=${retryCount}`;
+  const restoreScroll = () => {
+    const saved = scrollStyles.current;
+    if (!saved) return;
+    document.body.style.overflow = saved.overflow;
+    document.documentElement.style.scrollbarGutter = saved.gutter;
+    scrollStyles.current = null;
+  };
+  const closeViewer = () => {
+    if (viewer.current?.open) viewer.current.close();
+    restoreScroll();
+    setOpen(false);
+    opener.current?.focus({ preventScroll: true });
+  };
+  const retry = () => {
+    // The viewer's Retry button disappears when the image is retried; move focus to its stable Close control first.
+    if (viewer.current?.open && viewer.current.contains(document.activeElement)) viewer.current.querySelector<HTMLButtonElement>('.culture-close')?.focus();
+    setFailed(false);
+    setRetryCount((count) => count + 1);
+  };
+
+  useEffect(() => {
+    if (!open || !viewer.current) return;
+    const dialog = viewer.current;
+    scrollStyles.current = { overflow: document.body.style.overflow, gutter: document.documentElement.style.scrollbarGutter };
+    document.documentElement.style.scrollbarGutter = 'stable';
+    document.body.style.overflow = 'hidden';
+    dialog.showModal();
+    return () => {
+      restoreScroll();
+      if (dialog.open) dialog.close();
+    };
+  }, [open]);
+
+  return (
+    <div className="culture-photo">
+      <button ref={opener} type="button" className={`culture-thumb${failed ? ' culture-thumb-failed' : ''}`}
+        aria-label={t(failed ? 'Retry image for {item}' : 'Inspect image: {item}', { item: observation })}
+        onClick={failed ? retry : () => setOpen(true)}>
+        {failed
+          ? <><ImageOff size={25} aria-hidden="true" /><span>{t('Retry image')}</span></>
+          : <><img src={source} alt={t(evidence.alt)} width="720" height="720" loading="lazy" decoding="async" onError={() => setFailed(true)} /><span className="culture-zoom" aria-hidden="true"><ZoomIn size={16} /></span></>}
+      </button>
+      {failed && <p className="culture-image-error" role="status">{t('Image unavailable. The observation remains below.')}</p>}
+      <dialog ref={viewer} className="culture-viewer" aria-labelledby={titleId}
+        onClose={() => { if (scrollStyles.current && !viewer.current?.open) closeViewer(); }}
+        onCancel={(event) => { event.preventDefault(); closeViewer(); }}
+        onKeyDown={(event) => {
+          if (event.key !== 'Tab') return;
+          const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not([disabled])')].filter((button) => button.getClientRects().length > 0);
+          const first = buttons[0];
+          const last = buttons.at(-1);
+          if (!first || !last) return;
+          // Native modal inertness blocks the page, but a single focusable control can still Tab into browser chrome.
+          if (buttons.length === 1 || document.activeElement === (event.shiftKey ? first : last)) {
+            event.preventDefault();
+            (event.shiftKey ? last : first).focus();
+          }
+        }}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeViewer();
+        }}>
+        <header><h2 id={titleId}>{observation}</h2><button type="button" className="culture-close" aria-label={t('Close image viewer')} autoFocus onClick={closeViewer}><X size={21} aria-hidden="true" /></button></header>
+        {open && <div className="culture-viewer-body">
+          {failed
+            ? <div className="culture-viewer-error" role="alert"><ImageOff size={32} aria-hidden="true" /><p>{t('This image could not be loaded. Your associations are kept.')}</p><button type="button" className="ghost" onClick={retry}>{t('Retry image')}</button></div>
+            : <img className="culture-viewer-photo" src={source} alt={t(evidence.alt)} width="720" height="720" decoding="async" onError={() => setFailed(true)} />}
+        </div>}
+        <p className="culture-viewer-caption">{t('Illustrative training image')} · {t('The mission timer keeps running.')}</p>
+      </dialog>
+    </div>
+  );
+}
 
 export function GameEngine(props: EngineProps) {
   const { step } = props;
@@ -242,6 +338,7 @@ function DragOrder({ step, answer, setAnswer, disabled }: EngineProps) {
 
 function Matching({ step, answer, setAnswer, disabled }: EngineProps) {
   useLang();
+  const fieldsId = useId();
   const pairs = answer.pairs ?? {};
   const lefts = step.left ?? [];
   const rights = step.right ?? [];
@@ -252,24 +349,35 @@ function Matching({ step, answer, setAnswer, disabled }: EngineProps) {
 
   return (
     <>
+      {step.id === 'mic-03-s1' && <p className="culture-inspection-help">{t('Inspect each image in detail, then associate the observation with an organism.')}</p>}
       <div className="matching-list">
         {lefts.map((l) => {
           const chosen = pairs[l.id] ?? '';
           const clash = Boolean(chosen) && (counts.get(chosen) ?? 0) > 1;
+          const evidence = step.id === 'mic-03-s1' ? matchingEvidence[l.id] : undefined;
+          const fieldId = `${fieldsId}-${l.id}`;
           return (
-            <label className="match-row" key={l.id}>
-              <span>{t(l.label)}</span>
-              <select
-                value={chosen}
-                disabled={disabled}
-                aria-invalid={clash}
-                aria-label={t('Association for {item}', { item: t(l.label) })}
-                onChange={(e) => setAnswer({ pairs: { ...pairs, [l.id]: e.target.value } })}
-              >
-                <option value="">{t('Choose association…')}</option>
-                {rights.map((r) => <option value={r.id} key={r.id}>{t(r.label)}</option>)}
-              </select>
-            </label>
+            <div className="match-row" key={l.id}>
+              <div className={evidence ? 'match-evidence' : 'match-observation'}>
+                {evidence && <CultureEvidence evidence={evidence} observation={t(l.label)} />}
+                <label className={evidence ? 'match-evidence-copy' : undefined} htmlFor={fieldId}>{t(l.label)}</label>
+              </div>
+              <div className="match-selection">
+                <select
+                  id={fieldId}
+                  value={chosen}
+                  disabled={disabled}
+                  aria-invalid={clash}
+                  aria-label={t('Association for {item}', { item: t(l.label) })}
+                  aria-describedby={clash ? `${fieldId}-error` : undefined}
+                  onChange={(e) => setAnswer({ pairs: { ...pairs, [l.id]: e.target.value } })}
+                >
+                  <option value="">{t('Choose association…')}</option>
+                  {rights.map((r) => <option value={r.id} key={r.id}>{t(r.label)}</option>)}
+                </select>
+                {clash && <p className="match-duplicate" id={`${fieldId}-error`}>{t('Already used for another observation.')}</p>}
+              </div>
+            </div>
           );
         })}
       </div>

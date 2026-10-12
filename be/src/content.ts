@@ -146,6 +146,11 @@ const mic1: Step[] = [
     key: { kind: 'choice', answer: 'C' },
     explanation: 'Of these four, only Staphylococcus aureus is coagulase-positive. Staphylococci are catalase-positive; the other listed species are coagulase-negative.',
     recheck: 'Which species in the list is the coagulase-positive one?',
+    recheckByOption: {
+      A: 'Staphylococcus epidermidis is usually catalase-positive and tube-coagulase-negative. That does not match the positive tube coagulase result.',
+      B: 'Staphylococcus saprophyticus is usually catalase-positive and tube-coagulase-negative. That does not match the positive tube coagulase result.',
+      D: 'Micrococcus luteus is usually catalase-positive and tube-coagulase-negative. That does not match the positive tube coagulase result.',
+    },
     hints: ['Three of these four are coagulase-negative.'],
   },
 ];

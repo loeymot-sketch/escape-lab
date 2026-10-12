@@ -113,9 +113,9 @@ test.describe('iPhone 13 profile', () => {
     await tapNav(page, 'Lab map');
     await page.getByRole('button', { name: 'Review Hematology Lab' }).tap();
     await page.getByRole('button', { name: 'Replay Blood Smear Code' }).tap();
-    await expect(page.getByText(/CASE FILE · Hematology/)).toBeVisible();
+    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     await noOverflow(page, 'mission');
-    await expect(page.locator('.case-meta + .scenario-note')).toHaveText('Educational scenario — not clinical guidance');
+    await expect(page.locator('.mission-disclaimer')).toHaveText('Educational scenario — not clinical guidance');
     const box = (await page.locator('.scientific-image').boundingBox())!;
     expect(box.width).toBeLessThanOrEqual(390);
     await page.locator('.scientific').tap({ position: { x: 20, y: 20 } });
@@ -137,7 +137,7 @@ test.describe('iPhone 13 profile', () => {
       await page.getByRole('button', { name: new RegExp(`^(Start|Resume|Replay) ${title}$`) }).tap();
       await expect(page.locator('.case-panel h1')).toBeVisible();
       await noOverflow(page, title);
-      await page.getByRole('button', { name: '← Exit mission' }).tap();
+      await page.getByRole('button', { name: /Exit mission/ }).tap();
     }
   });
 

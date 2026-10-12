@@ -1,6 +1,5 @@
 import { ArrowRight, Beaker, Check, ChevronRight, Clock3, Hourglass, LockKeyhole, Sparkles, Trophy } from 'lucide-react';
 import { createElement } from 'react';
-import labescapeInvestigationHero from '../assets/labescape-investigation-hero.webp';
 import hematologyArt from '../assets/lab-hematology.webp';
 import microbiologyArt from '../assets/lab-microbiology.webp';
 import biochemistryArt from '../assets/lab-biochemistry.webp';
@@ -8,8 +7,8 @@ import vaultArt from '../assets/progression-vault.webp';
 import { api } from '../lib/api';
 import { formatInt, plural, t } from '../i18n';
 import { engineLabel, outOf } from '../lib/labels';
-import { allInvestigationsDone, dashboardFigures, hasProgress, normalizeDashboard, normalizeLabLobby, normalizeLabs, type Dashboard as DashboardData, type Lab, type LabLobby, type LobbyMission } from '../lib/student';
-import { IllustrativeTag, PageIntro, Stat, tone, useDocumentTitle, useNav } from '../ui/common';
+import { allInvestigationsDone, dashboardFigures, normalizeDashboard, normalizeLabLobby, normalizeLabs, type Dashboard as DashboardData, type Lab, type LabLobby, type LobbyMission } from '../lib/student';
+import { PageIntro, Stat, tone, useDocumentTitle, useNav } from '../ui/common';
 import { EmptyPanel, Loaded, useLoad } from '../ui/state';
 
 const loadLabs = async () => normalizeLabs(await api('/labs'));
@@ -44,38 +43,28 @@ function DashboardView({ dashboard, labs }: { dashboard: DashboardData; labs: La
         ? { label: t('Resume active investigation'), run: () => nav.startMission(target.missionId!), headline: t(target.title) }
         : { label: t('Start the next investigation'), run: () => nav.startMission(target.missionId!), headline: t(target.title) };
 
-  // Copy only: whether the learner already has progress is what the server reported (completed missions, a mission to resume or a vault to open).
+  // The server owns progress and the next action; the first view stays focused on the named laboratories.
   return (
     <>
-      <section className="hero" aria-labelledby="hero-title">
+      <section className="section-head dashboard-labs-head" aria-label={t('Laboratories')}>
         <div>
-          <div className="eyebrow">{t('LABESCAPE · LIVE DEMO')}</div>
-          <h1 id="hero-title">{allDone ? t('All investigations complete.') : hasProgress(dashboard) ? t('Continue your investigations.') : t('Choose your first investigation.')}</h1>
-          <p>{t('A virtual biomedical escape laboratory: observe the evidence, connect the clues, and unlock the next experiment. All cases and images are illustrative teaching material.')}</p>
-          <button type="button" className="primary" disabled={nav.busy} aria-busy={nav.starting !== null} onClick={cta.run}>{nav.starting !== null && target?.kind !== 'unlock' ? t('Starting…') : <>{cta.label} <ArrowRight size={17} aria-hidden="true" /></>}</button>
-        </div>
-        <div className="hero-science">
-          <img src={labescapeInvestigationHero} alt={t('Illustrative biomedical investigation workstation')} fetchPriority="high" decoding="async" onError={(event) => { event.currentTarget.style.visibility = 'hidden'; }} />
-          <IllustrativeTag />
-          <div><span>{t('INVESTIGATION BENCH')}</span><b>{cta.headline}</b></div>
-        </div>
-      </section>
-      <div className="stats">
-        <Stat icon={<Beaker />} label={t('Missions completed')} value={figures.missions.value} detail={figures.missions.detail} />
-        <Stat icon={<Sparkles />} label={t('Labs cleared')} value={figures.labs.value} detail={figures.labs.detail} />
-        <Stat icon={<Clock3 />} label={t('Streak')} value={plural(dashboard.streakDays, 'day')} detail={t('Level {level} · {xp} XP (server record)', { level: dashboard.user.level, xp: formatInt(dashboard.user.xp) })} />
-      </div>
-      <p className="demo-note">{t('Guest demo: the progress, XP, streak and names you see here are prepared demonstration data, not real people. Nothing you do creates an account.')}</p>
-      <section className="section-head" aria-label={t('Laboratories')}>
-        <div>
-          <div className="eyebrow">{t('START HERE')}</div>
-          <h2>{t('Choose a laboratory')}</h2>
+          <div className="eyebrow">{t('THE ESCAPE ROUTE')}</div>
+          <h1 id="hero-title">{t('Choose a laboratory')}</h1>
         </div>
         <button type="button" className="text-button" onClick={() => nav.go('labs')}>{t('View full map')} <ChevronRight size={16} aria-hidden="true" /></button>
       </section>
       {open.length === 0
         ? <EmptyPanel title={t('No laboratory is open yet')}>{t('The server did not list any playable laboratory. Please retry later.')}</EmptyPanel>
-        : <div className="lab-strip">{open.slice(0, 4).map((lab) => <LabCard lab={lab} level={3} key={lab.slug} />)}</div>}
+        : <div className="lab-strip">{open.slice(0, 4).map((lab) => <LabCard lab={lab} level={2} key={lab.slug} />)}</div>}
+      <section className="dashboard-next-step" aria-label={t('Next investigation')}>
+        <div><div className="eyebrow">{t('YOUR NEXT STEP')}</div><h2>{t(cta.headline)}</h2></div>
+        <button type="button" className="primary" disabled={nav.busy} aria-busy={nav.starting !== null} onClick={cta.run}>{nav.starting !== null && target?.kind !== 'unlock' ? t('Starting…') : <>{t(cta.label)} <ArrowRight size={17} aria-hidden="true" /></>}</button>
+      </section>
+      <div className="stats dashboard-stats">
+        <Stat icon={<Beaker />} label={t('Missions completed')} value={figures.missions.value} detail={figures.missions.detail} />
+        <Stat icon={<Sparkles />} label={t('Labs cleared')} value={figures.labs.value} detail={figures.labs.detail} />
+        <Stat icon={<Clock3 />} label={t('Streak')} value={plural(dashboard.streakDays, 'day')} detail={t('Level {level} · {xp} XP (server record)', { level: dashboard.user.level, xp: formatInt(dashboard.user.xp) })} />
+      </div>
       <section className="how-it-works" aria-labelledby="how-title">
         <div className="eyebrow">{t('HOW LABESCAPE WORKS')}</div>
         <h2 id="how-title">{t('Investigate, earn fragments, open the exit')}</h2>
@@ -87,6 +76,7 @@ function DashboardView({ dashboard, labs }: { dashboard: DashboardData; labs: La
         </ol>
         <p>{t('Scores, timers, penalties and unlocks are all decided by the server. Cases are educational scenarios, not clinical guidance.')}</p>
       </section>
+      <p className="demo-note">{t('Guest demo: the progress, XP, streak and names you see here are prepared demonstration data, not real people. Nothing you do creates an account.')}</p>
     </>
   );
 }

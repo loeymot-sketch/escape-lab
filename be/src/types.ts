@@ -1,5 +1,5 @@
 // Domain types shared by the content catalogue, engines and services.
-// `key`, `explanation`, `recheck` and `hints` are SERVER-ONLY: they never leave the process
+// `key`, `explanation`, `recheck`, `recheckByOption` and `hints` are SERVER-ONLY: they never leave the process
 // except through the deliberate paths in views.ts (explanation after a correct answer,
 // hints after an explicit hint request).
 
@@ -57,6 +57,8 @@ export interface Step {
   explanation: string;
   /** Pedagogical pointer shown after a wrong answer. Never gives the answer. */
   recheck: string;
+  /** Optional teaching feedback for an individual distractor, sent only after that option is submitted incorrectly. */
+  recheckByOption?: Record<string, string>;
   /** Faculty-written standard hints, progressive. Each costs the hint penalty. */
   hints: string[];
   /** Master Lab only: digit revealed when this step is first solved. */

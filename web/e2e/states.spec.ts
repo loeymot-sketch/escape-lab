@@ -141,14 +141,14 @@ test.describe('every student page: failure, slowness, emptiness', () => {
     await page.getByRole('button', { name: 'Lab map' }).click();
     await page.getByRole('button', { name: 'Review Hematology Lab' }).click();
     await page.getByRole('button', { name: 'Replay Blood Smear Code' }).click();
-    await expect(page.getByText(/CASE FILE · Hematology/)).toBeVisible();
+    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     const down = await outage(page, /\/api\/attempts\/[^/]+$/);
     await page.reload();
     await expect(alert(page)).toContainText('Temporary outage');
     expect(await page.evaluate(() => sessionStorage.getItem('escape-demo-attempt'))).toBeTruthy();
     down.lift();
     await alert(page).getByRole('button', { name: 'Retry' }).click();
-    await expect(page.getByText(/CASE FILE · Hematology/)).toBeVisible();
+    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     await expect(page.locator('.scientific')).toBeVisible();
     await expect(alert(page)).toHaveCount(0);
   });

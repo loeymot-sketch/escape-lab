@@ -75,6 +75,32 @@ async function inFrench(page: Page, label: string, options: { axe?: boolean; tar
 }
 
 test.describe('language switch', () => {
+  test('all difficulty levels in lab lobbies are translated, including locked missions', async ({ page }) => {
+    await resetDemo(page);
+    await page.getByRole('button', { name: 'Lab map', exact: true }).click();
+    await page.getByRole('button', { name: 'Review Hematology Lab' }).click();
+    await FR(page).click();
+    await expect(page.locator('.picker-main')).toContainText(['Débutant', 'Débutant', 'Intermédiaire']);
+    expect((await page.locator('.picker-main').allTextContents()).join(' ')).not.toMatch(/Foundation|Intermediate|Advanced/);
+    await page.getByRole('button', { name: 'Carte des laboratoires', exact: true }).click();
+    await page.getByRole('button', { name: 'Entrer dans Laboratoire de biochimie clinique' }).click();
+    await expect(page.locator('.picker-main').last()).toContainText('Avancé');
+    expect((await page.locator('.picker-main').allTextContents()).join(' ')).not.toMatch(/Foundation|Intermediate|Advanced/);
+  });
+
+  test('a wrong coagulase choice gives its own explanation in French and remains playable', async ({ page }) => {
+    await resetDemo(page);
+    await openAttemptAt(page, 'mic-01', 2);
+    await FR(page).click();
+    await page.locator('.answer-options button').filter({ hasText: 'Staphylococcus epidermidis' }).click();
+    await page.getByRole('button', { name: 'Valider la réponse' }).click();
+    await expect(page.getByRole('alert')).toContainText('Staphylococcus epidermidis est habituellement catalase positif et coagulase en tube négatif.');
+    await expect(page.getByRole('timer')).not.toContainText('Clôturé');
+    await page.locator('.answer-options button').filter({ hasText: 'Staphylococcus aureus' }).click();
+    await page.getByRole('button', { name: 'Valider la réponse' }).click();
+    await expect(page.getByRole('heading', { name: 'Enquête terminée.' })).toBeVisible();
+  });
+
   test('English browsers open in English; the switch changes every screen and is remembered for the tab', async ({ page }) => {
     await resetDemo(page);
     expect(await lang(page)).toBe('en');
@@ -200,7 +226,7 @@ test.describe('switching in the middle of a mission loses nothing', () => {
     // finish the mission with French labels
     await clickArtwork(page, ARTWORK.smear);
     await page.getByRole('button', { name: /Valider la réponse/ }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(/terminée|terminé|complète/i);
+    await expect(page.locator('#result-title')).toContainText(/terminée|terminé|complète/i);
     expect(await englishLeaks(page)).toEqual([]);
   });
 });

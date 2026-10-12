@@ -97,32 +97,15 @@ test.describe('adversarial audit fixes', () => {
     await page.unrouteAll({ behavior: 'ignoreErrors' });
   });
 
-  test('R2V-01/02: the dashboard hero never overflows the page, at any width', async ({ page }) => {
+  test('R2V-01/02: the dashboard opens on the lab cards without horizontal overflow', async ({ page }) => {
     for (const width of [601, 700, 768, 901, 960, 1024, 1090, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
-      await expect(page.getByRole('heading', { name: /Choose your first investigation|Continue your investigations/ })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Choose a laboratory' })).toBeVisible();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(0);
-      const layout = await page.evaluate(() => {
-        const h1 = document.querySelector('.hero h1') as HTMLElement;
-        const art = document.querySelector('.hero-science')!.getBoundingClientRect();
-        const box = h1.getBoundingClientRect();
-        // A word split across two lines occupies two client rects: count them per word.
-        const text = h1.firstChild as Text;
-        const split: string[] = [];
-        for (const match of text.data.matchAll(/\S+/g)) {
-          const range = document.createRange();
-          range.setStart(text, match.index!);
-          range.setEnd(text, match.index! + match[0].length);
-          if (range.getClientRects().length > 1) split.push(match[0]);
-        }
-        const sideBySide = art.top < box.bottom;
-        return { split, sideBySide, titleRight: Math.round(box.right), artLeft: Math.round(art.left), clipped: h1.scrollWidth > h1.clientWidth + 1 };
-      });
-      expect(layout.split, `title words broken across lines at ${width}px`).toEqual([]);
-      expect(layout.clipped, `hero title clipped at ${width}px`).toBe(false);
-      if (layout.sideBySide) expect(layout.titleRight, `hero title under the image at ${width}px`).toBeLessThanOrEqual(layout.artLeft);
+      await expect(page.locator('.lab-strip .lab-card')).toHaveCount(4);
+      await expect(page.locator('.hero-science')).toHaveCount(0);
     }
   });
 
@@ -212,7 +195,7 @@ test.describe('adversarial audit fixes', () => {
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     await expect(page.getByRole('heading', { name: 'Class intelligence' })).toBeVisible();
     await page.getByRole('button', { name: 'Return to student demo' }).click();
-    await expect(page.getByRole('heading', { name: /Choose your first investigation|Continue your investigations/ })).toBeFocused();
+    await expect(page.getByRole('heading', { name: 'Choose a laboratory' })).toBeFocused();
   });
 
   test('R4-04/06: the Master Lab note is on the analytics page, and content review keeps focus in its row with a described action', async ({ page }) => {
@@ -237,7 +220,7 @@ test.describe('adversarial audit fixes', () => {
       expect(check.rootImage).toBe('none');
       expect(check.rootColor).toBe('rgba(0, 0, 0, 0)');
       expect(check.bodyImage).toContain('gradient');
-      expect(check.attachment).toBe('fixed');
+      expect(check.attachment.split(',').every((value) => value.trim() === 'fixed')).toBe(true);
     }
     await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
     expect((await paint()).rootColor).toBe('rgba(0, 0, 0, 0)');
@@ -313,7 +296,7 @@ test.describe('adversarial audit fixes', () => {
       const select = await page.locator('.picker-label select').last().boundingBox();
       expect(select!.width, `student select width at ${width}px`).toBeLessThanOrEqual(width);
       await guest(page, 'Return to student demo');
-      await expect(page.getByRole('heading', { name: /Choose your first investigation|Continue your investigations/ })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Choose a laboratory' })).toBeVisible();
     }
   });
 
@@ -369,7 +352,7 @@ test.describe('adversarial audit fixes', () => {
     await page.evaluate((key) => sessionStorage.removeItem(key), TOKEN_KEY);
     await page.getByRole('button', { name: 'Lab map' }).click();
     await expect(page.getByText(/Your guest session expired, so a new guest session was opened/)).toBeVisible();
-    await expect(page.getByRole('heading', { name: /Choose your first investigation|Continue your investigations/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Choose a laboratory' })).toBeVisible();
     await page.getByRole('button', { name: 'Lab map' }).click();
     await expect(page.locator('.map-grid .lab-card').first()).toBeVisible();
   });
@@ -407,13 +390,11 @@ test.describe('adversarial audit fixes', () => {
     expect(await page.locator('.player > header').evaluate((el) => getComputedStyle(el).position)).toBe('static');
   });
 
-  test('R7-03: a failing hero image does not paint its alt text over the ILLUSTRATIVE IMAGE tag', async ({ page }) => {
-    // Only the picture request fails (in the dev server the same URL with ?import is a JS module and must load).
-    await page.route(/labescape-investigation-hero.*\.webp/, (route) => (route.request().resourceType() === 'image' ? route.abort() : route.continue()));
+  test('R7-03: the dashboard foregrounds the laboratory choices', async ({ page }) => {
     await page.reload();
-    await expect(page.getByRole('heading', { name: /Choose your first investigation|Continue your investigations/ })).toBeVisible();
-    expect(await page.locator('.hero-science img').evaluate((el) => getComputedStyle(el).fontSize)).toBe('0px');
-    await expect(page.locator('.hero-science img')).toHaveAttribute('alt', /Illustrative biomedical investigation workstation/);
+    await expect(page.getByRole('heading', { name: 'Choose a laboratory' })).toBeVisible();
+    await expect(page.locator('.lab-strip .lab-card')).toHaveCount(4);
+    await expect(page.locator('.hero-science')).toHaveCount(0);
   });
 
   test('R7-04: when a faculty guest session expires, a faculty guest session is reopened (not the student demo)', async ({ page }) => {
@@ -632,12 +613,12 @@ test.describe('round 9: engines, long server strings, request timeout', () => {
     await expect(page.locator('.feedback.wrong')).toContainText(LONG);
     await page.getByRole('button', { name: /Ask Lab Assistant/ }).click();
     await expect(page.locator('.hint-result')).toContainText(LONG);
-    await expect(page.locator('.sample-chip')).toContainText(LONG);
+    await expect(page.locator('.sample-card')).toContainText(LONG);
     await expect(page.locator('.value').first()).toContainText(LONG);
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: 900 });
       expect(await overflow(page), `case page at ${width}px`).toBeLessThanOrEqual(0);
-      for (const sel of ['.hint-result', '.value', '.value b', '.value span', '.value em', '.value small', '.sample-chip', '.feedback.wrong', '.feedback p']) {
+      for (const sel of ['.hint-result', '.value', '.value b', '.value span', '.value em', '.value small', '.sample-card', '.feedback.wrong', '.feedback p']) {
         expect(await escapes(page, sel), `${sel} at ${width}px`).toEqual([]);
       }
     }
@@ -655,7 +636,7 @@ test.describe('round 9: engines, long server strings, request timeout', () => {
     }
     await page.getByRole('button', { name: /Exit mission/ }).click();
     await startMissionViaUi(page, 'Microbiology Lab', 'Petri Dish Mystery');
-    await expect(page.locator('.match-row span').first()).toContainText(LONG);
+    await expect(page.locator('.match-row label').first()).toContainText(LONG);
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: 900 });
       expect(await overflow(page), `matching at ${width}px`).toBeLessThanOrEqual(0);
@@ -663,7 +644,7 @@ test.describe('round 9: engines, long server strings, request timeout', () => {
         const out: string[] = [];
         const hit = (a: DOMRect, b: DOMRect) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
         for (const row of document.querySelectorAll('.match-row')) {
-          const label = row.querySelector('span')!.getBoundingClientRect();
+          const label = row.querySelector('label')!.getBoundingClientRect();
           const select = row.querySelector('select')!.getBoundingClientRect();
           if (hit(label, select)) out.push('label overlaps its select');
         }
@@ -976,9 +957,8 @@ test.describe('round 9: mission screen and dashboard details', () => {
     const token = await freshStudent();
     for (const slug of ['hematology', 'microbiology', 'biochemistry', 'master']) await completeLabViaApi(token, slug);
     await openAs(page, token);
-    await expect(page.getByRole('heading', { name: 'All investigations complete.' })).toBeVisible();
+    await expect(page.locator('.dashboard-next-step h2')).toHaveText('Every laboratory is cleared');
     await expect(page.getByText('Select a discipline to begin')).toHaveCount(0);
-    await expect(page.getByText('Continue your investigations.')).toHaveCount(0);
     await page.getByRole('button', { name: 'Lab results' }).click();
     await expect(page.getByRole('heading', { name: 'Hematology Lab: Escape confirmed' })).toBeVisible();
   });
@@ -1454,10 +1434,10 @@ test.describe('round 11: faculty, dashboard wording, session recovery', () => {
     await expect(stats.locator('.stat').filter({ hasText: 'Labs cleared' })).toContainText('standard labs');
     await expect(page.getByText('of the investigation map')).toHaveCount(0);
     // The Master Lab is still open, so nothing claims that every investigation is complete.
-    await expect(page.getByRole('heading', { name: 'All investigations complete.' })).toHaveCount(0);
+    await expect(page.locator('.dashboard-next-step h2')).not.toHaveText('Every laboratory is cleared');
     await completeLabViaApi(token, 'master');
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'All investigations complete.' })).toBeVisible();
+    await expect(page.locator('.dashboard-next-step h2')).toHaveText('Every laboratory is cleared');
     await expect(stats.locator('.stat').filter({ hasText: 'Labs cleared' })).toContainText('3 of 3');
     await expect(page.locator('.lab-strip .lab-card').filter({ hasText: 'CLEARED' })).toHaveCount(4);
   });

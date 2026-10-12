@@ -17,12 +17,13 @@ const attemptIdOf = (page: Page) => page.evaluate(() => sessionStorage.getItem('
 /** Every figure of the result screen, compared with the server's payload. */
 async function expectResultShows(page: Page, server: ServerResult) {
   await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
+  const score = page.locator('.result-score-card .result-score-top > b');
+  await expect(score).toHaveText(`${server.score.toLocaleString('en-US')} / ${server.maxScore.toLocaleString('en-US')} XP`);
   const stats = page.locator('.result-stats .stat');
-  await expect(stats).toHaveCount(3);
-  await expect(stats.nth(0).locator('strong')).toHaveText(`${server.score} of ${server.maxScore} XP`);
-  await expect(stats.nth(1).locator('strong')).toHaveText(`${server.stats.accuracyPct}%`);
-  await expect(stats.nth(1).locator('small')).toHaveText(`${server.stats.wrongAnswers} wrong · ${plural(server.stats.hintsUsed)}`);
-  await expect(stats.nth(2).locator('strong')).toHaveText(server.stats.elapsed);
+  await expect(stats).toHaveCount(2);
+  await expect(stats.nth(0).locator('strong')).toHaveText(`${server.stats.accuracyPct}%`);
+  await expect(stats.nth(0).locator('small')).toHaveText(`${server.stats.wrongAnswers} wrong · ${plural(server.stats.hintsUsed)}`);
+  await expect(stats.nth(1).locator('strong')).toHaveText(server.stats.elapsed);
   if (server.newBest) await expect(page.locator('.result-lede').nth(1)).toHaveText(`New personal best: ${server.xpAwarded >= 0 ? '+' : ''}${server.xpAwarded} XP added to your total.`);
   else await expect(page.locator('.result-lede').nth(1)).toContainText('did not beat your best score');
   const rows = page.locator('.ledger li');
