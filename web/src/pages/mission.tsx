@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, Check, Clock3, Sparkles, Trophy, X } from 'lucide-react';
+import { Activity, ArrowLeft, ArrowRight, Check, Clock3, FlaskConical, RotateCcw, Sparkles, Trophy, X } from 'lucide-react';
+import hematologyArt from '../assets/lab-hematology.webp';
+import microbiologyArt from '../assets/lab-microbiology.webp';
+import biochemistryArt from '../assets/lab-biochemistry.webp';
+import masterArt from '../assets/progression-vault.webp';
 import { ApiError, api, demoSession } from '../lib/api';
 import { PayloadError } from '../lib/guard';
 import {
@@ -15,6 +19,8 @@ import { LanguageSwitch, formatInt, plural, t, useLang } from '../i18n';
 
 type Feedback = { correct: boolean; ordinal: number; message: string; progress: { correct: number; total: number } | null; penaltyXp: number | null };
 
+const labArtwork = (slug: string) => slug === 'hematology' ? hematologyArt : slug === 'microbiology' ? microbiologyArt : slug === 'biochemistry' ? biochemistryArt : masterArt;
+
 const isExpiry = (e: unknown) => e instanceof ApiError && e.status === 409 && e.code === 'time_expired';
 
 /** Refusals that prove this screen shows an out-of-date attempt (finished or moved on elsewhere, hints bought in another tab): the attempt is re-read. */
@@ -22,7 +28,7 @@ const STALE_CODES = ['attempt_finished', 'wrong_step', 'no_more_hints', 'hint_in
 
 export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: Attempt; onExit: () => void; onDone: () => void; onReturnToLab?: () => void }) {
   // Re-renders the whole screen when the display language is switched; the attempt, the answer and the timer live in state and are kept.
-  const lang = useLang();
+  useLang();
   const [attempt, setAttempt] = useState(initial);
   // The countdown is measured on the monotonic clock: stepping the clock of the computer back (or forward) must not freeze or jump it.
   const [clock, setClock] = useState(() => ({ remaining: initial.remainingSec, at: performance.now() }));
@@ -319,7 +325,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
     if (followUp) await followUp();
   };
 
-  const restart = async () => {
+  const restart = async (fromResult = false) => {
     if (restarting.current || submitting.current || hinting.current) return;
     restarting.current = true;
     pendingFocus.current = 'question';
@@ -333,6 +339,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
       setGone(false);
       setAttempt(started.attempt);
       attemptRef.current = started.attempt;
+      lastSynced.current = started.attempt;
       const at = performance.now();
       setClock({ remaining: started.attempt.remainingSec, at });
       setNow(at);
@@ -341,6 +348,8 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
       setFragments([]);
       setFragmentNote(null);
       setNoMoreHints(null);
+      setFeedback(null);
+      if (fromResult) setResult(null);
     } catch (e) {
       setProblem(e);
     } finally {
@@ -349,7 +358,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
     }
   };
 
-  if (result) return <ResultScreen result={result} newFragments={fragments} onExit={onDone} onReturnToLab={onReturnToLab} />;
+  if (result) return <ResultScreen result={result} newFragments={fragments} onExit={onDone} onReturnToLab={onReturnToLab} onReplay={() => void restart(true)} replayBusy={restartBusy} replayError={problem} />;
   if (!step) {
     // A completed attempt whose result has not been fetched yet (for example completed in another tab).
     return <CompletedFetch attemptId={attempt.attemptId} onResult={setResult} onExit={onDone} />;
@@ -362,8 +371,11 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
   const hintsGone = hintsLeft <= 0 || noMoreHints === step.id;
   const ready = isAnswerReady(step, answer);
   const hintCost = rules.state.phase === 'ready' ? Math.abs(rules.state.data.hintPenalty) : null;
+  const noHintBonus = rules.state.phase === 'ready'
+    ? (attempt.missionId.startsWith('master-') ? rules.state.data.noHintBonus.master : rules.state.data.noHintBonus.standard)
+    : null;
   // Share of steps the server reports as solved: it starts empty and fills as steps are completed.
-  const pct = attempt.stepCount === 0 ? 0 : (attempt.stepIndex / attempt.stepCount) * 100;
+  const pct = step.of === 0 ? 0 : (step.ordinal / step.of) * 100;
 
   // The server stores the text of every hint it delivered on this step, so the list is the same after a reload, a re-entry or another device.
   const issuedHints = step.hintsGiven.map((given) => (
@@ -385,7 +397,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
           <button type="button" className="hint" ref={hintRef} disabled={inFlight || closed || hintsGone} onClick={() => void askHint()} aria-busy={hintBusy}>
             {hintBusy ? t('Requesting hint…') : hintsGone ? t('No more hints on this step') : <><Sparkles size={15} aria-hidden="true" /> {t('Ask Lab Assistant')}</>}
           </button>
-          <p className="assistant-note">{t('Observe before you decide.')} {hintCost !== null ? t('Each hint costs {cost} XP.', { cost: formatInt(hintCost) }) : t('Each hint carries an XP penalty set by the server.')}</p>
+          <p className="assistant-note">{t('Observe before you decide.')} {hintCost !== null ? <>{t('Each hint costs {cost} XP.', { cost: formatInt(hintCost) })} {t('Using a hint also forfeits the {bonus} XP no-hint bonus.', { bonus: formatInt(noHintBonus!) })}</> : t('Each hint carries an XP penalty set by the server.')}</p>
         </div>
         {rulesNote}
         <p className="hint-budget">{t('Hints used on this step: {used} of {total}.', { used: formatInt(step.hintsOnStep), total: formatInt(step.hintsAvailable) })}</p>
@@ -398,7 +410,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
         <h2>{t('Observe before you decide.')}</h2>
         <p>
           {t('Request a contextual hint when you need a new angle.')}{' '}
-          {hintCost !== null ? t('Each hint costs {cost} XP.', { cost: formatInt(hintCost) }) : t('Each hint carries an XP penalty set by the server.')}
+          {hintCost !== null ? <>{t('Each hint costs {cost} XP.', { cost: formatInt(hintCost) })} {t('Using a hint also forfeits the {bonus} XP no-hint bonus.', { bonus: formatInt(noHintBonus!) })}</> : t('Each hint carries an XP penalty set by the server.')}
         </p>
         <button type="button" className="hint" ref={hintRef} disabled={inFlight || closed || hintsGone} onClick={() => void askHint()} aria-busy={hintBusy}>
           {hintBusy ? t('Requesting hint…') : hintsGone ? t('No more hints on this step') : <><Sparkles size={15} aria-hidden="true" /> {t('Ask Lab Assistant')}</>}
@@ -410,10 +422,10 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
     );
 
   return (
-    <div className="player">
+    <div className={`player mission-${attempt.labSlug}`}>
       <header>
         {/* Leaving while an answer is being checked would drop its outcome (a recorded answer whose result the learner never sees). */}
-        <button type="button" className="back-button" disabled={busy} onClick={onExit}>← {t('Exit mission')}</button>
+        <button type="button" className="back-button" disabled={busy} onClick={onExit}><ArrowLeft size={18} aria-hidden="true" /><span className="back-label">{t('Exit mission')}</span></button>
         <div className="player-title">
           <span className="eyebrow">{t('CASE FILE · {lab}', { lab: t(labName(attempt.labSlug)) })}</span>
           <b>{t(attempt.missionTitle)}</b>
@@ -423,18 +435,33 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
         </div>
         <LanguageSwitch />
       </header>
-      <div className="player-progress" aria-hidden="true"><span style={{ width: `${pct}%` }} /></div>
+      <div className="player-progress" role="progressbar" aria-label={t('Mission progress')} aria-valuemin={1} aria-valuemax={step.of} aria-valuenow={step.ordinal} aria-valuetext={t('Step {ordinal} of {total}', { ordinal: step.ordinal, total: step.of })}><span style={{ width: `${pct}%` }} /></div>
+      <section className="mission-hero" aria-labelledby="mission-title">
+        <img src={labArtwork(attempt.labSlug)} alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
+        <div className="mission-hero-shade" aria-hidden="true" />
+        <div className="mission-hero-copy">
+          <div className="mission-hero-kicker"><span className="mission-live-dot" />{t('CASE FILE · {lab}', { lab: t(labName(attempt.labSlug)) })}<span className="mission-kicker-divider" />{t('Educational simulation')}</div>
+          <h1 id="mission-title">{t(attempt.missionTitle)}</h1>
+          <p>{t(labName(attempt.labSlug))}<span aria-hidden="true"> / </span>{t(STEP_LABELS[step.kind])}</p>
+        </div>
+        <div className="mission-hero-stage"><span>{t('STEP {ordinal} / {total}', { ordinal: step.ordinal, total: step.of })}</span><b>{String(step.ordinal).padStart(2, '0')}</b></div>
+      </section>
+      <ol className="mission-step-track" aria-label={t('Mission steps')}>
+        {Array.from({ length: step.of }, (_, index) => {
+          const ordinal = index + 1;
+          const state = ordinal < step.ordinal ? 'done' : ordinal === step.ordinal ? 'current' : 'upcoming';
+          return <li className={`mission-step ${state}`} aria-current={state === 'current' ? 'step' : undefined} aria-label={t(state === 'done' ? 'Step {ordinal} complete' : state === 'current' ? 'Current step {ordinal}' : 'Upcoming step {ordinal}', { ordinal })} key={ordinal}>{state === 'done' ? <Check size={14} aria-hidden="true" /> : <span>{String(ordinal).padStart(2, '0')}</span>}</li>;
+        })}
+      </ol>
       <main className="case-layout">
         <section className="case-panel" aria-labelledby="case-prompt">
-          <div className="case-meta"><span>{t('STEP {ordinal} / {total}', { ordinal: step.ordinal, total: step.of })}</span><span>{t(STEP_LABELS[step.kind])}</span></div>
-          <p className="scenario-note">{t('Educational scenario — not clinical guidance')}</p>
-          {lang === 'fr' && <p className="scenario-note" role="note">{t('French translation of the mission text, not reviewed by experts. The English text is the reference.')}</p>}
+          <div className="question-section-label"><span><Activity size={15} aria-hidden="true" />{t('YOUR INVESTIGATION')}</span><span>{t('QUESTION {ordinal}', { ordinal: step.ordinal })}</span></div>
           <h1 id="case-prompt" ref={headingRef} tabIndex={-1}>{t(step.prompt)}</h1>
           {step.context && <p className="context">{t(step.context)}</p>}
-          {step.sample && <p className="sample-chip">{t('Sample {id}: {label}', { id: step.sample.id, label: t(step.sample.label) })}</p>}
+          {step.sample && <div className="sample-card"><span className="sample-icon"><FlaskConical size={20} aria-hidden="true" /></span><span><small>{t('SPECIMEN')}</small><b>{t('Sample {id}: {label}', { id: step.sample.id, label: t(step.sample.label) })}</b></span><span className="sample-status"><Check size={14} aria-hidden="true" />{t('IN ANALYSIS')}</span></div>}
           {attempt.revealed.length > 0 && (
             <div className="values-block">
-              <div className="eyebrow">{attempt.engine === 'stepper' ? t('EVIDENCE REVEALED SO FAR') : t('LABORATORY VALUES')}</div>
+              <div className="evidence-heading"><span className="eyebrow">{attempt.engine === 'stepper' ? t('EVIDENCE REVEALED SO FAR') : t('LABORATORY VALUES')}</span><span>{t('{count} indicators', { count: formatInt(attempt.revealed.length) })}</span></div>
               <div className="values" role="list">
                 {attempt.revealed.map((v, i) => (
                   <div className={`value ${v.flag ? 'flagged' : ''}`} role="listitem" key={`${v.name}-${i}`}>
@@ -448,6 +475,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
             </div>
           )}
 
+          <div className="response-heading"><span className="eyebrow">{t('YOUR RESPONSE')}</span><span>{t(STEP_LABELS[step.kind])}</span></div>
           <GameEngine key={step.id} step={step} answer={answer} setAnswer={setAnswer} disabled={inFlight || closed} />
 
           {feedback && (feedback.correct
@@ -510,8 +538,9 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
           {narrow && assistant}
 
           <button type="button" className="primary submit" ref={submitRef} disabled={inFlight || closed || !ready} onClick={() => void submit()}>
-            {busy ? t('Checking…') : t('Submit answer')} <ArrowRight size={17} aria-hidden="true" />
+            {busy ? t('Checking…') : t('Validate my answer')} <ArrowRight size={17} aria-hidden="true" />
           </button>
+          <p className="mission-disclaimer">{t('Educational scenario — not clinical guidance')}</p>
         </section>
 
         <aside className="case-aside" aria-label={t('Lab assistant and case status')}>
@@ -559,25 +588,38 @@ export function resultXpNote(result: Pick<MissionResult, 'newBest' | 'xpAwarded'
   return t('New personal best: {sign}{xp} XP added to your total.', { sign: result.xpAwarded > 0 ? '+' : '', xp: formatInt(result.xpAwarded) });
 }
 
-export function ResultScreen({ result, newFragments, onExit, onReturnToLab }: { result: MissionResult; newFragments: Fragment[]; onExit: () => void; onReturnToLab?: () => void }) {
-  const lang = useLang();
+export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onReplay, replayBusy = false, replayError = null }: { result: MissionResult; newFragments: Fragment[]; onExit: () => void; onReturnToLab?: () => void; onReplay?: () => void; replayBusy?: boolean; replayError?: unknown }) {
+  useLang();
   // The result replaces a long case page: start at its top, not wherever the Submit button was.
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { window.scrollTo?.({ top: 0 }); headingRef.current?.focus({ preventScroll: true }); }, []);
   return (
-    <main className="result-screen">
-      <div className="result-lang"><LanguageSwitch /></div>
-      <div className="eyebrow">{t('CASE COMPLETE')}</div>
-      <div className="result-seal" aria-hidden="true"><Trophy size={30} /></div>
-      <h1 ref={headingRef} tabIndex={-1}>{t('Investigation complete.')}</h1>
-      {lang === 'fr' && <p className="scenario-note" role="note">{t('French translation of the mission text, not reviewed by experts. The English text is the reference.')}</p>}
-      <p className="result-lede">{t('The backend has recorded your result for “{title}”.', { title: t(result.mission.title) })}</p>
+    <main className={`result-screen result-${result.mission.labSlug}`}>
+      <section className="result-hero" aria-labelledby="result-title">
+        <img src={labArtwork(result.mission.labSlug)} alt="" aria-hidden="true" decoding="async" />
+        <div className="result-hero-shade" aria-hidden="true" />
+        <div className="result-lang"><LanguageSwitch /></div>
+        <div className="result-hero-copy">
+          <div className="eyebrow">{t('CASE COMPLETE')}<span className="mission-kicker-divider" />{t(labName(result.mission.labSlug))}</div>
+          <div className="result-seal" aria-hidden="true"><Trophy size={30} /></div>
+          <h1 id="result-title" ref={headingRef} tabIndex={-1}>{t('Investigation complete.')}</h1>
+          <p>{t(result.mission.title)}</p>
+        </div>
+      </section>
+      <p className="result-lede result-record">{t('The backend has recorded your result for “{title}”.', { title: t(result.mission.title) })}</p>
+      <section className="result-score-card" aria-label={t('Mission score')}>
+        <div className="result-score-top"><span><Sparkles size={18} aria-hidden="true" />{t('SCORE')}</span><b>{formatInt(result.score)} <small>/ {formatInt(result.maxScore)} XP</small></b></div>
+        <div className="result-score-bar" role="progressbar" aria-label={t('Score')} aria-valuemin={0} aria-valuemax={result.maxScore} aria-valuenow={Math.min(result.maxScore, result.score)}><i style={{ width: `${result.maxScore > 0 ? Math.max(0, Math.min(100, (result.score / result.maxScore) * 100)) : 0}%` }} /></div>
+      </section>
       <div className="result-stats">
-        <Stat icon={<Sparkles />} label={t('Score')} value={t('{score} of {max} XP', { score: formatInt(result.score), max: formatInt(result.maxScore) })} detail={t('Server-calculated')} />
         <Stat icon={<Trophy />} label={t('Accuracy')} value={t('{pct}%', { pct: formatInt(result.stats.accuracyPct) })} detail={`${plural(result.stats.wrongAnswers, 'wrong', 'wrong')} · ${plural(result.stats.hintsUsed, 'hint')}`} />
         <Stat icon={<Clock3 />} label={t('Time')} value={result.stats.elapsed} detail={t('Official timer')} />
       </div>
-      <p className="result-lede">{resultXpNote(result)}</p>
+      <p className="result-lede result-xp-note">{resultXpNote(result)}</p>
+      <section className="result-explanation" aria-labelledby="result-explanation-title">
+        <h2 id="result-explanation-title">{t('Final step explained')}</h2>
+        <p>{t(result.finalExplanation)}</p>
+      </section>
       {result.ledger.length > 0 && (
         <ul className="ledger" aria-label={t('Score ledger')}>
           {result.ledger.map((row) => (
@@ -604,8 +646,12 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab }: { 
           </ul>
         </div>
       )}
-      {onReturnToLab && <button type="button" className="primary" onClick={onReturnToLab}>{t('Back to the laboratory')} <ArrowRight size={16} aria-hidden="true" /></button>}
-      <button type="button" className={onReturnToLab ? 'ghost' : 'primary'} onClick={onExit}>{t('Return to mission control')} <ArrowRight size={16} aria-hidden="true" /></button>
+      {replayError !== null && replayError !== undefined && <div className="feedback wrong" role="alert"><X size={16} aria-hidden="true" /><div><b>{t('The mission could not be restarted.')}</b><p>{describeError(replayError)}</p></div></div>}
+      <div className="result-actions">
+        {onReplay && <button type="button" className="result-replay" disabled={replayBusy} aria-busy={replayBusy} onClick={onReplay}><RotateCcw size={18} aria-hidden="true" />{replayBusy ? t('Restarting…') : t('Replay mission')}</button>}
+        {onReturnToLab && <button type="button" className="result-return" onClick={onReturnToLab}>{t('Back to the laboratory')} <ArrowRight size={16} aria-hidden="true" /></button>}
+        <button type="button" className={onReturnToLab ? 'ghost' : 'primary'} onClick={onExit}>{t('Return to mission control')} <ArrowRight size={16} aria-hidden="true" /></button>
+      </div>
     </main>
   );
 }

@@ -44,7 +44,8 @@ test.describe('production bundle', () => {
   test('a mission: wrong answer, right answer, and a result that equals the server record', async ({ page }) => {
     await resetDemo(page);
     await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
-    await expect(page.locator('.case-meta + .scenario-note')).toHaveText('Educational scenario — not clinical guidance');
+    await expect(page.locator('.mission-hero')).toContainText('Blood Smear Code');
+    await expect(page.locator('.mission-disclaimer')).toHaveText('Educational scenario — not clinical guidance');
     await page.locator('.scientific').click({ position: { x: 20, y: 20 } });
     await submit(page).click();
     await expect(page.getByRole('alert')).toContainText('Not quite.');
@@ -53,14 +54,21 @@ test.describe('production bundle', () => {
     await submit(page).click();
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
     const stored = (await apiCall(await sessionToken(page), `/attempts/${id}/result`)).body as { score: number; maxScore: number };
-    await expect(page.locator('.result-stats .stat').first().locator('strong')).toHaveText(`${stored.score} of ${stored.maxScore} XP`);
-    await expect(page.getByText('Server-calculated')).toBeVisible();
+    await expect(page.locator('.result-score-top')).toContainText(`${stored.score}`);
+    await expect(page.locator('.result-score-top')).toContainText(`${stored.maxScore} XP`);
+    await expect(page.getByRole('button', { name: 'Replay mission' })).toBeVisible();
+    const replay = page.waitForResponse((r) => r.url().endsWith('/missions/hem-01/start') && r.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Replay mission' }).click();
+    await replay;
+    await expect(page.locator('.mission-hero')).toContainText('Blood Smear Code');
+    await expect(page.locator('.case-panel h1')).toContainText('Click the schistocyte');
   });
 
   test('a bundle built without VITE_API_URL refuses to start with a clear alert and calls no API', async ({ page }) => {
     const calls: string[] = [];
     page.on('request', (request) => { if (request.url().includes('/api/') || request.url().includes('localhost:3000')) calls.push(request.url()); });
-    await page.goto('http://127.0.0.1:4174/');
+    const unconfiguredPort = Number(process.env.E2E_UNCONFIGURED_PORT) || 4174;
+    await page.goto(`http://127.0.0.1:${unconfiguredPort}/`);
     const alert = page.getByRole('alert');
     await expect(alert).toContainText('Escape Lab is not configured');
     await expect(alert).toContainText('VITE_API_URL');

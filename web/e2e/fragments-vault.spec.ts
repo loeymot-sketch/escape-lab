@@ -10,6 +10,8 @@ test.describe('Code Vault: fragments, unlock and results', () => {
     await clickArtwork(page, ARTWORK.smear);
     await submit(page).click();
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Final step explained' })).toBeVisible();
+    await expect(page.locator('.result-explanation p')).not.toBeEmpty();
     const fragment = page.locator('.fragment-reveal');
     await expect(fragment).toBeVisible();
     await expect(fragment).toContainText('CODE FRAGMENT DISCOVERED');
@@ -105,6 +107,28 @@ test.describe('Code Vault: fragments, unlock and results', () => {
     await expect(page.getByText('Hematology Lab').first()).toBeVisible();
     await expect(page.getByRole('list', { name: 'Hematology Lab score ledger' })).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  });
+
+  test('holding Enter cannot submit repeated vault guesses or exhaust the lockout budget', async ({ page }) => {
+    const token = await freshStudent();
+    await completeLabViaApi(token, 'hematology', false);
+    await openAs(page, token);
+    await page.getByRole('button', { name: 'Progress' }).click();
+    const input = page.getByLabel(/Exit code for Hematology Lab/);
+    await input.fill('000');
+    let requests = 0;
+    await page.route('**/api/labs/hematology/unlock', async (route) => {
+      requests += 1;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await route.continue();
+    });
+    await input.press('Enter');
+    await expect(page.getByRole('button', { name: 'Checking…' })).toBeDisabled();
+    await page.locator('.unlock-row').evaluate((form) => {
+      for (let i = 0; i < 8; i += 1) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    await expect(page.getByRole('alert')).toContainText('4 attempts left');
+    expect(requests).toBe(1);
   });
 
   test('the exit code is refused until every fragment is found (no input is offered)', async ({ page }) => {

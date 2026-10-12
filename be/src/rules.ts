@@ -7,6 +7,7 @@ export function scoringRules() {
     masterLab: { ...MASTER_SCORING, maxScore: maxScore(MASTER_SCORING, 4) },
     wrongAnswerPenalty: -WRONG_PENALTY,
     hintPenalty: -HINT_PENALTY,
+    noHintBonus: { standard: STANDARD_SCORING.noHint, master: MASTER_SCORING.noHint },
     scoreFloor: 'Penalties are applied only up to the points a mission has earned: a mission never scores below 0, and a ledger row marked "capped" says so.',
     timeBonus: `Full bonus up to ${TIME_PAR_SHARE * 100}% of the time limit, then linear down to 0 at the limit.`,
     xp: 'Total XP is the sum of your best score per mission, so replays can improve but never farm XP.',

@@ -176,6 +176,7 @@ test('R3-01/03/13: the cap is visible in the HUD, the lab results ledger and the
   assert.equal(results.ledger.reduce((s: number, r: any) => s + r.points, 0), results.xp);
   const rules = (await h.call('GET', '/api/rules')).body;
   assert.match(rules.scoreFloor, /never scores below 0/);
+  assert.deepEqual(rules.noHintBonus, { standard: 20, master: 60 });
 });
 
 test('R3-02: every POST/PUT operation declares 400, 413 and 415', async () => {

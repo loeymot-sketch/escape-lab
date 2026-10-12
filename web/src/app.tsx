@@ -24,6 +24,7 @@ import './polish.css';
 import './about.css';
 import './refine.css';
 import './neon-theme.css';
+import './game-world.css';
 
 type Role = 'student' | 'teacher';
 

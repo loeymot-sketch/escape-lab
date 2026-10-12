@@ -154,15 +154,16 @@ test('content approval: draft -> reviewed -> approved, students cannot see or ch
   assert.equal((await h.call('PUT', '/api/content/missions/hem-01/status', { token: alex, body: { status: 'reviewed' } })).status, 403);
 });
 
-test('reset also restores the demo student identity and drops extra classes (ADV-04)', async () => {
+test('reset restores the demo student identity without removing other class memberships', async () => {
   const profile = () => h.call('GET', '/api/profile', { token: alex });
   assert.equal((await h.call('PUT', '/api/profile', { token: alex, body: { name: 'Mallory Reset', program: 'Other', studyLevel: 'M2' } })).status, 200);
-  const classes = (await h.call('GET', '/api/classes', { token: claire })).body;
-  const other = (Array.isArray(classes) ? classes : classes.classes).find((c: any) => c.name !== 'L3 Biomedical Sciences');
-  assert.equal((await h.call('POST', '/api/classes/join', { token: alex, body: { joinCode: other.joinCode } })).status, 200);
+  const otherTeacher = await h.signup('Independent Teacher', 'independent@uni.edu', { teacherInviteCode: 'FACULTY-INVITE' });
+  const external = await h.call('POST', '/api/classes', { token: otherTeacher.token, body: { name: 'External class' } });
+  assert.equal(external.status, 201);
+  assert.equal((await h.call('POST', '/api/classes/join', { token: alex, body: { joinCode: external.body.joinCode } })).status, 200);
   assert.equal((await h.call('POST', '/api/demo/reset', { token: alex })).status, 200);
   const p = (await profile()).body.user;
   assert.deepEqual([p.name, p.studyLevel], ['Alex Martin', 'L3']);
-  const rosterOther = (await h.call('GET', `/api/classes/${other.id}/students`, { token: claire })).body;
-  assert.ok(!rosterOther.students.some((s: any) => s.name === 'Alex Martin'), 'Alex left the extra class');
+  const rosterOther = (await h.call('GET', `/api/classes/${external.body.id}/students`, { token: otherTeacher.token })).body;
+  assert.ok(rosterOther.students.some((s: any) => s.name === 'Alex Martin'), 'reset must preserve the student in the other class roster');
 });

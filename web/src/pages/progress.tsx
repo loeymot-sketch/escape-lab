@@ -1,5 +1,6 @@
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { ArrowRight, Check, Clock3, Sparkles, Trophy } from 'lucide-react';
+import vaultArt from '../assets/progression-vault.webp';
 import { ApiError, api } from '../lib/api';
 import { describeBoard, normalizeBadges, normalizeLabResult, normalizeLeaderboard, normalizeVault, type BadgeItem, type LabResult, type Leaderboard, type LeaderboardRow, type VaultItem } from '../lib/progression';
 import { normalizeLabs, normalizeUnlock, type Lab } from '../lib/student';
@@ -38,13 +39,21 @@ export function ProgressHub() {
 
   return (
     <>
-      <PageIntro eyebrow={t('PROGRESSION SYSTEM')} title={t('Progress vault')}>
-        {t('Every fragment and badge below comes from the server record. Nothing is awarded by the interface.')}
-      </PageIntro>
-      {refreshError !== null && <ErrorPanel error={refreshError} title={t('The vault could not be refreshed')} onRetry={() => void refresh()} level={2} />}
-      <Loaded load={state} label={t('Opening the vault…')} onRetry={reload} level={2}>
-        {(data) => <ProgressView data={data} outcome={outcome} setOutcome={setOutcome} refresh={refresh} />}
-      </Loaded>
+      <div className="progress-screen">
+        <section className="vault-hero" aria-labelledby="vault-page-title">
+          <img src={vaultArt} alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
+          <div className="vault-hero-copy">
+            <div className="eyebrow">{t('PROGRESSION SYSTEM')}</div>
+            <h1 id="vault-page-title">{t('Progress vault')}</h1>
+            <p>{t('Every fragment and badge below comes from the server record. Nothing is awarded by the interface.')}</p>
+          </div>
+          <div className="vault-hero-mark" aria-hidden="true"><Trophy size={28} /></div>
+        </section>
+        {refreshError !== null && <ErrorPanel error={refreshError} title={t('The vault could not be refreshed')} onRetry={() => void refresh()} level={2} />}
+        <Loaded load={state} label={t('Opening the vault…')} onRetry={reload} level={2}>
+          {(data) => <ProgressView data={data} outcome={outcome} setOutcome={setOutcome} refresh={refresh} />}
+        </Loaded>
+      </div>
     </>
   );
 }
@@ -88,6 +97,7 @@ function BadgeRow({ badge }: { badge: BadgeItem }) {
 function VaultCard({ vault, name, outcome, setOutcome, refresh }: { vault: VaultItem; name: string; outcome: Outcome | null; setOutcome: (o: Outcome | null) => void; refresh: () => Promise<ProgressData | null> }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
   const inputId = useId();
   // The Unlock button disables itself while the server checks, and the form disappears on success: focus is placed back by hand.
   const cardRef = useRef<HTMLDivElement>(null);
@@ -98,7 +108,8 @@ function VaultCard({ vault, name, outcome, setOutcome, refresh }: { vault: Vault
 
   const unlock = async (event: FormEvent) => {
     event.preventDefault();
-    if (busy || !ready) return;
+    if (submitting.current || !ready) return;
+    submitting.current = true;
     setBusy(true);
     setOutcome(null);
     try {
@@ -132,6 +143,7 @@ function VaultCard({ vault, name, outcome, setOutcome, refresh }: { vault: Vault
       setOutcome({ kind: 'error', slug: vault.labSlug, text: () => unlockMessage(e) });
       window.setTimeout(() => inputRef.current?.focus(), 0);
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   };

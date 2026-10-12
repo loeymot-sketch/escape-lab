@@ -44,8 +44,9 @@ aside, .app>aside {
 .brand, .mobile-brand { color: #f3fbff; }
 .brand-mark { background: #0a3854; color: var(--teal); box-shadow: 0 0 18px rgba(25,216,255,.28); }
 .brand>span:last-child>span, .mobile-brand span { color: var(--teal); }
-.author-credit { margin: 10px 4px 0; color: #a9c4d8; font-size: 10px; line-height: 1.45; }
+.author-credit { margin: 10px 4px 0; color: #a9c4d8; font-size: 12px; line-height: 1.45; }
 .author-credit strong { color: #ffc83d; font-weight: 800; }
+.author-credit-compact, .nav-label-compact { display: none; }
 .landing .author-credit { margin: 14px 0 0; font-size: 12px; }
 .eyebrow { color: #71dfff; }
 .side-status { color: #86abc5; }
@@ -138,6 +139,9 @@ header { border-color: rgba(35, 117, 157, .55); }
 .lang-switch button { color: #a9d7e9; background: transparent; }
 .lang-switch button[aria-pressed="true"] { background: #075e78; color: #fff; box-shadow: inset 0 0 14px rgba(255,255,255,.16); }
 .player, .result-screen { background: transparent; color: #edf7ff; }
+.result-explanation { max-width: 560px; margin: 20px auto; padding: 18px 20px; border: 1px solid #177f9e; border-radius: 16px; background: linear-gradient(135deg, #09263b, #061a2b); box-shadow: inset 0 0 24px rgb(0 198 255 / 7%); text-align: left; }
+.result-explanation h2 { margin: 0 0 8px; color: #92eaff; font-size: 16px; }
+.result-explanation p { margin: 0; color: #d4e8f4; line-height: 1.6; overflow-wrap: anywhere; }
 .player header { background: rgba(4, 21, 34, .94); color: #edf7ff; }
 .player-title b { color: #f2fbff; }
 .player-title .eyebrow { color: #8dd9ee; }
@@ -149,8 +153,20 @@ header { border-color: rgba(35, 117, 157, .55); }
 .point-text th:first-child { background: #082b45; box-shadow: 1px 0 0 #1b5876; }
 
 @media (max-width: 600px) {
-  .app>aside { background: rgba(4, 25, 43, .98); }
-  .app>aside nav button.active, .app>aside nav button:hover { background: rgba(15, 105, 143, .5); }
-  .app>aside .author-credit { margin: 8px 0 0; text-align: center; font-size: 10px; }
+  .app>aside { background: linear-gradient(180deg, rgba(7, 35, 55, .99), rgba(4, 25, 43, .98)); border-bottom-color: rgba(35, 117, 157, .55); }
+  .app>aside .brand { color: #f3fbff; }
+  .app>aside .brand-mark { background: #0a3854; color: var(--teal); box-shadow: 0 0 14px rgba(25,216,255,.2); }
+  .app>aside .author-credit { color: #a9c4d8; }
+  .app>aside .author-credit strong { color: #ffc83d; }
+  .app>aside nav button { color: #b6cee0; }
+  .app>aside nav button.active { color: #fff; background: linear-gradient(135deg, rgba(7, 111, 145, .56), rgba(6, 62, 93, .6)); box-shadow: inset 0 0 0 1px rgba(25,216,255,.58), 0 0 14px rgba(25,216,255,.12); }
+  .app-main>header { height: auto; min-height: 68px; gap: 8px; padding: 10px 0; }
+  .mobile-brand { min-height: 44px; gap: 6px; padding: 0 10px; border: 1px solid #228eb5; border-radius: 13px; background: linear-gradient(135deg, #0b405d, #082944); color: #eefaff; box-shadow: 0 0 12px rgba(25,216,255,.1); }
+  .mobile-brand b { color: inherit; font-size: 12px; }
+  .app-main>header .lang-switch { flex: 0 0 auto; }
+  .app-main>header .lang-switch button { min-width: 44px; min-height: 44px; }
+  .app-main>header .user-chip { flex: 1 1 auto; min-width: 0; justify-content: flex-end; gap: 6px; font-size: 11px; color: #d8eaf5; }
+  .app-main>header .user-chip>span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app-main>header .avatar { width: 28px; height: 28px; flex: 0 0 28px; background: #0b405d; color: #75e7ff; border: 1px solid #1687ad; }
   .landing-inner { background: linear-gradient(180deg, rgba(4,21,34,.12), rgba(4,21,34,.98) 28%); }
 }

@@ -39,6 +39,7 @@ export const expiredView = () => ({ ...base, status: 'expired', expired: true, r
 export const resultPayload = () => ({
   attemptId: 'attempt-42',
   mission: { id: 'hem-03', title: 'Anemia Detective', labSlug: 'hematology' },
+  finalExplanation: 'The final laboratory finding supports the diagnosis.',
   score: 168, maxScore: 180, xpAwarded: 168, totalXp: 168, newBest: true,
   ledger: [{ id: 'base', label: 'Base mission', reason: 'Mission completed', points: 100, kind: 'earned' }, { id: 'wrong', label: 'Wrong attempt', reason: '1 x -10 XP', points: -10, kind: 'penalty' }],
   stats: { accuracyPct: 75, elapsedSec: 90, elapsed: '01:30', hintsUsed: 0, wrongAnswers: 1, firstTrySteps: 2, steps: 3 },

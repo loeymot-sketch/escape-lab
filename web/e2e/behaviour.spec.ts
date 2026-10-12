@@ -182,6 +182,7 @@ test.describe('hints', () => {
   test('the budget is shown, the penalty is server-owned, and the hint is cleared on the next step', async ({ page }) => {
     await startMissionViaUi(page, 'Hematology Lab', 'Fix the Sample');
     await expect(page.getByText('Each hint costs 15 XP.')).toBeVisible();
+    await expect(page.getByText('Using a hint also forfeits the 20 XP no-hint bonus.')).toBeVisible();
     await expect(page.getByText('Hints used on this step: 0 of 1.')).toBeVisible();
     await page.getByRole('button', { name: 'Ask Lab Assistant' }).click();
     await expect(page.locator('.hint-result')).toBeVisible();

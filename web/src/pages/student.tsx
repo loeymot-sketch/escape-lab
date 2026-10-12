@@ -1,6 +1,10 @@
-import { ArrowRight, Beaker, ChevronRight, Clock3, Hourglass, LockKeyhole, Sparkles, Trophy } from 'lucide-react';
+import { ArrowRight, Beaker, Check, ChevronRight, Clock3, Hourglass, LockKeyhole, Sparkles, Trophy } from 'lucide-react';
 import { createElement } from 'react';
 import labescapeInvestigationHero from '../assets/labescape-investigation-hero.webp';
+import hematologyArt from '../assets/lab-hematology.webp';
+import microbiologyArt from '../assets/lab-microbiology.webp';
+import biochemistryArt from '../assets/lab-biochemistry.webp';
+import vaultArt from '../assets/progression-vault.webp';
 import { api } from '../lib/api';
 import { formatInt, plural, t } from '../i18n';
 import { engineLabel, outOf } from '../lib/labels';
@@ -92,27 +96,35 @@ export function LabCard({ lab, level }: { lab: Lab; level: 2 | 3 }) {
   const soon = lab.state === 'coming_soon';
   const locked = lab.state === 'locked' || soon;
   const stateLabel = lab.state === 'completed' ? t('CLEARED') : lab.state === 'locked' ? t('LOCKED') : t('ACTIVE');
+  const art = lab.discipline === 'hematology' ? hematologyArt : lab.discipline === 'microbiology' ? microbiologyArt : lab.discipline === 'biochemistry' ? biochemistryArt : lab.discipline === 'master' ? vaultArt : null;
+  const slotCount = Math.min(4, lab.fragments.total);
   return (
     <article className={`lab-card ${tone(lab.discipline)} ${locked ? 'locked' : ''}`}>
-      <div className="lab-card-top">
-        <span className="lab-index">{String(lab.ordinal).padStart(2, '0')}</span>
-        {soon ? null : locked ? <LockKeyhole size={16} aria-label={stateLabel} role="img" /> : <span className="lab-state">{stateLabel}</span>}
+      <div className="lab-card-scene" aria-hidden="true">
+        {art && <img src={art} alt="" loading="lazy" decoding="async" />}
+        <div className="lab-card-top">
+          <span className="lab-index">{String(lab.ordinal).padStart(2, '0')}</span>
+          {soon ? null : locked ? <LockKeyhole size={16} /> : <span className="lab-state">{stateLabel}</span>}
+        </div>
+        <div className="lab-emblem">{soon ? <Hourglass size={22} /> : <Beaker size={24} />}</div>
       </div>
-      <div className="lab-emblem" aria-hidden="true">{soon ? <Hourglass size={22} /> : <Beaker size={24} />}</div>
-      {createElement(`h${level}`, null, t(lab.name.replace(' Lab', '')))}
-      {!soon && <p>{t(lab.blurb)}</p>}
-      {!soon && (
-        <p className="lab-meta">
-          {outOf(lab.missions.completed, plural(lab.missions.total, 'mission'))} · {outOf(lab.fragments.found, plural(lab.fragments.total, 'code fragment'))}
-        </p>
-      )}
-      {lab.lockedReason && <p className="lab-meta">{t(lab.lockedReason)}</p>}
-      <div className="lab-card-foot">
-        {lab.state === 'coming_soon'
-          ? <span className="soon">{t('Coming soon')}</span>
-          : lab.state === 'locked'
-            ? <span>{t('Locked')}</span>
-            : <button type="button" disabled={nav.busy} onClick={() => nav.openLab(lab.slug)} aria-label={lab.state === 'completed' ? t('Review {name}', { name: t(lab.name) }) : t('Enter {name}', { name: t(lab.name) })}>{lab.state === 'completed' ? t('Review lab') : t('Enter lab')} <ArrowRight size={14} aria-hidden="true" /></button>}
+      <div className="lab-card-content">
+        {createElement(`h${level}`, null, t(lab.name.replace(' Lab', '')))}
+        {!soon && <p>{t(lab.blurb)}</p>}
+        {!soon && (
+          <div className="lab-card-progress" role="group" aria-label={`${outOf(lab.missions.completed, plural(lab.missions.total, 'mission'))} · ${outOf(lab.fragments.found, plural(lab.fragments.total, 'code fragment'))}`}>
+            <span className="lab-card-counts">{outOf(lab.missions.completed, plural(lab.missions.total, 'mission'))} · {outOf(lab.fragments.found, plural(lab.fragments.total, 'code fragment'))}</span>
+            {slotCount > 0 && <span className="lab-code-pips" aria-hidden="true">{Array.from({ length: slotCount }, (_, index) => <i className={index < lab.fragments.found ? 'found' : ''} key={index}>{index < lab.fragments.found ? <Check size={12} /> : '·'}</i>)}</span>}
+          </div>
+        )}
+        {lab.lockedReason && <p className="lab-meta">{t(lab.lockedReason)}</p>}
+        <div className="lab-card-foot">
+          {lab.state === 'coming_soon'
+            ? <span className="soon">{t('Coming soon')}</span>
+            : lab.state === 'locked'
+              ? <span><LockKeyhole size={15} aria-hidden="true" /> {t('Locked')}</span>
+              : <button type="button" disabled={nav.busy} onClick={() => nav.openLab(lab.slug)} aria-label={lab.state === 'completed' ? t('Review {name}', { name: t(lab.name) }) : t('Enter {name}', { name: t(lab.name) })}>{lab.state === 'completed' ? t('Review lab') : t('Enter lab')} <ArrowRight size={16} aria-hidden="true" /></button>}
+        </div>
       </div>
     </article>
   );

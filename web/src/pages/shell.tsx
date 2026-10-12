@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { ArrowRight, Beaker, BookOpen, ChevronRight, FlaskConical, Loader2, Menu, Sparkles, Trophy, X } from 'lucide-react';
+import { ArrowRight, Beaker, BookOpen, ClipboardCheck, ClipboardList, FlaskConical, Loader2, Menu, Settings as SettingsIcon, Sparkles, Trophy, Users, X } from 'lucide-react';
 import labescapeInvestigationHero from '../assets/labescape-investigation-hero.webp';
 import { ApiError } from '../lib/api';
 import { LanguageSwitch, t } from '../i18n';
@@ -23,7 +23,7 @@ export function GuestGate({ loading, error, retry }: { loading: boolean; error: 
       <div className="landing-lang" role="region" aria-label="Langue / Language"><LanguageSwitch /></div>
       <main className="landing-inner">
         <div className="brand large"><span className="brand-mark"><FlaskConical size={24} aria-hidden="true" /></span><span>ESCAPE<span>LAB</span></span></div>
-        <div className="author-credit"><span>{t('Project conceived and developed with passion by')}</span> <strong>Sawssen Jemaiel</strong></div>
+        <div className="author-credit"><span className="author-credit-full">{t('Project conceived and developed with passion by')}</span><span className="author-credit-compact">{t('Created with passion by')}</span> <strong>Sawssen Jemaiel</strong></div>
         <div className="landing-kicker">{t('LabEscape · virtual laboratory')}</div>
         {loading
           ? <div role="status" aria-live="polite"><h1>{t('Preparing your investigation…')}</h1><p>{t('Opening a guided biomedical investigation with a guest demo session.')}</p></div>
@@ -100,9 +100,9 @@ function focusHeadingWhenReady(root: HTMLElement, done: () => void): () => void 
 }
 
 export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpen, setMenuOpen, error, clearError, notice, clearNotice, banner, guestBusy, starting, children }: ShellProps) {
-  const navItem = (target: View, label: string, icon: ReactNode, activeFor: View[] = [target]) => (
-    <button type="button" className={activeFor.includes(view) ? 'active' : ''} aria-current={activeFor.includes(view) ? 'page' : undefined} onClick={() => { setView(target); setMenuOpen(false); }}>
-      {icon}{label}
+  const navItem = (target: View, label: string, icon: ReactNode, activeFor: View[] = [target], mobileLabel = label) => (
+    <button type="button" className={activeFor.includes(view) ? 'active' : ''} aria-label={label} aria-current={activeFor.includes(view) ? 'page' : undefined} onClick={() => { setView(target); setMenuOpen(false); }}>
+      {icon}<span className="nav-label-full">{label}</span><span className="nav-label-compact" aria-hidden="true">{mobileLabel}</span>
     </button>
   );
   const mainRef = useRef<HTMLElement>(null);
@@ -237,25 +237,25 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
       <aside aria-label={t('Primary')}>
         <div className="brand"><span className="brand-mark"><FlaskConical size={19} aria-hidden="true" /></span><span>ESCAPE<span>LAB</span></span></div>
         <div className="eyebrow">{t('BIOMEDICAL TRAINING')}</div>
-        <div className="author-credit"><span>{t('Project conceived and developed with passion by')}</span> <strong>Sawssen Jemaiel</strong></div>
+        <div className="author-credit"><span className="author-credit-full">{t('Project conceived and developed with passion by')}</span><span className="author-credit-compact">{t('Created with passion by')}</span> <strong>Sawssen Jemaiel</strong></div>
         <nav aria-label={t('Sections')}>
           {teacher
             ? (
               <>
-                {navItem('teacher', t('Faculty'), <Sparkles size={17} aria-hidden="true" />)}
-                {navItem('student', t('Student detail'), <ChevronRight size={17} aria-hidden="true" />)}
-                {navItem('content', t('Content review'), <ChevronRight size={17} aria-hidden="true" />)}
-                {navItem('about', t('About & demo guide'), <BookOpen size={17} aria-hidden="true" />)}
+                {navItem('teacher', t('Faculty'), <Sparkles size={17} aria-hidden="true" />, ['teacher'], t('Faculty'))}
+                {navItem('student', t('Student detail'), <Users size={17} aria-hidden="true" />, ['student'], t('Learners'))}
+                {navItem('content', t('Content review'), <ClipboardCheck size={17} aria-hidden="true" />, ['content'], t('Review'))}
+                {navItem('about', t('About & demo guide'), <BookOpen size={17} aria-hidden="true" />, ['about'], t('Guide'))}
               </>
             )
             : (
               <>
-                {navItem('home', t('Investigations'), <Sparkles size={17} aria-hidden="true" />)}
-                {navItem('labs', t('Lab map'), <Beaker size={17} aria-hidden="true" />, ['labs', 'lab'])}
+                {navItem('home', t('Investigations'), <Sparkles size={17} aria-hidden="true" />, ['home'], t('Cases'))}
+                {navItem('labs', t('Lab map'), <Beaker size={17} aria-hidden="true" />, ['labs', 'lab'], t('Labs'))}
                 {navItem('progress', t('Progress'), <Trophy size={17} aria-hidden="true" />)}
-                {navItem('results', t('Lab results'), <ChevronRight size={17} aria-hidden="true" />)}
-                {navItem('profile', t('Learning settings'), <ChevronRight size={17} aria-hidden="true" />)}
-                {navItem('about', t('About & demo guide'), <BookOpen size={17} aria-hidden="true" />)}
+                {navItem('results', t('Lab results'), <ClipboardList size={17} aria-hidden="true" />, ['results'], t('Results'))}
+                {navItem('profile', t('Learning settings'), <SettingsIcon size={17} aria-hidden="true" />, ['profile'], t('Settings'))}
+                {navItem('about', t('About & demo guide'), <BookOpen size={17} aria-hidden="true" />, ['about'], t('Guide'))}
               </>
             )}
         </nav>
@@ -264,8 +264,8 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
       <div className="app-main">
         <header>
           <div className="menu-anchor">
-            <button type="button" className="mobile-brand" ref={menuButtonRef} aria-expanded={menuOpen} aria-controls={menuOpen ? 'guest-menu' : undefined} onClick={() => setMenuOpen(!menuOpen)}>
-              <Menu size={18} aria-hidden="true" /><b>{t('Guest options')}</b>
+            <button type="button" className="mobile-brand" ref={menuButtonRef} aria-label={t('Guest options')} aria-expanded={menuOpen} aria-controls={menuOpen ? 'guest-menu' : undefined} onClick={() => setMenuOpen(!menuOpen)}>
+              <Menu size={18} aria-hidden="true" /><b>{t('Menu')}</b>
             </button>
             {menuOpen && (
               <div className="guest-popover" id="guest-menu" role="group" aria-label={t('Guest options')} ref={popoverRef}>

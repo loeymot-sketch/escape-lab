@@ -471,6 +471,8 @@ export class Game {
     const payload = {
       attemptId: a.id,
       mission: { id: m.id, title: m.title, labSlug: m.labSlug },
+      // Available only after the final step is solved; the completed result remains useful after a reload.
+      finalExplanation: m.steps.at(-1)?.explanation ?? '',
       score: score.total, maxScore: score.max,
       xpAwarded: earnedNow - xpBefore, totalXp, newBest: !prev || score.total > prev.best_score,
       ledger: score.rows as LedgerRow[],
@@ -557,7 +559,9 @@ export class Game {
     const a = this.attemptRow(attemptId, uid);
     if (a.status === 'expired') throw conflict('time_expired', 'This attempt expired before it was completed.');
     if (a.status !== 'completed' || !a.result_json) throw conflict('attempt_in_progress', 'The result is available once the mission is complete.');
-    const payload = JSON.parse(a.result_json) as Record<string, unknown> & { mission: { labSlug: string } };
+    const payload = JSON.parse(a.result_json) as Record<string, unknown> & { mission: { id: string; labSlug: string } };
+    // Older completed attempts predate this field; derive it only after completion and keep them readable without a data migration.
+    if (typeof payload.finalExplanation !== 'string') payload.finalExplanation = MISSION_BY_ID.get(payload.mission.id)?.steps.at(-1)?.explanation ?? '';
     const slug = payload.mission.labSlug;
     const exited = this.exits(uid).has(slug);
     const comp = this.competencies(uid);

@@ -189,10 +189,15 @@ export function normalizeVaultItem(value: unknown): VaultItem {
   };
 }
 
-export type Rules = { hintPenalty: number; wrongAnswerPenalty: number };
+export type Rules = { hintPenalty: number; wrongAnswerPenalty: number; noHintBonus: { standard: number; master: number } };
 export function normalizeRules(payload: unknown): Rules {
   const root = rec(payload, 'rules');
-  return { hintPenalty: num(root.hintPenalty, 'rules', 'hintPenalty'), wrongAnswerPenalty: num(root.wrongAnswerPenalty, 'rules', 'wrongAnswerPenalty') };
+  const bonuses = rec(root.noHintBonus, 'rules', 'noHintBonus');
+  return {
+    hintPenalty: num(root.hintPenalty, 'rules', 'hintPenalty'),
+    wrongAnswerPenalty: num(root.wrongAnswerPenalty, 'rules', 'wrongAnswerPenalty'),
+    noHintBonus: { standard: nonNeg(bonuses.standard, 'rules', 'noHintBonus.standard'), master: nonNeg(bonuses.master, 'rules', 'noHintBonus.master') },
+  };
 }
 
 export type UnlockReply = { alreadyUnlocked: boolean; labName: string; newBadges: { id: string; name: string }[] };

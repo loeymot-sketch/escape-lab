@@ -17,8 +17,9 @@ const apiCommand = [
 
 // The production-bundle project exercises `vite build` output served by `vite preview` (not the dev server): minified
 // code, hashed assets, no StrictMode double effects. It is built into its own folders so `dist/` (the budget check) is untouched.
-const PROD_PORT = 4173;
-const UNCONFIGURED_PORT = 4174;
+// Keep the production previews movable: another local project may already own the default ports.
+const PROD_PORT = Number(process.env.E2E_PROD_PORT) || 4173;
+const UNCONFIGURED_PORT = Number(process.env.E2E_UNCONFIGURED_PORT) || 4174;
 const API_URL = 'http://localhost:3000/api';
 
 export default defineConfig({

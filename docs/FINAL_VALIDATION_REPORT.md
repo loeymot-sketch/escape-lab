@@ -1,3 +1,20 @@
+## Complément de validation — 2026-10-12 (dépôt local uniquement)
+
+Cette passe a été exécutée sur `/Users/1millnonstop/Downloads/escape-lab/escape-lab`, avec Node 22.23.2. Elle ne constitue ni une publication, ni une validation distante, ni une revue biomédicale humaine.
+
+| Contrôle | Résultat |
+|---|---:|
+| Tests backend | **272/272 réussis** |
+| Typecheck backend | réussi |
+| Tests unitaires frontend | **345/345 réussis** (22 fichiers) |
+| Playwright complet | **427/427 réussis** : Chromium, iPhone 13 émulé sur Chromium, et bundle de production |
+| Build configuré (`VITE_API_URL=/api`) | réussi ; budget respecté : JS principal 377 128/400 000 o, JS différé 99 163/160 000 o, CSS 75 871/120 000 o, images 93 et 166 ko |
+| `git diff --check` | réussi |
+
+Corrections incluses : les soumissions répétées du coffre pendant le maintien d’Entrée sont bloquées côté interface; le coût affiché d’un indice distingue la pénalité directe de la prime « sans indice » perdue (valeurs fournies par `/api/rules`); l’explication de la dernière étape figure dans le résultat et reste disponible après rechargement, y compris pour les anciens résultats; la réinitialisation de l’élève de démonstration ne le retire plus des classes d’autres enseignants; la signature du profil reste lisible sur téléphone. Les tests de production utilisent maintenant le port réellement configuré; le contrôle de visibilité en paysage tolère seulement l’arrondi inférieur à 1 % dû aux pixels fractionnaires.
+
+Limites à ne pas masquer : le parcours « Blood Smear Code » reste visuel sans alternative complète pour lecteur d’écran; il faut une description rédigée et validée par un expert pédagogique/accessibilité. Le contenu biomédical et les illustrations ne sont pas validés par des professionnels de santé. Le mode invité utilise un profil partagé : plusieurs visiteurs peuvent partager progression et réinitialisation. Les captures de référence sont une direction visuelle, pas une preuve de comparaison pixel par pixel. Safari/WebKit, une revue humaine, CI distante et le déploiement Vercel n’ont pas été exécutés dans cette passe. Les modifications restent locales et non publiées.
+
 # Escape Lab — rapport unique de validation
 
 Date de consolidation : 2026-10-09 (historique des passes du 2026-10-04 au 2026-10-08 conservé plus bas)
@@ -610,4 +627,3 @@ Corrections majeures (toutes avec test de non-régression) :
 Limites ouvertes (voir `KNOWN_LIMITATIONS.md`) : **tous les invités partagent le même utilisateur serveur « Alex Martin »** (décision produit requise avant toute démo publique concurrente), classement `cohort=all`, statut de contenu global, absence de routage par URL, content/clinique non validés.
 
 Verdict : **MVP invité local PASS ; release ESCALATE** — aucune exécution CI distante ni signature indépendante n'existe dans ce workspace (pas de remote Git). Une boucle d'agents du même éditeur, un test Playwright vert ou une capture ne constituent pas une signature indépendante.
-

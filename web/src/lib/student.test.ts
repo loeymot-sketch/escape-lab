@@ -110,8 +110,10 @@ describe('GET /labs/:slug', () => {
 
 describe('GET /rules and unlock', () => {
   it('reads the published penalties instead of hard-coding them', () => {
-    expect(normalizeRules({ hintPenalty: -15, wrongAnswerPenalty: -10, xp: 'x' })).toEqual({ hintPenalty: -15, wrongAnswerPenalty: -10 });
-    expect(() => normalizeRules({ wrongAnswerPenalty: -10 })).toThrow('hintPenalty');
+    expect(normalizeRules({ hintPenalty: -15, wrongAnswerPenalty: -10, noHintBonus: { standard: 20, master: 60 }, xp: 'x' })).toEqual({ hintPenalty: -15, wrongAnswerPenalty: -10, noHintBonus: { standard: 20, master: 60 } });
+    expect(() => normalizeRules({ hintPenalty: -15, wrongAnswerPenalty: -10 })).toThrow('noHintBonus');
+    expect(() => normalizeRules({ wrongAnswerPenalty: -10, noHintBonus: { standard: 20, master: 60 } })).toThrow('hintPenalty');
+    expect(() => normalizeRules({ hintPenalty: -15, wrongAnswerPenalty: -10, noHintBonus: { standard: -1, master: 60 } })).toThrow('noHintBonus.standard');
   });
   it('reads a successful unlock', () => {
     const reply = normalizeUnlock({ unlocked: true, alreadyUnlocked: false, lab: { name: 'Hematology Lab' }, newBadges: [{ id: 'first-escape', name: 'First Escape' }] });

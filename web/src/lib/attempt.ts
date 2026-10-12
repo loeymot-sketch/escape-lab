@@ -180,6 +180,7 @@ export type AwardedBadge = { id: string; name: string; description: string };
 export type MissionResult = {
   attemptId: string;
   mission: { id: string; title: string; labSlug: string };
+  finalExplanation: string;
   score: number;
   maxScore: number;
   xpAwarded: number;
@@ -210,6 +211,7 @@ function readResult(payload: unknown): MissionResult {
   return {
     attemptId: str(root.attemptId, R, 'attemptId'),
     mission: { id: str(mission.id, R, 'mission.id'), title: str(mission.title, R, 'mission.title'), labSlug: str(mission.labSlug, R, 'mission.labSlug') },
+    finalExplanation: str(root.finalExplanation, R, 'finalExplanation'),
     score: nonNeg(root.score, R, 'score'),
     maxScore: nonNeg(root.maxScore, R, 'maxScore'),
     xpAwarded: num(root.xpAwarded, R, 'xpAwarded'),

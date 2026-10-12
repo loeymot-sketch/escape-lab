@@ -268,6 +268,19 @@ test('result is unavailable until the mission is complete', async () => {
   assert.equal((await h.call('GET', `/api/attempts/${a.attemptId}/result`, { token: u.token })).status, 409);
 });
 
+test('completed results persist the final explanation and remain readable from legacy stored results', async () => {
+  const u = await h.signup('Result explanation');
+  const { attemptId, last } = await solve(h, u.token, 'hem-01');
+  assert.equal(last.result.finalExplanation, mission('hem-01').steps.at(-1)!.explanation);
+  const raw = h.app.db.prepare('SELECT result_json FROM attempts WHERE id = ?').get(attemptId) as { result_json: string };
+  const legacy = JSON.parse(raw.result_json) as Record<string, unknown>;
+  delete legacy.finalExplanation;
+  h.app.db.prepare('UPDATE attempts SET result_json = ? WHERE id = ?').run(JSON.stringify(legacy), attemptId);
+  const restored = await h.call('GET', `/api/attempts/${attemptId}/result`, { token: u.token });
+  assert.equal(restored.status, 200);
+  assert.equal(restored.body.finalExplanation, mission('hem-01').steps.at(-1)!.explanation);
+});
+
 // ---------------------------------------------- vault, labs, Master Lab
 test('full journey: three labs, Code Vault, Master Lab, Clinical Detective badge', async () => {
   const u = await h.signup('Journey');
