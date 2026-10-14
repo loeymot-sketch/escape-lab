@@ -481,7 +481,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
       </div>
     )
     : (
-      <div className="aside-card">
+      <div className="aside-card assistant-card">
         <div className="eyebrow">{t('LAB ASSISTANT · BETA')}</div>
         <h2>{t('Observe before you decide.')}</h2>
         <p>
@@ -498,7 +498,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
     );
 
   const reviewAssistant = (
-    <div className={narrow ? 'assistant-inline review-assistant' : 'aside-card review-assistant'}>
+    <div className={narrow ? 'assistant-inline review-assistant' : 'aside-card review-assistant assistant-card'}>
       <div className="eyebrow">{t('ANSWER SAVED')}</div>
       <h2>{t('Take a moment to understand.')}</h2>
       <p>{t('Read the explanation, then continue when you are ready. The mission timer keeps running.')}</p>

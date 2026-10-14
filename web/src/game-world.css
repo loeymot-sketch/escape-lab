@@ -457,8 +457,9 @@ body::before { opacity: .22; background-size: 56px 56px; }
 .assistant-inline,.case-aside .aside-card { box-shadow: inset 0 1px 0 rgb(188 233 255 / 7%), 0 14px 32px rgb(0 0 0 / 24%); }
 .assistant-inline .eyebrow,.case-aside .aside-card .eyebrow { color: #8bdfff; }
 .assistant-inline .hint,.case-aside .hint { min-height: 48px; justify-content: center; padding: 10px 14px; font-weight: 800; }
-.assistant-inline,.case-aside>.aside-card:first-child { position: relative; overflow: hidden; }
-.assistant-inline::before,.case-aside>.aside-card:first-child::before { content: ''; position: absolute; top: 8px; right: 8px; width: 82px; height: 82px; background: url('./assets/lab-assistant-robot.webp') center / contain no-repeat; filter: drop-shadow(0 0 10px rgb(37 213 255 / 28%)); opacity: .9; pointer-events: none; }
+.assistant-inline,.case-aside>.assistant-card { position: relative; overflow: hidden; }
+.assistant-card .eyebrow, .assistant-card h2, .assistant-inline .eyebrow { padding-right: 92px; }
+.assistant-inline::before,.case-aside>.assistant-card::before { content: ''; position: absolute; top: 8px; right: 8px; width: 82px; height: 82px; background: url('./assets/lab-assistant-robot.webp') center / contain no-repeat; filter: drop-shadow(0 0 10px rgb(37 213 255 / 28%)); opacity: .9; pointer-events: none; }
 .mission-hero+.mission-step-track+.case-layout .feedback { padding: 16px; }
 .mission-hero+.mission-step-track+.case-layout .feedback b { font-size: 14px; }
 
