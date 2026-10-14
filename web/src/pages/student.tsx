@@ -1,4 +1,4 @@
-import { ArrowRight, Beaker, Check, ChevronRight, Clock3, Droplet, FlaskConical, Hourglass, LockKeyhole, Microscope, Sparkles, Trophy } from 'lucide-react';
+import { ArrowRight, Beaker, Check, ChevronRight, Clock3, DoorOpen, Droplet, FlaskConical, Hourglass, LockKeyhole, Microscope, Sparkles, Trophy } from 'lucide-react';
 import { createElement } from 'react';
 import hematologyArt from '../assets/lab-hematology-door.webp';
 import microbiologyArt from '../assets/lab-microbiology-door.webp';
@@ -7,7 +7,7 @@ import masterArt from '../assets/lab-master.webp';
 import masterOpenArt from '../assets/lab-master-open.webp';
 import { api } from '../lib/api';
 import { formatInt, plural, t } from '../i18n';
-import { engineLabel, outOf } from '../lib/labels';
+import { engineLabel, masteryLabel, outOf } from '../lib/labels';
 import { allInvestigationsDone, dashboardFigures, normalizeDashboard, normalizeLabLobby, normalizeLabs, type Dashboard as DashboardData, type Lab, type LabLobby, type LobbyMission } from '../lib/student';
 import { PageIntro, Stat, tone, useDocumentTitle, useNav } from '../ui/common';
 import { EmptyPanel, Loaded, useLoad } from '../ui/state';
@@ -62,6 +62,16 @@ function DashboardView({ dashboard, labs }: { dashboard: DashboardData; labs: La
         <button type="button" className="primary" disabled={nav.busy} aria-busy={nav.starting !== null} onClick={cta.run}>{nav.starting !== null && target?.kind !== 'unlock' ? t('Starting…') : <>{t(cta.label)} <ArrowRight size={17} aria-hidden="true" /></>}</button>
       </section>
       <LevelStrip level={dashboard.user.level} xp={dashboard.user.xp} progress={dashboard.user.levelProgress} />
+      {dashboard.recommended && dashboard.recommended.missionId !== target?.missionId && (
+        <section className="dashboard-recommended" aria-labelledby="recommended-title">
+          <div>
+            <div className="eyebrow">{t('RECOMMENDED FOR YOU')}</div>
+            <h2 id="recommended-title">{t(dashboard.recommended.title)}</h2>
+            <p>{t(dashboard.recommended.reason)} {t('Laboratory: {lab}.', { lab: t(labs.find((l) => l.slug === dashboard.recommended!.labSlug)?.name ?? dashboard.recommended.labSlug) })}</p>
+          </div>
+          <button type="button" className="ghost" disabled={nav.busy} aria-busy={nav.starting === dashboard.recommended.missionId} onClick={() => nav.startMission(dashboard.recommended!.missionId)}>{nav.starting === dashboard.recommended.missionId ? t('Starting…') : <>{t('Start {title}', { title: t(dashboard.recommended.title) })} <ArrowRight size={16} aria-hidden="true" /></>}</button>
+        </section>
+      )}
       <div className="stats dashboard-stats">
         <Stat icon={<Beaker />} label={t('Missions completed')} value={figures.missions.value} detail={figures.missions.detail} />
         <Stat icon={<Sparkles />} label={t('Labs cleared')} value={figures.labs.value} detail={figures.labs.detail} />
@@ -161,6 +171,39 @@ export function LabMap() {
   );
 }
 
+/** The laboratory as a route: one stop per mission (state and server mastery), the code fragments, the exit. Server data only. */
+export function RouteStrip({ missions, vault }: { missions: Pick<LobbyMission, 'id' | 'ordinal' | 'title' | 'state' | 'mastery'>[]; vault: LabLobby['vault'] }) {
+  const exit = vault === null ? null : vault.exited ? 'open' : vault.complete ? 'ready' : 'sealed';
+  const stopWord = (m: Pick<LobbyMission, 'state' | 'mastery'>) => (m.state === 'completed' ? (t(masteryLabel(m.mastery)) || t('Completed')) : m.state === 'locked' ? t('Locked') : m.state === 'current' ? t('In progress') : t('Ready'));
+  return (
+    <section className="route-strip" aria-label={t('Laboratory route')}>
+      <ol className="route-missions">
+        {missions.map((m) => (
+          <li key={m.id} className="route-stop" data-state={m.state} data-mastery={m.mastery ?? undefined}>
+            <span className="route-dot" aria-hidden="true">{m.state === 'completed' ? <Check size={12} /> : String(m.ordinal).padStart(2, '0')}</span>
+            <span className="route-label"><span>{t(m.title)}</span><small>{stopWord(m)}</small></span>
+          </li>
+        ))}
+      </ol>
+      {vault && (
+        <>
+          <span className="route-link" aria-hidden="true" />
+          <div className="route-fragments" role="list" aria-label={t('Code fragments')}>
+            {vault.slots.map((digit, i) => (
+              <span role="listitem" key={i} className={`route-fragment${digit === null ? '' : ' found'}`}>
+                <span className="sr-only">{digit === null ? t('Fragment {n}: not found yet', { n: i + 1 }) : `${t('Fragment {n}:', { n: i + 1 })} `}</span>
+                <span aria-hidden={digit === null ? true : undefined}>{digit === null ? '·' : digit}</span>
+              </span>
+            ))}
+          </div>
+          <span className="route-link" aria-hidden="true" />
+          <div className="route-exit" data-exit={exit}><DoorOpen size={16} aria-hidden="true" /><span>{exit === 'open' ? t('Exit open') : exit === 'ready' ? t('Exit ready') : t('Exit sealed')}</span></div>
+        </>
+      )}
+    </section>
+  );
+}
+
 function actionFor(m: LobbyMission): { verb: string; locked: boolean } {
   if (m.state === 'locked') return { verb: 'Locked', locked: true };
   if (m.inProgress) return { verb: 'Resume', locked: false };
@@ -193,6 +236,7 @@ function LobbyView({ lobby }: { lobby: LabLobby }) {
       {lobby.state === 'locked' && <EmptyPanel title={t('This laboratory is locked')}>{lobby.lockedReason === undefined ? undefined : t(lobby.lockedReason)}</EmptyPanel>}
       {lobby.missions.length > 0 && (
         <>
+          <RouteStrip missions={lobby.missions} vault={lobby.vault} />
           <div className="stats lobby-stats">
             <Stat icon={<Beaker />} label={t('Missions')} value={outOf(done, lobby.missions.length)} detail={t('Completed in this laboratory')} />
             {lobby.vault && <Stat icon={<Trophy />} label={t('Code fragments')} value={outOf(lobby.vault.slots.filter((s) => s !== null).length, lobby.vault.codeLength)} detail={lobby.vault.exited ? t('Exit unlocked') : lobby.vault.complete ? t('Ready: open the Code Vault') : t('Found by completing missions')} />}
@@ -210,7 +254,7 @@ function LobbyView({ lobby }: { lobby: LabLobby }) {
                       <h3>{t(m.title)}</h3>
                       <p>{t('{engine} · Difficulty: {difficulty} · about {minutes} min', { engine: engineLabel(m.engine), difficulty: t(m.difficulty), minutes: m.estMinutes })}</p>
                       <p>
-                        {m.state === 'completed' ? t('Completed') : m.state === 'locked' ? (m.unlocksWith === undefined ? undefined : t(m.unlocksWith)) : m.inProgress ? t('In progress') : t('Ready')}
+                        {m.state === 'completed' ? <>{t('Completed')}{m.mastery !== null && m.mastery !== 'completed' && <span className={`mastery-chip ${m.mastery}`}>{t(masteryLabel(m.mastery))}</span>}</> : m.state === 'locked' ? (m.unlocksWith === undefined ? undefined : t(m.unlocksWith)) : m.inProgress ? t('In progress') : t('Ready')}
                         {m.bestScore !== null && <> · {t('best score {score} of {max} XP', { score: m.bestScore, max: m.maxScore })}</>}
                       </p>
                     </div>

@@ -687,3 +687,47 @@ html[data-reduce-motion="true"] .timer.critical { animation: none; }
 .result-next { border-color: #2fcfff; }
 .result-next-start { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; margin-top: 12px; padding-inline: 18px; border-radius: 12px; }
 @media (max-width: 600px) { .result-progress, .result-competencies, .result-debrief, .result-exit, .result-next { width: calc(100% - 26px); padding: 14px; } }
+
+/* Investigation journal (mission aside), laboratory route (lobby), mastery chips, dashboard recommendation (2026-10-15). */
+.journal-summary { margin: 8px 0 10px; color: #a9c4d8; font-size: 12px; }
+.journal-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.journal-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 8px; border: 1px solid rgb(53 109 140 / 36%); border-radius: 10px; background: rgb(8 46 71 / 45%); }
+.journal-mark { display: grid; place-items: center; flex: 0 0 24px; width: 24px; height: 24px; border: 1px solid #2fcfff; border-radius: 50%; font: 700 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #8ceeff; }
+.journal-body { display: grid; gap: 2px; min-width: 0; }
+.journal-body b { color: #eaf5ff; font-size: 12px; line-height: 1.3; }
+.journal-body small { color: #9fbfd5; font-size: 11px; }
+.journal-row[data-state="solved"] .journal-mark { border-color: #27dcb4; background: rgb(8 92 78 / 55%); color: #70f5d7; }
+.journal-row[data-state="solved"] .journal-body small { color: #70f5d7; }
+.journal-row[data-state="current"] { border-color: #8ceeff; box-shadow: 0 0 0 1px rgb(25 216 255 / 30%); }
+.journal-row[data-state="upcoming"] { opacity: .75; }
+.route-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin: 10px 0 18px; padding: 14px 16px; border: 1px solid rgb(37 142 188 / 62%); border-radius: 16px; background: linear-gradient(135deg, rgb(9 42 68 / 94%), rgb(4 23 41 / 96%)); }
+.route-missions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.route-stop { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 12px 6px 8px; border: 1px solid rgb(53 109 140 / 50%); border-radius: 999px; background: rgb(8 46 71 / 60%); }
+.route-dot { display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 26px; border: 1px solid #2fcfff; border-radius: 50%; font: 700 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #8ceeff; }
+.route-label { display: grid; gap: 1px; color: #eaf5ff; font-size: 12px; font-weight: 700; }
+.route-label small { color: #9fbfd5; font-size: 11px; font-weight: 500; }
+.route-stop[data-state="completed"] .route-dot { border-color: #27dcb4; background: rgb(8 92 78 / 55%); color: #70f5d7; }
+.route-stop[data-mastery="mastered"] { border-color: #e3b33e; }
+.route-stop[data-mastery="mastered"] .route-label small { color: #ffd15b; }
+.route-stop[data-mastery="review"] { border-color: #ff6571; }
+.route-stop[data-mastery="review"] .route-label small { color: #ffb1b8; }
+.route-stop[data-state="current"] { border-color: #8ceeff; box-shadow: 0 0 14px rgb(25 216 255 / 18%); }
+.route-stop[data-state="locked"] { opacity: .6; }
+.route-link { flex: 0 0 18px; height: 2px; background: linear-gradient(90deg, #16bfe8, #ffc83d); border-radius: 1px; }
+.route-fragments { display: flex; gap: 6px; }
+.route-fragment { display: grid; place-items: center; width: 30px; height: 36px; border: 1px solid rgb(53 109 140 / 60%); border-radius: 8px; color: #7fa6bf; font: 700 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.route-fragment.found { border-color: #e3b33e; color: #ffd15b; background: rgb(85 58 14 / 45%); }
+.route-exit { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; border: 1px solid rgb(53 109 140 / 60%); border-radius: 999px; color: #9fbfd5; font-size: 12px; font-weight: 700; }
+.route-exit[data-exit="ready"] { border-color: #e3b33e; color: #ffd15b; box-shadow: 0 0 14px rgb(255 200 61 / 30%); }
+.route-exit[data-exit="open"] { border-color: #27dcb4; color: #70f5d7; }
+.mastery-chip { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+.mastery-chip.mastered { border: 1px solid #e3b33e; color: #ffd15b; background: rgb(85 58 14 / 45%); }
+.mastery-chip.review { border: 1px solid #ff6571; color: #ffb1b8; background: rgb(101 26 42 / 45%); }
+.dashboard-recommended { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px 18px; align-items: center; margin: 14px 0 0; padding: 14px 16px; border: 1px solid #2fcfff; border-radius: 16px; background: linear-gradient(135deg, rgb(9 42 68 / 94%), rgb(4 23 41 / 96%)); }
+.dashboard-recommended h2 { margin: 4px 0 4px; color: #f1f9ff; font-size: 18px; }
+.dashboard-recommended p { margin: 0; color: #a9c4d8; font-size: 13px; line-height: 1.5; }
+.dashboard-recommended .ghost { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding-inline: 18px; border-radius: 12px; white-space: nowrap; }
+@media (max-width: 600px) { .dashboard-recommended { grid-template-columns: minmax(0,1fr); } .dashboard-recommended .ghost { width: 100%; justify-content: center; } .route-strip { padding: 12px; } }
+/* Focus: persistent glow reserved for the action and the reward; information cards stay flat (report §1). */
+.case-panel, .case-aside .aside-card, .values .value, .values-block { box-shadow: none; }
+.mission-scene.hero-science { box-shadow: 0 10px 28px rgb(0 0 0 / 30%); }

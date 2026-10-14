@@ -6,6 +6,8 @@ import { PointEngine } from './point-engine';
 import { normalizeStep } from '../lib/attempt';
 import { steps } from '../lib/fixtures';
 import { CompetencyBars } from '../ui/common';
+import { JournalCard } from '../pages/mission';
+import { RouteStrip } from '../pages/student';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -203,5 +205,54 @@ describe('observation checklist (guided multi-zone point step)', () => {
     act(() => root.render(createElement(PointEngine, { step, answer: { points: {} }, setAnswer: () => undefined, disabled: true })));
     expect(host.querySelectorAll('.observation-list button')).toHaveLength(0);
     expect(host.querySelectorAll('.observation-list .observation-row')).toHaveLength(2);
+  });
+});
+
+describe('investigation journal (server rows, display only)', () => {
+  const rows = [
+    { ordinal: 1, stepId: 's1', competency: 'Pre-analytical quality', state: 'solved' as const, wrong: 1, hints: 0 },
+    { ordinal: 2, stepId: 's2', competency: 'Hematology interpretation', state: 'current' as const, wrong: 0, hints: 1 },
+    { ordinal: 3, stepId: 's3', competency: 'Clinical reasoning', state: 'upcoming' as const, wrong: 0, hints: 0 },
+  ];
+  it('lists every step with its competency, marks the current one and counts only what happened', () => {
+    act(() => root.render(createElement(JournalCard, { journal: rows })));
+    const items = Array.from(host.querySelectorAll('.journal-row'));
+    expect(items).toHaveLength(3);
+    expect(items.map((li) => li.getAttribute('data-state'))).toEqual(['solved', 'current', 'upcoming']);
+    expect(items[1]!.getAttribute('aria-current')).toBe('step');
+    expect(items[0]!.textContent).toContain('Pre-analytical quality');
+    expect(items[0]!.textContent).toContain('1 wrong');
+    expect(items[1]!.textContent).toContain('1 hint');
+    expect(items[2]!.textContent).not.toMatch(/wrong|hint/);
+    expect(host.textContent).toContain('1 of 3 steps proven');
+  });
+  it('renders nothing for an older server without a journal', () => {
+    act(() => root.render(createElement(JournalCard, { journal: [] })));
+    expect(host.querySelector('.journal-card')).toBeNull();
+  });
+});
+
+describe('laboratory route (lobby missions, fragments and exit from the server)', () => {
+  const missions = [
+    { id: 'hem-01', ordinal: 1, title: 'Blood Smear Code', state: 'completed' as const, mastery: 'mastered' as const },
+    { id: 'hem-02', ordinal: 2, title: 'Fix the Sample', state: 'completed' as const, mastery: 'review' as const },
+    { id: 'hem-03', ordinal: 3, title: 'Anemia Detective', state: 'current' as const, mastery: null },
+  ];
+  it('draws one stop per mission with its mastery, the fragment slots and the exit state', () => {
+    act(() => root.render(createElement(RouteStrip, { missions, vault: { labSlug: 'hematology', codeLength: 3, slots: [7, 4, null], complete: false, exited: false } })));
+    const stops = Array.from(host.querySelectorAll('.route-stop'));
+    expect(stops).toHaveLength(3);
+    expect(stops.map((s) => s.getAttribute('data-mastery'))).toEqual(['mastered', 'review', null]);
+    expect(stops[2]!.getAttribute('data-state')).toBe('current');
+    expect(host.querySelectorAll('.route-fragment')).toHaveLength(3);
+    expect(host.querySelectorAll('.route-fragment.found')).toHaveLength(2);
+    expect(host.querySelector('.route-exit')?.getAttribute('data-exit')).toBe('sealed');
+    expect(host.querySelector('.route-exit')?.textContent).toContain('Exit');
+  });
+  it('shows the exit as ready when the code is complete and as open once escaped', () => {
+    act(() => root.render(createElement(RouteStrip, { missions, vault: { labSlug: 'hematology', codeLength: 3, slots: [7, 4, 2], complete: true, exited: false } })));
+    expect(host.querySelector('.route-exit')?.getAttribute('data-exit')).toBe('ready');
+    act(() => root.render(createElement(RouteStrip, { missions, vault: { labSlug: 'hematology', codeLength: 3, slots: [7, 4, 2], complete: true, exited: true } })));
+    expect(host.querySelector('.route-exit')?.getAttribute('data-exit')).toBe('open');
   });
 });

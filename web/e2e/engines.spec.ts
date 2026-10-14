@@ -31,7 +31,8 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await clickArtwork(page, ARTWORK.smear);
     await submit(page).click();
     await complete(page);
-    await expect(page.getByText('1 wrong')).toBeVisible();
+    // The debrief repeats the figure per step: the stat card is the one checked here.
+    await expect(page.locator('.result-stats').getByText('1 wrong')).toBeVisible();
   });
 
   test('point image has a precise inspection mode that preserves the answer until submit', async ({ page }) => {

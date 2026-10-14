@@ -25,6 +25,9 @@ export const ENGINE_LABELS: Record<string, string> = {
 /** Call while rendering: the result is in the display language. */
 export const engineLabel = (engine: string): string => { const label = ENGINE_LABELS[engine]; return label !== undefined ? t(label) : t('Case challenge'); };
 
+/** Words for the server-decided mastery of a completed mission (thresholds live in the server's rules); '' when the server sent none. */
+export const masteryLabel = (mastery: 'mastered' | 'completed' | 'review' | null): string => (mastery === 'mastered' ? 'Mastered' : mastery === 'completed' ? 'Completed' : mastery === 'review' ? 'To review' : '');
+
 /** A, B, C... for the n-th option: a visual chip, never the server's option id. */
 export const optionLetter = (index: number): string => String.fromCharCode(65 + (index % 26));
 

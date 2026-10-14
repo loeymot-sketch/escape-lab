@@ -107,6 +107,15 @@ export default {
   '{left} XP to level {next}': '{left} XP avant le niveau {next}',
   '{into} of {size} XP into level {level}': '{into} XP sur {size} dans le niveau {level}',
 
+  // Laboratory route, mastery and the dashboard recommendation (2026-10-15)
+  'Laboratory route': 'Parcours du laboratoire',
+  'Exit open': 'Sortie ouverte',
+  'Exit ready': 'Sortie prête',
+  'Exit sealed': 'Sortie scellée',
+  'Mastered': 'Maîtrisée',
+  'To review': 'À revoir',
+  'RECOMMENDED FOR YOU': 'RECOMMANDÉ POUR VOUS',
+
   // Labels of steps and mission engines (lib/labels.ts)
   'Work through the case': 'Analyser le cas pas à pas',
   'Case challenge': 'Défi du cas',

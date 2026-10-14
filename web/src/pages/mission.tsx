@@ -7,7 +7,7 @@ import { ApiError, api, demoSession } from '../lib/api';
 import { PayloadError } from '../lib/guard';
 import {
   normalizeAttempt, normalizeAttemptResult, normalizeHint, normalizeMissionAnswer, normalizeStart,
-  type Attempt, type Fragment, type MissionResult, type PublicStep,
+  type Attempt, type Fragment, type JournalRow, type MissionResult, type PublicStep,
 } from '../lib/attempt';
 import { normalizeRules, normalizeUnlock, type Rules } from '../lib/student';
 import { GameEngine, initialAnswer, isAnswerReady, type EngineAnswer } from '../components/engines';
@@ -40,6 +40,30 @@ export const investigationPhase = (kind: PublicStep['kind']): string => ({
   order: 'Reconstruct',
   match: 'Connect',
 }[kind]);
+
+/** The investigation journal the server keeps for the attempt: which competencies are proven, where the learner stands, what each step cost. */
+export function JournalCard({ journal }: { journal: JournalRow[] }) {
+  if (journal.length === 0) return null;
+  const solved = journal.filter((row) => row.state === 'solved').length;
+  const cost = (row: JournalRow) => [row.wrong > 0 ? plural(row.wrong, 'wrong', 'wrong') : '', row.hints > 0 ? plural(row.hints, 'hint') : ''].filter(Boolean).join(' · ');
+  return (
+    <div className="aside-card journal-card">
+      <div className="eyebrow">{t('INVESTIGATION JOURNAL')}</div>
+      <p className="journal-summary">{t('{solved} of {total} steps proven', { solved: formatInt(solved), total: formatInt(journal.length) })}</p>
+      <ol className="journal-list">
+        {journal.map((row) => (
+          <li key={row.stepId} className="journal-row" data-state={row.state} aria-current={row.state === 'current' ? 'step' : undefined}>
+            <span className="journal-mark" aria-hidden="true">{row.state === 'solved' ? <Check size={13} /> : String(row.ordinal).padStart(2, '0')}</span>
+            <span className="journal-body">
+              <b>{t(row.competency)}</b>
+              <small>{row.state === 'solved' ? t('Proven') : row.state === 'current' ? t('In progress') : t('Upcoming')}{row.state !== 'upcoming' && cost(row) ? ` · ${cost(row)}` : ''}</small>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
 /** Refusals that prove this screen shows an out-of-date attempt (finished or moved on elsewhere, hints bought in another tab): the attempt is re-read. */
 const STALE_CODES = ['attempt_finished', 'wrong_step', 'no_more_hints', 'hint_in_progress'];
@@ -665,6 +689,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
               <div className="status-row"><dt>{t('XP penalty so far')}</dt><dd>{formatInt(attempt.penaltyXp)}</dd></div>
             </dl>
           </div>
+          <JournalCard journal={attempt.journal} />
         </aside>
       </main>
     </div>
