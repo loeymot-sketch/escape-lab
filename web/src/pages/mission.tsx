@@ -11,11 +11,12 @@ import {
 } from '../lib/attempt';
 import { normalizeRules, type Rules } from '../lib/student';
 import { GameEngine, initialAnswer, isAnswerReady, type EngineAnswer } from '../components/engines';
-import { STEP_LABELS, labName, optionLetter } from '../lib/labels';
+import { STEP_LABELS, labName, optionLetter, outOf } from '../lib/labels';
 import { SCIENTIFIC_ASSETS } from '../lib/assets';
 import { missionScene } from '../lib/mission-scenes';
 import { FLAG_WORDS, Stat, formatSeconds, secondsLeft, useDocumentTitle, useMediaQuery } from '../ui/common';
 import { describeError, useLoad } from '../ui/state';
+import { useCountUp } from '../ui/motion';
 import { LanguageSwitch, formatInt, plural, t, useLang } from '../i18n';
 
 type Feedback = { correct: boolean; ordinal: number; message: string; progress: { correct: number; total: number } | null; penaltyXp: number | null };
@@ -732,6 +733,12 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onRe
   // The result replaces a long case page: start at its top, not wherever the Submit button was.
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { window.scrollTo?.({ top: 0 }); headingRef.current?.focus({ preventScroll: true }); }, []);
+  // Celebration layer: the figure counted to and the bar filled to are the server's; under reduce-motion both show at once (CSS drops the transition).
+  const shownScore = useCountUp(result.score);
+  const [filled, setFilled] = useState(false);
+  useEffect(() => { const id = window.setTimeout(() => setFilled(true), 30); return () => window.clearTimeout(id); }, []);
+  const scorePct = result.maxScore > 0 ? Math.max(0, Math.min(100, (result.score / result.maxScore) * 100)) : 0;
+  const gained = result.newBest && result.xpAwarded > 0;
   return (
     <main className={`result-screen result-${result.mission.labSlug}`}>
       <section className="result-hero" aria-labelledby="result-title">
@@ -745,14 +752,15 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onRe
       </section>
       <p className="result-lede result-record">{t('Case archived. Here is your mission debrief.')}</p>
       <section className="result-score-card" aria-label={t('Mission score')}>
-        <div className="result-score-top"><span><Sparkles size={18} aria-hidden="true" />{t('SCORE')}</span><b>{formatInt(result.score)} <small>/ {formatInt(result.maxScore)} XP</small></b></div>
-        <div className="result-score-bar" role="progressbar" aria-label={t('Score')} aria-valuemin={0} aria-valuemax={result.maxScore} aria-valuenow={Math.min(result.maxScore, result.score)}><i style={{ width: `${result.maxScore > 0 ? Math.max(0, Math.min(100, (result.score / result.maxScore) * 100)) : 0}%` }} /></div>
+        <div className="result-score-top"><span><Sparkles size={18} aria-hidden="true" />{t('SCORE')}</span><b>{formatInt(shownScore)} <small>/ {formatInt(result.maxScore)} XP</small></b></div>
+        <div className="result-score-bar" role="progressbar" aria-label={t('Score')} aria-valuemin={0} aria-valuemax={result.maxScore} aria-valuenow={Math.min(result.maxScore, result.score)}><i style={{ width: `${filled ? scorePct : 0}%` }} /></div>
       </section>
       <div className="result-stats">
         <Stat icon={<Trophy />} label={t('Accuracy')} value={t('{pct}%', { pct: formatInt(result.stats.accuracyPct) })} detail={`${plural(result.stats.wrongAnswers, 'wrong', 'wrong')} · ${plural(result.stats.hintsUsed, 'hint')}`} />
         <Stat icon={<Clock3 />} label={t('Time')} value={result.stats.elapsed} detail={t('Official timer')} />
+        <Stat icon={<Check />} label={t('First-try steps')} value={outOf(result.stats.firstTrySteps, result.stats.steps)} detail={t('Solved without a wrong answer')} />
       </div>
-      <p className="result-lede result-xp-note">{resultXpNote(result)}</p>
+      <p className={`result-lede result-xp-note${gained ? ' gained' : ''}`}>{resultXpNote(result)}</p>
       <section className="result-explanation" aria-labelledby="result-explanation-title">
         <h2 id="result-explanation-title">{t('Final step explained')}</h2>
         <p>{t(result.finalExplanation)}</p>
@@ -765,7 +773,7 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onRe
         </ul>
       )}
       {newFragments.map((f, index) => (
-        <div className="fragment-reveal" role="status" key={`${f.labSlug}-${f.position}-${index}`}>
+        <div className="fragment-reveal celebrate" role="status" key={`${f.labSlug}-${f.position}-${index}`}>
           <div className="eyebrow">{t('CODE FRAGMENT DISCOVERED')}</div>
           <strong>{f.digit}</strong>
           <p>{t('Position {position} added to the Code Vault.', { position: f.position })}</p>
@@ -778,7 +786,7 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onRe
       {result.newBadges.length > 0 && (
         <div role="status">
           <p className="badge-chips-label">{result.newBadges.length === 1 ? t('New badge earned') : t('New badges earned')}</p>
-          <ul className="badge-chips" aria-label={t('New badges')}>
+          <ul className="badge-chips celebrate" aria-label={t('New badges')}>
             {result.newBadges.map((b) => <li key={b.id}><Trophy size={15} aria-hidden="true" />{t(b.name)}</li>)}
           </ul>
         </div>

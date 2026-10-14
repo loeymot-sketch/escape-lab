@@ -7,7 +7,7 @@ import { navigateSection, ARTWORK, apiCall, clickArtwork, freshStudent, openAs, 
 type Ledger = { id: string; label: string; reason: string; points: number; kind: string };
 type ServerResult = {
   score: number; maxScore: number; xpAwarded: number; newBest: boolean; ledger: Ledger[];
-  stats: { accuracyPct: number; elapsed: string; hintsUsed: number; wrongAnswers: number };
+  stats: { accuracyPct: number; elapsed: string; hintsUsed: number; wrongAnswers: number; firstTrySteps: number; steps: number };
 };
 
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
@@ -20,10 +20,11 @@ async function expectResultShows(page: Page, server: ServerResult) {
   const score = page.locator('.result-score-card .result-score-top > b');
   await expect(score).toHaveText(`${server.score.toLocaleString('en-US')} / ${server.maxScore.toLocaleString('en-US')} XP`);
   const stats = page.locator('.result-stats .stat');
-  await expect(stats).toHaveCount(2);
+  await expect(stats).toHaveCount(3);
   await expect(stats.nth(0).locator('strong')).toHaveText(`${server.stats.accuracyPct}%`);
   await expect(stats.nth(0).locator('small')).toHaveText(`${server.stats.wrongAnswers} wrong · ${plural(server.stats.hintsUsed)}`);
   await expect(stats.nth(1).locator('strong')).toHaveText(server.stats.elapsed);
+  await expect(stats.nth(2).locator('strong')).toHaveText(`${server.stats.firstTrySteps} of ${server.stats.steps}`);
   if (server.newBest) await expect(page.locator('.result-lede').nth(1)).toHaveText(`New personal best: ${server.xpAwarded >= 0 ? '+' : ''}${server.xpAwarded} XP added to your total.`);
   else await expect(page.locator('.result-lede').nth(1)).toContainText('did not beat your best score');
   const rows = page.locator('.ledger li');

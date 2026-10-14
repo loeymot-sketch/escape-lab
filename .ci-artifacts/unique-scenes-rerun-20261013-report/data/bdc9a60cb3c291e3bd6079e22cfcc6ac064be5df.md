@@ -1,0 +1,253 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: image-integration.spec.ts >> every playable mission has its own evidence scene >> Petri Dish Mystery keeps its unique mission scene
+- Location: e2e/image-integration.spec.ts:325:5
+
+# Error details
+
+```
+ReferenceError: completeMissionViaApi is not defined
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=f1e3]:
+  - link "Skip to main content" [ref=f1e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - complementary "Primary" [ref=f1e5]:
+    - generic [ref=f1e6]: ESCAPELAB
+    - generic [ref=f1e11]: BIOMEDICAL TRAINING
+    - generic [ref=f1e12]:
+      - text: Project conceived and developed with passion by
+      - strong [ref=f1e13]: Sawssen Jemaiel
+    - navigation "Sections" [ref=f1e14]:
+      - button "Rooms" [ref=f1e15] [cursor=pointer]
+      - button "Vault" [ref=f1e20] [cursor=pointer]
+      - button "Badges" [ref=f1e25] [cursor=pointer]
+      - button "Lab map" [ref=f1e33] [cursor=pointer]
+      - button "Leaderboard" [ref=f1e37] [cursor=pointer]
+      - button "Lab results" [ref=f1e45] [cursor=pointer]
+      - button "Learning settings" [ref=f1e50] [cursor=pointer]
+      - button "About & demo guide" [ref=f1e55] [cursor=pointer]
+    - generic [ref=f1e59]:
+      - generic [ref=f1e60]: Guest demo · server-side scoring
+      - button "Faculty guest" [ref=f1e62] [cursor=pointer]
+      - button "Reset guest session" [ref=f1e63] [cursor=pointer]
+  - generic [ref=f1e64]:
+    - banner [ref=f1e65]:
+      - generic [ref=f1e66]: Mission control
+      - group "Langue / Language" [ref=f1e67]:
+        - button "Français" [ref=f1e68] [cursor=pointer]: FR
+        - button "English" [pressed] [ref=f1e69] [cursor=pointer]: EN
+      - generic [ref=f1e70]: Guest laboratory
+    - main [ref=f1e75]:
+      - region "Laboratories" [ref=f1e76]:
+        - generic [ref=f1e77]:
+          - generic [ref=f1e78]: THE ESCAPE ROUTE
+          - heading "Choose a laboratory" [level=1] [ref=f1e79]
+        - button "View full map" [ref=f1e80] [cursor=pointer]
+      - generic [ref=f1e83]:
+        - article [ref=f1e84]:
+          - generic [aria-hidden] [ref=f1e85]:
+            - generic [ref=f1e86]:
+              - generic [ref=f1e87]: "01"
+              - generic [ref=f1e88]: CLEARED
+            - generic [ref=f1e92]: Hematology
+          - generic [ref=f1e93]:
+            - heading "Hematology" [level=2] [ref=f1e94]
+            - paragraph [ref=f1e95]: Blood cells, indices and the pre-analytical checks behind every count.
+            - group "3 of 3 missions · 3 of 3 code fragments" [ref=f1e96]
+            - button "Review Hematology Lab" [ref=f1e109] [cursor=pointer]: Review lab
+        - article [ref=f1e112]:
+          - generic [aria-hidden] [ref=f1e113]:
+            - generic [ref=f1e114]:
+              - generic [ref=f1e115]: "02"
+              - generic [ref=f1e116]: ACTIVE
+            - generic [ref=f1e122]: Microbiology
+          - generic [ref=f1e123]:
+            - heading "Microbiology" [level=2] [ref=f1e124]
+            - paragraph [ref=f1e125]: Stains, cultures and the logic that turns a plate into an identification.
+            - group "2 of 3 missions · 2 of 3 code fragments" [ref=f1e126]:
+              - generic [ref=f1e135]: ·
+            - button "Enter Microbiology Lab" [ref=f1e137] [cursor=pointer]: Enter lab
+        - article [ref=f1e140]:
+          - generic [aria-hidden] [ref=f1e141]:
+            - generic [ref=f1e142]:
+              - generic [ref=f1e143]: "03"
+              - generic [ref=f1e144]: ACTIVE
+            - generic [ref=f1e148]: Clinical Biochemistry
+          - generic [ref=f1e149]:
+            - heading "Clinical Biochemistry" [level=2] [ref=f1e150]
+            - paragraph [ref=f1e151]: Interpret organ panels, spot interference and read acid-base status.
+            - group "0 of 3 missions · 0 of 3 code fragments" [ref=f1e152]:
+              - generic [aria-hidden] [ref=f1e154]:
+                - generic [ref=f1e155]: ·
+                - generic [ref=f1e156]: ·
+                - generic [ref=f1e157]: ·
+            - button "Enter Clinical Biochemistry Lab" [ref=f1e159] [cursor=pointer]: Enter lab
+        - article [ref=f1e162]:
+          - generic [ref=f1e164]: "04"
+          - generic [ref=f1e173]:
+            - heading "Master" [level=2] [ref=f1e174]
+            - paragraph [ref=f1e175]: One patient, three disciplines. Integrate everything you have learned.
+            - group "0 of 1 mission · 0 of 4 code fragments" [ref=f1e176]:
+              - generic [aria-hidden] [ref=f1e178]:
+                - generic [ref=f1e179]: ·
+                - generic [ref=f1e180]: ·
+                - generic [ref=f1e181]: ·
+                - generic [ref=f1e182]: ·
+            - paragraph [ref=f1e183]: Clear 3 labs (1 of 3 cleared)
+            - generic [ref=f1e184]: Locked
+      - region "Next investigation" [ref=f1e190]:
+        - generic [ref=f1e191]:
+          - generic [ref=f1e192]: YOUR NEXT STEP
+          - heading "Petri Dish Mystery" [level=2] [ref=f1e193]
+        - button "Start the next investigation" [ref=f1e194] [cursor=pointer]
+      - generic [ref=f1e197]:
+        - generic [ref=f1e202]:
+          - generic [ref=f1e203]: Missions completed
+          - strong [ref=f1e204]: 5 of 9
+          - generic [ref=f1e205]: 56% of the standard missions · The Master Lab is tracked separately
+        - generic [ref=f1e210]:
+          - generic [ref=f1e211]: Labs cleared
+          - strong [ref=f1e212]: 1 of 3
+          - generic [ref=f1e213]: standard labs · 4 of 7 badges earned
+        - generic [ref=f1e219]:
+          - generic [ref=f1e220]: Streak
+          - strong [ref=f1e221]: 6 days
+          - generic [ref=f1e222]: Level 6 · 8,240 XP (server record)
+      - region [ref=f1e223]:
+        - generic [ref=f1e224]: HOW LABESCAPE WORKS
+        - heading "Investigate, earn fragments, open the exit" [level=2] [ref=f1e225]
+        - list [ref=f1e226]:
+          - listitem [ref=f1e227]: "Observe. Each mission is a case: read the evidence, inspect the illustrative image or the laboratory values."
+          - listitem [ref=f1e228]: Reason. Answer the interactive challenge. A wrong answer costs a few XP; a hint costs more, so think first.
+          - listitem [ref=f1e229]: Collect. Finishing a mission earns XP and reveals one digit of the laboratory's exit code.
+          - listitem [ref=f1e230]: Escape. With every digit found, enter the exit code in the vault to clear the laboratory and unlock the next one.
+        - paragraph [ref=f1e231]: Scores, timers, penalties and unlocks are all decided by the server. Cases are educational scenarios, not clinical guidance.
+      - paragraph [ref=f1e232]: "Guest demo: the progress, XP, streak and names you see here are prepared demonstration data, not real people. Nothing you do creates an account."
+```
+
+# Test source
+
+```ts
+  227 | test.describe('observation recovery and association guidance', () => {
+  228 |   test.beforeEach(async ({ page }) => { await resetDemo(page); });
+  229 | 
+  230 |   test('a failed photo keeps its description and association; Retry restores the image', async ({ page }) => {
+  231 |     let unavailable = true;
+  232 |     await page.route('**/culture-observation-01.webp*', (route) => unavailable ? route.fulfill({ status: 503, body: '' }) : route.continue());
+  233 |     await startMissionViaUi(page, 'Microbiology Lab', 'Petri Dish Mystery');
+  234 |     const row = page.locator('.match-row').first();
+  235 |     await expect(row.getByRole('button', { name: /^Retry image for/ })).toBeVisible();
+  236 |     await expect(row.locator('label')).toContainText('Pink colonies');
+  237 |     await row.locator('select').selectOption('ecoli');
+  238 |     unavailable = false;
+  239 |     await row.getByRole('button', { name: /^Retry image for/ }).click();
+  240 |     await expect.poll(() => row.locator('.culture-thumb img').evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true);
+  241 |     await expect(row.locator('select')).toHaveValue('ecoli');
+  242 |     await row.getByRole('button', { name: /^Inspect image:/ }).click();
+  243 |     await expect(page.getByRole('dialog')).toBeVisible();
+  244 |     await page.getByRole('button', { name: 'Close image viewer' }).click();
+  245 |     await expect(page.getByRole('dialog')).toBeHidden();
+  246 |     await expect(row.locator('select')).toHaveValue('ecoli');
+  247 |     const opener = row.getByRole('button', { name: /^Inspect image:/ });
+  248 |     await opener.click();
+  249 |     await page.mouse.click(0, 0);
+  250 |     await expect(page.getByRole('dialog')).toBeHidden();
+  251 |     await expect(opener).toBeFocused();
+  252 |   });
+  253 | 
+  254 |   test('a photo that fails while its viewer is open can be retried without losing focus or associations', async ({ page }) => {
+  255 |     let unavailable = true;
+  256 |     let release: () => void = () => undefined;
+  257 |     const responseGate = new Promise<void>((resolve) => { release = resolve; });
+  258 |     await page.route('**/culture-observation-02.webp*', async (route) => {
+  259 |       await responseGate;
+  260 |       return unavailable ? route.fulfill({ status: 503, body: '' }) : route.continue();
+  261 |     });
+  262 |     await startMissionViaUi(page, 'Microbiology Lab', 'Petri Dish Mystery');
+  263 |     await page.locator('select').nth(1).selectOption('spyo');
+  264 |     await page.locator('.culture-thumb').nth(1).click();
+  265 |     const dialog = page.getByRole('dialog');
+  266 |     await expect(dialog).toBeVisible();
+  267 |     release();
+  268 |     await expect(dialog.getByRole('alert')).toContainText('Your associations are kept.');
+  269 |     unavailable = false;
+  270 |     await dialog.getByRole('button', { name: 'Retry image', exact: true }).click();
+  271 |     await expect.poll(() => dialog.locator('img').evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true);
+  272 |     await expect(dialog.getByRole('button', { name: 'Close image viewer' })).toBeFocused();
+  273 |     await page.keyboard.press('Escape');
+  274 |     await expect(page.locator('select').nth(1)).toHaveValue('spyo');
+  275 |     await expect(page.locator('.culture-thumb').nth(1)).toBeFocused();
+  276 |     expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
+  277 |   });
+  278 | 
+  279 |   test('each duplicated association has a local explanation which disappears after correction', async ({ page }) => {
+  280 |     await startMissionViaUi(page, 'Microbiology Lab', 'Petri Dish Mystery');
+  281 |     const selects = page.locator('select');
+  282 |     await selects.nth(0).selectOption('ecoli');
+  283 |     await selects.nth(1).selectOption('ecoli');
+  284 |     for (const index of [0, 1]) {
+  285 |       await expect(selects.nth(index)).toHaveAttribute('aria-invalid', 'true');
+  286 |       await expect(selects.nth(index)).toHaveAccessibleDescription('Already used for another observation.');
+  287 |     }
+  288 |     await expect(submit(page)).toBeDisabled();
+  289 |     await selects.nth(1).selectOption('spyo');
+  290 |     await expect(page.locator('.match-duplicate')).toHaveCount(0);
+  291 |     await expect(selects.nth(0)).toHaveAttribute('aria-invalid', 'false');
+  292 |     await expect(selects.nth(1)).toHaveAttribute('aria-invalid', 'false');
+  293 |   });
+  294 | });
+  295 | 
+  296 | test.describe('discipline-specific mission scenes', () => {
+  297 |   for (const caseFile of [
+  298 |     { lab: 'Hematology Lab', mission: 'Blood Smear Code', asset: 'mission-hematology-investigation' },
+  299 |     { lab: 'Clinical Biochemistry Lab', mission: 'Organ Rescue Mission', asset: 'm6.webp' },
+  300 |   ]) {
+  301 |     test(`${caseFile.mission} uses a dedicated evidence scene`, async ({ page }) => {
+  302 |       await resetDemo(page);
+  303 |       await startMissionViaUi(page, caseFile.lab, caseFile.mission);
+  304 |       const hero = page.locator('.mission-hero > img');
+  305 |       await expect(hero).toHaveAttribute('src', new RegExp(caseFile.asset));
+  306 |       await expect.poll(() => hero.evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true);
+  307 |       expect(await hero.evaluate((el) => [el.naturalWidth, el.naturalHeight])).toEqual([1400, 934]);
+  308 |       await noOverflow(page);
+  309 |     });
+  310 |   }
+  311 | });
+  312 | 
+  313 | test.describe('every playable mission has its own evidence scene', () => {
+  314 |   for (const caseFile of [
+  315 |     { id: 'hem-01', lab: 'Hematology Lab', mission: 'Blood Smear Code', asset: 'mission-hematology-investigation', before: [] },
+  316 |     { id: 'hem-02', lab: 'Hematology Lab', mission: 'Fix the Sample', asset: 'm2.webp', before: ['hem-01'] },
+  317 |     { id: 'hem-03', lab: 'Hematology Lab', mission: 'Anemia Detective', asset: 'm3.webp', before: ['hem-01', 'hem-02'] },
+  318 |     { id: 'mic-01', lab: 'Microbiology Lab', mission: 'Microbe Detective', asset: 'm4.webp', before: [] },
+  319 |     { id: 'mic-02', lab: 'Microbiology Lab', mission: 'Gram Stain Challenge', asset: 'm5.webp', before: ['mic-01'] },
+  320 |     { id: 'mic-03', lab: 'Microbiology Lab', mission: 'Petri Dish Mystery', asset: 'mission-microbiology-petri', before: ['mic-01', 'mic-02'] },
+  321 |     { id: 'bio-01', lab: 'Clinical Biochemistry Lab', mission: 'Organ Rescue Mission', asset: 'm6.webp', before: [] },
+  322 |     { id: 'bio-02', lab: 'Clinical Biochemistry Lab', mission: 'Lab Value Hacker', asset: 'm7.webp', before: ['bio-01'] },
+  323 |     { id: 'bio-03', lab: 'Clinical Biochemistry Lab', mission: 'Acid-Base Emergency', asset: 'mission-biochemistry-acid-base', before: ['bio-01', 'bio-02'] },
+  324 |   ]) {
+  325 |     test(`${caseFile.mission} keeps its unique mission scene`, async ({ page }) => {
+  326 |       const token = await resetDemo(page);
+> 327 |       for (const missionId of caseFile.before) await completeMissionViaApi(token, missionId);
+      |                                                ^ ReferenceError: completeMissionViaApi is not defined
+  328 |       await startMissionViaUi(page, caseFile.lab, caseFile.mission);
+  329 |       const hero = page.locator('.mission-hero > img');
+  330 |       await expect(hero).toHaveAttribute('src', new RegExp(caseFile.asset));
+  331 |       await expect.poll(() => hero.evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true);
+  332 |       expect(await hero.evaluate((el) => [el.naturalWidth, el.naturalHeight])).toEqual([1400, 934]);
+  333 |       await noOverflow(page);
+  334 |     });
+  335 |   }
+  336 | });
+  337 | 
+```

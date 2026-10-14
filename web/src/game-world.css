@@ -624,3 +624,16 @@ button.observation-row:hover { border-color: #8ceeff; }
 .level-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #16bfe8, #ffc83d); box-shadow: 0 0 12px rgb(25 216 255 / 45%); transition: width .9s cubic-bezier(.2,.8,.2,1); }
 @media (prefers-reduced-motion: reduce) { .level-bar i { transition: none; } }
 html[data-reduce-motion="true"] .level-bar i { transition: none; }
+
+/* Result celebration (E2/E3): count-up, bar fill, XP-gain pill, badge and fragment pop. Every motion stops under reduce-motion. */
+.result-score-bar i { transition: width 1.1s cubic-bezier(.2,.8,.2,1); }
+.result-stats { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.result-xp-note.gained { display: inline-block; margin-inline: 24px; padding: 8px 14px; border: 1px solid #27dcb4; border-radius: 999px; background: rgb(8 92 78 / 45%); color: #a9f5d3; font-weight: 700; }
+@keyframes celebrate-pop { 0% { transform: scale(.6); opacity: 0; } 70% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+.celebrate strong, .badge-chips.celebrate li { animation: celebrate-pop .7s cubic-bezier(.2,.8,.2,1) both; }
+.badge-chips.celebrate li:nth-child(2) { animation-delay: .12s; }
+.badge-chips.celebrate li:nth-child(3) { animation-delay: .24s; }
+@media (prefers-reduced-motion: reduce) { .celebrate strong, .badge-chips.celebrate li { animation: none; } .result-score-bar i { transition: none; } }
+html[data-reduce-motion="true"] .celebrate strong, html[data-reduce-motion="true"] .badge-chips.celebrate li { animation: none; }
+html[data-reduce-motion="true"] .result-score-bar i { transition: none; }
+@media (max-width: 600px) { .result-xp-note.gained { margin-inline: 13px; } }
