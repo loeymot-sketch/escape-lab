@@ -70,3 +70,16 @@ describe('prefersReducedMotion', () => {
     try { expect(prefersReducedMotion()).toBe(true); } finally { restore(); }
   });
 });
+
+describe('useCountUp follows a reduce-motion preference that arrives after mount', () => {
+  it('jumps to the figure when the server preference is applied to <html> during the animation', async () => {
+    act(() => root.render(createElement(Counter, { target: 180 })));
+    act(() => { vi.advanceTimersByTime(60); });
+    expect(shown()).toBeLessThan(180);
+    // The attribute change is observed through a microtask (MutationObserver): let it run before reading the figure.
+    await act(async () => { document.documentElement.dataset.reduceMotion = 'true'; await Promise.resolve(); });
+    expect(shown()).toBe(180);
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(shown()).toBe(180);
+  });
+});

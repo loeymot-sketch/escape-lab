@@ -721,6 +721,9 @@ function CompletedFetch({ attemptId, onResult, onExit }: { attemptId: string; on
   return <main className="result-screen"><div role="status" className="state-panel loading"><h1 className="state-title">{t('Loading your result…')}</h1></div></main>;
 }
 
+/** True only when the result really added XP to the learner's total: a new best with a zero award is not a gain. */
+export const xpGained = (result: Pick<MissionResult, 'newBest' | 'xpAwarded'>): boolean => result.newBest && result.xpAwarded > 0;
+
 /** What the result says about the total XP of the learner: a personal best is not announced with a zero gain; any other server figure is shown as sent. */
 export function resultXpNote(result: Pick<MissionResult, 'newBest' | 'xpAwarded'>): string {
   if (!result.newBest) return t('This replay did not beat your best score, so your total XP is unchanged.');
@@ -738,7 +741,7 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onRe
   const [filled, setFilled] = useState(false);
   useEffect(() => { const id = window.setTimeout(() => setFilled(true), 30); return () => window.clearTimeout(id); }, []);
   const scorePct = result.maxScore > 0 ? Math.max(0, Math.min(100, (result.score / result.maxScore) * 100)) : 0;
-  const gained = result.newBest && result.xpAwarded > 0;
+  const gained = xpGained(result);
   return (
     <main className={`result-screen result-${result.mission.labSlug}`}>
       <section className="result-hero" aria-labelledby="result-title">

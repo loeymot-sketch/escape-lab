@@ -88,7 +88,7 @@ export function LevelStrip({ level, xp, progress }: { level: number; xp: number;
   const left = progress.size - progress.into;
   const pct = progress.size > 0 ? (100 * progress.into) / progress.size : 0;
   return (
-    <section className="level-strip" aria-label={t('Level progress')}>
+    <section className="level-strip">
       <div className="level-badge"><span>{t('LEVEL')}</span><b>{formatInt(level)}</b></div>
       <div className="level-body">
         <div className="level-head"><b>{formatInt(xp)} XP</b><span>{t('{left} XP to level {next}', { left: formatInt(left), next: formatInt(level + 1) })}</span></div>

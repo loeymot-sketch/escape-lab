@@ -24,7 +24,12 @@ export function useCountUp(target: number, durationMs = 900): number {
       if (progress < 1) handle = raf(tick);
     };
     handle = raf(tick);
-    return () => cancel(handle);
+    // The server-owned preference can be applied to <html> after this screen mounted (the profile loads in parallel): honour it at once.
+    const observer = typeof MutationObserver === 'function'
+      ? new MutationObserver(() => { if (document.documentElement.dataset.reduceMotion === 'true') { cancel(handle); setValue(target); observer?.disconnect(); } })
+      : null;
+    observer?.observe(document.documentElement, { attributes: true, attributeFilter: ['data-reduce-motion'] });
+    return () => { cancel(handle); observer?.disconnect(); };
   }, [target, durationMs]);
   return value;
 }

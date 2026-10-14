@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it } from 'vitest';
-import { investigationPhase, SavedResponse } from './mission';
+import { investigationPhase, SavedResponse, xpGained } from './mission';
 import { normalizeStep } from '../lib/attempt';
 import { steps } from '../lib/fixtures';
 import { initLang } from '../i18n/core';
@@ -61,5 +61,14 @@ describe('saved responses display the submitted input for every engine', () => {
     const host = render(step, { order: ['read', 'crystal'] });
     expect([...host.querySelectorAll('li')].map((item) => item.textContent)).toEqual(['Lire la lame', 'Cristal violet']);
     expect(render(normalizeStep(steps.point), { x: 40, y: 60 }).querySelector('figcaption')?.textContent).toBe('Repère à 40 % en largeur, 60 % en hauteur.');
+  });
+});
+
+describe('xpGained (whether the result adds XP to the total)', () => {
+  it('is true only for a new best that really added XP', () => {
+    expect(xpGained({ newBest: true, xpAwarded: 180 })).toBe(true);
+    expect(xpGained({ newBest: true, xpAwarded: 0 })).toBe(false);
+    expect(xpGained({ newBest: false, xpAwarded: 180 })).toBe(false);
+    expect(xpGained({ newBest: false, xpAwarded: 0 })).toBe(false);
   });
 });
