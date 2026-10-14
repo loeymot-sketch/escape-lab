@@ -248,3 +248,19 @@ describe('GET /dashboard level progress (display only: the server computes the l
     expect(() => normalizeDashboard(missing)).toThrow(/levelProgress/);
   });
 });
+
+describe('lobby mastery (server-decided)', () => {
+  it('reads the mastery label of each mission and accepts null', () => {
+    const lobby = lobbyPayload();
+    (lobby.missions[0] as Record<string, unknown>).mastery = 'mastered';
+    (lobby.missions[1] as Record<string, unknown>).mastery = null;
+    const l = normalizeLabLobby(lobby);
+    expect(l.missions[0]!.mastery).toBe('mastered');
+    expect(l.missions[1]!.mastery).toBeNull();
+  });
+  it('refuses a mastery word the server never uses', () => {
+    const lobby = lobbyPayload();
+    (lobby.missions[0] as Record<string, unknown>).mastery = 'legendary';
+    expect(() => normalizeLabLobby(lobby)).toThrow(/mastery/);
+  });
+});

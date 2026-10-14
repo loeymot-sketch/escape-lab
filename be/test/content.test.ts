@@ -111,7 +111,8 @@ test('every guided visual step keeps public labels and private targets in exact 
   const visualSteps = MISSIONS.flatMap((mission) => mission.steps).filter((step) => step.key.kind === 'point');
   for (const step of visualSteps) {
     assert.ok(step.data.image?.asset, `${step.id} needs an image asset`);
-    const key = step.key;
+    // Point keys are the only ones with targets; the single-point assertion below still checks that no other key carries them.
+    const key = step.key as { kind: string; targets?: { id: string; x: number; y: number; r: number; selection?: string }[] };
     const labels = step.data.pointTargets;
     if (labels) {
       assert.ok(key.targets, `${step.id} public zones require private targets`);
@@ -124,7 +125,7 @@ test('every guided visual step keeps public labels and private targets in exact 
         assert.ok(target.x - target.r >= 0 && target.x + target.r <= 100 && target.y - target.r >= 0 && target.y + target.r <= 100, `${step.id}/${target.id} stays inside the artwork`);
       }
     } else {
-      assert.equal((key as { targets?: unknown }).targets, undefined, `${step.id} single-point content must not have hidden multi-zone targets`);
+      assert.equal(key.targets, undefined, `${step.id} single-point content must not have hidden multi-zone targets`);
     }
     const publicView = publicStep(step, 0, 1);
     const serialized = JSON.stringify(publicView);

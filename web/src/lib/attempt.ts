@@ -1,4 +1,5 @@
 import { arr, bool, nonNeg, nullable, num, oneOf, optional, pct, rec, str, text } from './guard';
+import { normalizeCompetencies, type Competencies } from './competency';
 
 const L = 'attempt';
 
@@ -15,6 +16,8 @@ export type PublicStep = {
   ordinal: number;
   of: number;
   prompt: string;
+  /** The competency this step trains, as labelled by the server (absent on an older server). */
+  competency?: string;
   context?: string;
   image?: { asset: string; caption: string };
   options?: Labelled[];
@@ -53,7 +56,28 @@ export type Attempt = {
   step: PublicStep | null;
   /** Cumulative values the server has revealed so far (a stepper accumulates; other engines show the current step). */
   revealed: LabValue[];
+  /** The investigation journal the server keeps for this attempt: one row per step, a competency label and two counters. Empty on an older server. */
+  journal: JournalRow[];
 };
+
+export type JournalState = 'solved' | 'current' | 'upcoming';
+export type JournalRow = { ordinal: number; stepId: string; competency: string; state: JournalState; wrong: number; hints: number };
+const JOURNAL_STATES = ['solved', 'current', 'upcoming'] as const;
+
+export function normalizeJournal(value: unknown, field = 'journal'): JournalRow[] {
+  if (value === undefined) return [];
+  return arr(value, L, field).map((item, i) => {
+    const row = rec(item, L, `${field}[${i}]`);
+    return {
+      ordinal: nonNeg(row.ordinal, L, `${field}[${i}].ordinal`),
+      stepId: str(row.stepId, L, `${field}[${i}].stepId`),
+      competency: str(row.competency, L, `${field}[${i}].competency`),
+      state: oneOf(row.state, JOURNAL_STATES, L, `${field}[${i}].state`),
+      wrong: nonNeg(row.wrong, L, `${field}[${i}].wrong`),
+      hints: nonNeg(row.hints, L, `${field}[${i}].hints`),
+    };
+  });
+}
 
 const labelled = (value: unknown, field: string): Labelled => {
   const row = rec(value, L, field);
@@ -105,6 +129,7 @@ export function normalizeStep(value: unknown): PublicStep {
     ordinal: nonNeg(row.ordinal, L, 'step.ordinal'),
     of: nonNeg(row.of, L, 'step.of'),
     prompt: str(row.prompt, L, 'step.prompt'),
+    competency: optional(row.competency, (v) => str(v, L, 'step.competency')),
     context: optional(row.context, (v) => str(v, L, 'step.context')),
     values: arr(row.values, L, 'step.values').map((v, i) => normalizeLabValue(v, `step.values[${i}]`)),
     hintsAvailable: nonNeg(row.hintsAvailable, L, 'step.hintsAvailable'),
@@ -168,6 +193,7 @@ export function normalizeAttempt(payload: unknown): Attempt {
     penaltyXp: num(attempt.penaltyXp, L, 'penaltyXp'),
     step,
     revealed: arr(attempt.revealed, L, 'revealed').map((v, i) => normalizeLabValue(v, `revealed[${i}]`)),
+    journal: normalizeJournal(attempt.journal),
   };
 }
 
@@ -196,7 +222,21 @@ export type MissionResult = {
   lab?: { slug: string; exited: boolean };
   fragments?: (number | null)[];
   masterCode?: string | null;
+  /** The best score before this attempt (absent on results stored before 2026-10-15). */
+  previousBest?: number | null;
+  /** Debrief by step, frozen with the result (absent on older results). */
+  steps?: ResultStep[];
+  /** Competency figures and the recommendation, on GET /attempts/:id/result only. */
+  competencies?: Competencies;
+  recommended?: Recommendation | null;
 };
+export type ResultStep = { ordinal: number; id: string; prompt: string; competency: string; wrong: number; hints: number; explanation: string };
+export type Recommendation = { missionId: string; labSlug: string; title: string; reason: string };
+
+export function normalizeRecommendation(value: unknown, label: string, field = 'recommended'): Recommendation {
+  const r = rec(value, label, field);
+  return { missionId: str(r.missionId, label, `${field}.missionId`), labSlug: str(r.labSlug, label, `${field}.labSlug`), title: str(r.title, label, `${field}.title`), reason: str(r.reason, label, `${field}.reason`) };
+}
 
 const R = 'result';
 export function normalizeFragment(value: unknown, field = 'fragment'): Fragment {
@@ -243,6 +283,18 @@ function readResult(payload: unknown): MissionResult {
       const row = rec(item, R, `newBadges[${i}]`);
       return { id: str(row.id, R, `newBadges[${i}].id`), name: str(row.name, R, `newBadges[${i}].name`), description: str(row.description, R, `newBadges[${i}].description`) };
     }),
+    previousBest: root.previousBest === undefined ? undefined : nullable(root.previousBest, (v) => nonNeg(v, R, 'previousBest')),
+    steps: root.steps === undefined ? undefined : arr(root.steps, R, 'steps').map((item, i) => {
+      const row = rec(item, R, `steps[${i}]`);
+      return {
+        ordinal: nonNeg(row.ordinal, R, `steps[${i}].ordinal`), id: str(row.id, R, `steps[${i}].id`), prompt: str(row.prompt, R, `steps[${i}].prompt`),
+        competency: str(row.competency, R, `steps[${i}].competency`), wrong: nonNeg(row.wrong, R, `steps[${i}].wrong`), hints: nonNeg(row.hints, R, `steps[${i}].hints`),
+        explanation: str(row.explanation, R, `steps[${i}].explanation`),
+      };
+    }),
+    // strongest/improvement travel with the competency list; a reply that omits them is read as having none to name.
+    competencies: root.competencies === undefined ? undefined : normalizeCompetencies({ competencies: root.competencies, strongest: root.strongest ?? null, improvement: root.improvement ?? null }, R),
+    recommended: root.recommended === undefined ? undefined : nullable(root.recommended, (v) => normalizeRecommendation(v, R)),
   };
 }
 

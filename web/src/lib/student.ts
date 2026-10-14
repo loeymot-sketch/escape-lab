@@ -139,8 +139,12 @@ export type LobbyMission = {
   unlocksWith?: string;
   bestScore: number | null;
   maxScore: number;
+  /** Server-decided reading of the best score (thresholds published by the rules route); null without a best. */
+  mastery: Mastery | null;
   inProgress: boolean;
 };
+export type Mastery = 'mastered' | 'completed' | 'review';
+const MASTERY = ['mastered', 'completed', 'review'] as const;
 export type LabLobby = {
   lab: { slug: string; name: string; discipline: string; blurb: string };
   state: LabState;
@@ -173,6 +177,7 @@ export function normalizeLabLobby(payload: unknown): LabLobby {
         unlocksWith: missionState === 'locked' ? str(m.unlocksWith, B, 'mission.unlocksWith') : optional(m.unlocksWith, (v) => str(v, B, 'mission.unlocksWith')),
         bestScore: nullable(m.bestScore, (v) => nonNeg(v, B, 'mission.bestScore')),
         maxScore: nonNeg(m.maxScore, B, 'mission.maxScore'),
+        mastery: m.mastery === undefined ? null : nullable(m.mastery, (v) => oneOf(v, MASTERY, B, 'mission.mastery')),
         inProgress: bool(m.inProgress, B, 'mission.inProgress'),
       };
     }),
