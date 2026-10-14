@@ -61,6 +61,7 @@ function DashboardView({ dashboard, labs }: { dashboard: DashboardData; labs: La
         <div><div className="eyebrow">{t('YOUR NEXT STEP')}</div><h2>{t(cta.headline)}</h2></div>
         <button type="button" className="primary" disabled={nav.busy} aria-busy={nav.starting !== null} onClick={cta.run}>{nav.starting !== null && target?.kind !== 'unlock' ? t('Starting…') : <>{t(cta.label)} <ArrowRight size={17} aria-hidden="true" /></>}</button>
       </section>
+      <LevelStrip level={dashboard.user.level} xp={dashboard.user.xp} progress={dashboard.user.levelProgress} />
       <div className="stats dashboard-stats">
         <Stat icon={<Beaker />} label={t('Missions completed')} value={figures.missions.value} detail={figures.missions.detail} />
         <Stat icon={<Sparkles />} label={t('Labs cleared')} value={figures.labs.value} detail={figures.labs.detail} />
@@ -79,6 +80,21 @@ function DashboardView({ dashboard, labs }: { dashboard: DashboardData; labs: La
       </section>
       <p className="demo-note">{t('Guest demo: the progress, XP, streak and names you see here are prepared demonstration data, not real people. Nothing you do creates an account.')}</p>
     </>
+  );
+}
+
+/** The learner's level and the XP still needed for the next one, exactly as the server computed them (presentation only). */
+export function LevelStrip({ level, xp, progress }: { level: number; xp: number; progress: { into: number; size: number } }) {
+  const left = progress.size - progress.into;
+  const pct = progress.size > 0 ? (100 * progress.into) / progress.size : 0;
+  return (
+    <section className="level-strip" aria-label={t('Level progress')}>
+      <div className="level-badge"><span>{t('LEVEL')}</span><b>{formatInt(level)}</b></div>
+      <div className="level-body">
+        <div className="level-head"><b>{formatInt(xp)} XP</b><span>{t('{left} XP to level {next}', { left: formatInt(left), next: formatInt(level + 1) })}</span></div>
+        <div className="level-bar" role="progressbar" aria-label={t('Level progress')} aria-valuemin={0} aria-valuemax={progress.size} aria-valuenow={progress.into} aria-valuetext={t('{into} of {size} XP into level {level}', { into: formatInt(progress.into), size: formatInt(progress.size), level: formatInt(level) })}><i style={{ width: `${pct}%` }} /></div>
+      </div>
+    </section>
   );
 }
 

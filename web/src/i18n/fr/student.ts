@@ -101,6 +101,12 @@ export default {
   'Replay': 'Rejouer',
   'Start': 'Démarrer',
 
+  // Level strip on the dashboard (server-computed level progress, display only)
+  'Level progress': 'Progression de niveau',
+  'LEVEL': 'NIVEAU',
+  '{left} XP to level {next}': '{left} XP avant le niveau {next}',
+  '{into} of {size} XP into level {level}': '{into} XP sur {size} dans le niveau {level}',
+
   // Labels of steps and mission engines (lib/labels.ts)
   'Work through the case': 'Analyser le cas pas à pas',
   'Case challenge': 'Défi du cas',
