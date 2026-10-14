@@ -653,3 +653,37 @@ html[data-reduce-motion="true"] .timer.critical { animation: none; }
 .leaderboard-row.rank-2 > span:first-child { color: #d9e4ee; }
 .leaderboard-row.rank-3 > span:first-child { color: #e0a06a; }
 .leaderboard-row.rank-1:not(.you) { background: linear-gradient(90deg, rgb(92 65 21 / 40%), transparent 60%); }
+
+/* Result debrief (2026-10-15): personal progress, competencies, step debrief, exit, recommendation. Same width rule as the ledger. */
+.result-progress, .result-competencies, .result-debrief, .result-exit, .result-next { width: calc(100% - 48px); margin: 16px auto 0; padding: 16px 20px; border: 1px solid #1c7097; border-radius: 16px; background: linear-gradient(135deg, rgb(8 39 63 / 90%), rgb(5 24 42 / 94%)); text-align: left; }
+.result-progress p, .result-next p { margin: 8px 0 0; color: #d4e8f4; font-size: 14px; line-height: 1.6; }
+.result-progress p { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.result-progress b { color: #f6fbff; }
+.result-progress-arrow { color: #68e2ff; }
+.result-progress-delta { font-style: normal; font-weight: 700; }
+.result-progress-delta.up { color: #70f5d7; }
+.result-progress-delta.down { color: #ffb1b8; }
+.result-progress-delta.same { color: #a9c4d8; }
+.result-competencies h2, .result-debrief h2, .result-exit h2, .result-next h2 { margin: 6px 0 10px; color: #f1f9ff; font-size: 18px; line-height: 1.3; }
+.result-competencies .bar-list { margin-top: 4px; }
+.debrief-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.debrief-list details { border: 1px solid rgb(53 109 140 / 50%); border-radius: 12px; background: rgb(8 46 71 / 55%); }
+.debrief-list summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 46px; padding: 10px 14px; cursor: pointer; color: #e5f5ff; font-size: 13px; list-style: none; }
+.debrief-list summary::-webkit-details-marker { display: none; }
+.debrief-ordinal { flex: 0 0 auto; font: 700 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #8ceeff; }
+.debrief-prompt { flex: 1 1 240px; min-width: 0; }
+.debrief-meta { flex: 0 0 auto; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #9fbfd5; }
+.debrief-list .had-mistakes .debrief-meta { color: #ffb1b8; }
+.debrief-list .clean .debrief-meta { color: #70f5d7; }
+.debrief-list details > p { margin: 0 14px 12px; color: #d4e8f4; font-size: 14px; line-height: 1.6; }
+.debrief-competency { color: #8ceeff !important; font-size: 12px !important; }
+.result-exit { border-color: #e3b33e; background: radial-gradient(ellipse at 50% 0, rgb(123 86 22 / 45%), transparent 70%), linear-gradient(140deg, rgb(8 39 63 / 92%), rgb(5 24 42 / 96%)); box-shadow: 0 0 24px rgb(255 200 61 / 18%); }
+.result-exit .eyebrow { color: #ffd565; }
+.result-exit p { margin: 0 0 12px; color: #e9f3fa; font-size: 14px; line-height: 1.6; }
+.result-open-exit { display: inline-flex; min-height: 50px; padding-inline: 20px; border-radius: 14px; }
+.result-exit.escaped { border-color: #27dcb4; box-shadow: 0 0 24px rgb(39 220 180 / 22%); }
+.result-exit.escaped .eyebrow { color: #70f5d7; }
+.result-exit.escaped h2 strong { display: inline-block; color: #a9f5d3; }
+.result-next { border-color: #2fcfff; }
+.result-next-start { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; margin-top: 12px; padding-inline: 18px; border-radius: 12px; }
+@media (max-width: 600px) { .result-progress, .result-competencies, .result-debrief, .result-exit, .result-next { width: calc(100% - 26px); padding: 14px; } }

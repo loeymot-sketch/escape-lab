@@ -295,8 +295,18 @@ function readResult(payload: unknown): MissionResult {
     // strongest/improvement travel with the competency list; a reply that omits them is read as having none to name.
     competencies: root.competencies === undefined ? undefined : normalizeCompetencies({ competencies: root.competencies, strongest: root.strongest ?? null, improvement: root.improvement ?? null }, R),
     recommended: root.recommended === undefined ? undefined : nullable(root.recommended, (v) => normalizeRecommendation(v, R)),
+    // The vault context travels with the stored result and, since 2026-10-15, with the final answer too; GET still requires it (below).
+    lab: root.lab === undefined ? undefined : readLab(root.lab),
+    fragments: root.fragments === undefined ? undefined : readFragments(root.fragments),
+    masterCode: root.masterCode === undefined ? undefined : (root.masterCode === null ? null : str(root.masterCode, R, 'masterCode')),
   };
 }
+
+function readLab(value: unknown): { slug: string; exited: boolean } {
+  const lab = rec(value, R, 'lab');
+  return { slug: str(lab.slug, R, 'lab.slug'), exited: bool(lab.exited, R, 'lab.exited') };
+}
+const readFragments = (value: unknown): (number | null)[] => arr(value, R, 'fragments').map((slot, i) => nullable(slot, (v) => nonNeg(v, R, `fragments[${i}]`)));
 
 /** The result embedded in the final answer response. */
 export function normalizeMissionResult(payload: unknown): MissionResult {
@@ -307,11 +317,10 @@ export function normalizeMissionResult(payload: unknown): MissionResult {
 export function normalizeAttemptResult(payload: unknown): MissionResult {
   const base = readResult(payload);
   const root = rec(payload, R);
-  const lab = rec(root.lab, R, 'lab');
   return {
     ...base,
-    lab: { slug: str(lab.slug, R, 'lab.slug'), exited: bool(lab.exited, R, 'lab.exited') },
-    fragments: arr(root.fragments, R, 'fragments').map((slot, i) => nullable(slot, (v) => nonNeg(v, R, `fragments[${i}]`))),
+    lab: readLab(root.lab),
+    fragments: readFragments(root.fragments),
     masterCode: root.masterCode === null ? null : str(root.masterCode, R, 'masterCode'),
   };
 }

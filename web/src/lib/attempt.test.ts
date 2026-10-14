@@ -275,7 +275,11 @@ describe('pedagogical fields (server-computed, display only)', () => {
   it('refuses a debrief step without its explanation', () => {
     const payload = { ...resultPayload(), lab: { slug: 'hematology', exited: false }, fragments: [7, null, null], masterCode: null, steps: [{ ordinal: 1, id: 'x', prompt: 'p', competency: 'c', wrong: 0, hints: 0 }] };
     expect(() => normalizeAttemptResult(payload)).toThrow(/steps/);
-    // The embedded answer result carries the same optional fields.
+    // The embedded answer result carries the same optional fields, vault context included.
     expect(normalizeMissionResult({ ...resultPayload(), previousBest: null }).previousBest).toBeNull();
+    const embedded = normalizeMissionResult({ ...resultPayload(), lab: { slug: 'hematology', exited: false }, fragments: [7, 4, 2], masterCode: null });
+    expect(embedded.lab).toEqual({ slug: 'hematology', exited: false });
+    expect(embedded.fragments).toEqual([7, 4, 2]);
+    expect(normalizeMissionResult(resultPayload()).lab).toBeUndefined();
   });
 });

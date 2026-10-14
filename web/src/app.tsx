@@ -331,7 +331,7 @@ function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student,
       </main>
     );
   }
-  if (play) return <ErrorBoundary><Mission key={play.attemptId} initial={play} onExit={() => exitMission()} onDone={() => exitMission(true)} onReturnToLab={returnToLab} /></ErrorBoundary>;
+  if (play) return <ErrorBoundary><Mission key={play.attemptId} initial={play} onExit={() => exitMission()} onDone={() => exitMission(true)} onReturnToLab={returnToLab} onStartMission={(id) => void startMission(id)} /></ErrorBoundary>;
 
   const page = (() => {
     switch (view) {

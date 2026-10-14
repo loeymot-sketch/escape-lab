@@ -54,6 +54,8 @@ test('a completed result carries the step debrief, the previous best and the das
     assert.equal(first.last.result.previousBest, null, 'first completion: no previous best');
     const r1 = await h.call('GET', `/api/attempts/${first.attemptId}/result`, { token });
     assert.equal(r1.status, 200);
+    // The final answer embeds the same complete result as GET (lab, fragments, competencies, recommendation): one screen, one source.
+    assert.deepEqual(first.last.result, r1.body, 'the embedded result equals the stored result');
     assert.deepEqual(
       r1.body.steps.map((s: Record<string, unknown>) => [s.ordinal, s.id, s.prompt, s.competency, s.wrong, s.hints, s.explanation]),
       m.steps.map((st, i) => [i + 1, st.id, st.prompt, st.competency, 0, 0, st.explanation]),

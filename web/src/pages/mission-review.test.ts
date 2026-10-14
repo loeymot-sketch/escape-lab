@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it } from 'vitest';
-import { investigationPhase, SavedResponse, xpGained } from './mission';
+import { earnedCode, exitReady, investigationPhase, progressDelta, SavedResponse, xpGained } from './mission';
 import { normalizeStep } from '../lib/attempt';
 import { steps } from '../lib/fixtures';
 import { initLang } from '../i18n/core';
@@ -70,5 +70,26 @@ describe('xpGained (whether the result adds XP to the total)', () => {
     expect(xpGained({ newBest: true, xpAwarded: 0 })).toBe(false);
     expect(xpGained({ newBest: false, xpAwarded: 180 })).toBe(false);
     expect(xpGained({ newBest: false, xpAwarded: 0 })).toBe(false);
+  });
+});
+
+describe('result debrief helpers (presentation of server fields)', () => {
+  const base = { lab: { slug: 'hematology', exited: false }, fragments: [7, 4, 2] as (number | null)[] };
+  it('offers the exit only when every fragment is earned and the lab is still sealed', () => {
+    expect(exitReady(base)).toBe(true);
+    expect(exitReady({ ...base, lab: { slug: 'hematology', exited: true } })).toBe(false);
+    expect(exitReady({ ...base, fragments: [7, null, 2] })).toBe(false);
+    expect(exitReady({ lab: undefined, fragments: undefined })).toBe(false);
+    expect(exitReady({ ...base, fragments: [] })).toBe(false);
+  });
+  it('assembles the earned digits in vault order, never from anything else', () => {
+    expect(earnedCode(base)).toBe('742');
+    expect(earnedCode({ ...base, fragments: [3, 9, 1, 6] })).toBe('3916');
+  });
+  it('reports the progress against the previous best only when the server sent one', () => {
+    expect(progressDelta({ score: 180, previousBest: 150 })).toBe(30);
+    expect(progressDelta({ score: 120, previousBest: 150 })).toBe(-30);
+    expect(progressDelta({ score: 180, previousBest: null })).toBeNull();
+    expect(progressDelta({ score: 180 })).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, Clock3, FlaskConical, RotateCcw, Sparkles, Trophy, X } from 'lucide-react';
+import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, Clock3, DoorOpen, FlaskConical, RotateCcw, Sparkles, Trophy, X } from 'lucide-react';
 import hematologyArt from '../assets/mission-hematology-investigation.webp';
 import microbiologyArt from '../assets/mission-microbiology-petri.webp';
 import biochemistryArt from '../assets/mission-biochemistry-acid-base.webp';
@@ -9,12 +9,12 @@ import {
   normalizeAttempt, normalizeAttemptResult, normalizeHint, normalizeMissionAnswer, normalizeStart,
   type Attempt, type Fragment, type MissionResult, type PublicStep,
 } from '../lib/attempt';
-import { normalizeRules, type Rules } from '../lib/student';
+import { normalizeRules, normalizeUnlock, type Rules } from '../lib/student';
 import { GameEngine, initialAnswer, isAnswerReady, type EngineAnswer } from '../components/engines';
 import { STEP_LABELS, labName, optionLetter, outOf } from '../lib/labels';
 import { SCIENTIFIC_ASSETS } from '../lib/assets';
 import { missionScene } from '../lib/mission-scenes';
-import { FLAG_WORDS, Stat, formatSeconds, secondsLeft, timerTone, useDocumentTitle, useMediaQuery } from '../ui/common';
+import { CompetencyBars, FLAG_WORDS, Stat, formatSeconds, secondsLeft, timerTone, useDocumentTitle, useMediaQuery } from '../ui/common';
 import { describeError, useLoad } from '../ui/state';
 import { useCountUp } from '../ui/motion';
 import { LanguageSwitch, formatInt, plural, t, useLang } from '../i18n';
@@ -55,7 +55,7 @@ function MissionScene({ stepId }: { stepId: string }) {
   </figure>;
 }
 
-export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: Attempt; onExit: () => void; onDone: () => void; onReturnToLab?: () => void }) {
+export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission }: { initial: Attempt; onExit: () => void; onDone: () => void; onReturnToLab?: () => void; onStartMission?: (missionId: string) => void }) {
   // Re-renders the whole screen when the display language is switched; the attempt, the answer and the timer live in state and are kept.
   useLang();
   const [attempt, setAttempt] = useState(initial);
@@ -355,6 +355,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
       setSyncNote(null);
       applyAttempt(reply.attempt);
       if (reply.completed && reply.result) {
+        // The server embeds the same complete result as GET /attempts/:id/result (vault, competencies, recommendation): nothing to re-read.
         setResult(reply.result);
       }
     } catch (e) {
@@ -435,7 +436,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
     setFragmentNote(null);
   };
 
-  if (result) return <ResultScreen result={result} newFragments={fragments} onExit={onDone} onReturnToLab={onReturnToLab} onReplay={() => void restart(true)} replayBusy={restartBusy} replayError={problem} />;
+  if (result) return <ResultScreen result={result} newFragments={fragments} onExit={onDone} onReturnToLab={onReturnToLab} onStartMission={onStartMission} onReplay={() => void restart(true)} replayBusy={restartBusy} replayError={problem} />;
   if (!step) {
     // A completed attempt whose result has not been fetched yet (for example completed in another tab).
     return <CompletedFetch attemptId={attempt.attemptId} onResult={setResult} onExit={onDone} />;
@@ -724,6 +725,17 @@ function CompletedFetch({ attemptId, onResult, onExit }: { attemptId: string; on
 /** True only when the result really added XP to the learner's total: a new best with a zero award is not a gain. */
 export const xpGained = (result: Pick<MissionResult, 'newBest' | 'xpAwarded'>): boolean => result.newBest && result.xpAwarded > 0;
 
+/** The exit can be opened from the debrief when the server reports every fragment of this laboratory earned and the lab still sealed. */
+export const exitReady = (result: Pick<MissionResult, 'lab' | 'fragments'>): boolean =>
+  result.lab !== undefined && !result.lab.exited && result.fragments !== undefined && result.fragments.length > 0 && result.fragments.every((digit) => digit !== null);
+
+/** The code the learner earned, in vault order: the digits the server revealed, nothing else. */
+export const earnedCode = (result: Pick<MissionResult, 'fragments'>): string => (result.fragments ?? []).map((digit) => (digit === null ? '' : String(digit))).join('');
+
+/** Score minus the previous best, only when the server sent a previous best. */
+export const progressDelta = (result: Pick<MissionResult, 'score' | 'previousBest'>): number | null =>
+  (result.previousBest === undefined || result.previousBest === null ? null : result.score - result.previousBest);
+
 /** What the result says about the total XP of the learner: a personal best is not announced with a zero gain; any other server figure is shown as sent. */
 export function resultXpNote(result: Pick<MissionResult, 'newBest' | 'xpAwarded'>): string {
   if (!result.newBest) return t('This replay did not beat your best score, so your total XP is unchanged.');
@@ -731,7 +743,9 @@ export function resultXpNote(result: Pick<MissionResult, 'newBest' | 'xpAwarded'
   return t('New personal best: {sign}{xp} XP added to your total.', { sign: result.xpAwarded > 0 ? '+' : '', xp: formatInt(result.xpAwarded) });
 }
 
-export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onReplay, replayBusy = false, replayError = null }: { result: MissionResult; newFragments: Fragment[]; onExit: () => void; onReturnToLab?: () => void; onReplay?: () => void; replayBusy?: boolean; replayError?: unknown }) {
+type ExitState = { phase: 'idle' } | { phase: 'busy' } | { phase: 'done'; labName: string; badges: { id: string; name: string }[]; already: boolean } | { phase: 'error'; error: unknown };
+
+export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onStartMission, onReplay, replayBusy = false, replayError = null }: { result: MissionResult; newFragments: Fragment[]; onExit: () => void; onReturnToLab?: () => void; onStartMission?: (missionId: string) => void; onReplay?: () => void; replayBusy?: boolean; replayError?: unknown }) {
   useLang();
   // The result replaces a long case page: start at its top, not wherever the Submit button was.
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -742,6 +756,20 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onRe
   useEffect(() => { const id = window.setTimeout(() => setFilled(true), 30); return () => window.clearTimeout(id); }, []);
   const scorePct = result.maxScore > 0 ? Math.max(0, Math.min(100, (result.score / result.maxScore) * 100)) : 0;
   const gained = xpGained(result);
+  const delta = progressDelta(result);
+  // Opening the exit posts the digits the server revealed to the existing unlock route: the server still decides.
+  const [exit, setExit] = useState<ExitState>({ phase: 'idle' });
+  const openExit = async () => {
+    if (exit.phase === 'busy' || !result.lab) return;
+    setExit({ phase: 'busy' });
+    try {
+      const reply = normalizeUnlock(await api(`/labs/${result.lab.slug}/unlock`, { method: 'POST', body: JSON.stringify({ code: earnedCode(result) }) }));
+      setExit({ phase: 'done', labName: reply.labName, badges: reply.newBadges, already: reply.alreadyUnlocked });
+    } catch (e) {
+      setExit({ phase: 'error', error: e });
+    }
+  };
+  const nextMission = result.recommended && result.recommended.missionId !== result.mission.id ? result.recommended : null;
   return (
     <main className={`result-screen result-${result.mission.labSlug}`}>
       <section className="result-hero" aria-labelledby="result-title">
@@ -764,6 +792,49 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onRe
         <Stat icon={<Check />} label={t('First-try steps')} value={outOf(result.stats.firstTrySteps, result.stats.steps)} detail={t('Solved without a wrong answer')} />
       </div>
       <p className={`result-lede result-xp-note${gained ? ' gained' : ''}`}>{resultXpNote(result)}</p>
+      {result.previousBest !== undefined && (
+        <section className="result-progress" aria-label={t('Personal progress')}>
+          <div className="eyebrow">{t('PERSONAL PROGRESS')}</div>
+          {result.previousBest === null
+            ? <p>{t('First completion: this score is now your best for this mission.')}</p>
+            : (
+              <p>
+                <span>{t('Previous best {score} XP', { score: formatInt(result.previousBest) })}</span>
+                <span className="result-progress-arrow" aria-hidden="true">→</span>
+                <b>{t('Now {score} XP', { score: formatInt(result.score) })}</b>
+                {delta !== null && <em className={`result-progress-delta ${delta > 0 ? 'up' : delta < 0 ? 'down' : 'same'}`}>{delta > 0 ? t('{delta} XP better than your best', { delta: `+${formatInt(delta)}` }) : delta < 0 ? t('{delta} XP below your best', { delta: formatInt(delta) }) : t('Equal to your best')}</em>}
+              </p>
+            )}
+        </section>
+      )}
+      {result.competencies && result.competencies.items.length > 0 && (
+        <section className="result-competencies" aria-labelledby="result-competencies-title">
+          <div className="eyebrow">{t('COMPETENCIES')}</div>
+          <h2 id="result-competencies-title">{t('What you have proven so far')}</h2>
+          <CompetencyBars data={result.competencies} title={t('Competencies')} />
+        </section>
+      )}
+      {result.steps && result.steps.length > 0 && (
+        <section className="result-debrief" aria-labelledby="result-debrief-title">
+          <div className="eyebrow">{t('DEBRIEF BY STEP')}</div>
+          <h2 id="result-debrief-title">{t('Every step, explained')}</h2>
+          <ol className="debrief-list">
+            {result.steps.map((s) => (
+              <li key={s.id} className={s.wrong > 0 ? 'had-mistakes' : 'clean'}>
+                <details>
+                  <summary>
+                    <span className="debrief-ordinal" aria-hidden="true">{String(s.ordinal).padStart(2, '0')}</span>
+                    <span className="debrief-prompt">{t(s.prompt)}</span>
+                    <span className="debrief-meta">{s.wrong > 0 ? plural(s.wrong, 'wrong', 'wrong') : t('First try')}{s.hints > 0 ? ` · ${plural(s.hints, 'hint')}` : ''}</span>
+                  </summary>
+                  <p className="debrief-competency">{t('Competency: {name}', { name: t(s.competency) })}</p>
+                  <p>{t(s.explanation)}</p>
+                </details>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
       <section className="result-explanation" aria-labelledby="result-explanation-title">
         <h2 id="result-explanation-title">{t('Final step explained')}</h2>
         <p>{t(result.finalExplanation)}</p>
@@ -786,6 +857,25 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onRe
         <p className="result-lede">{t('Vault progress for this laboratory: {slots}', { slots: result.fragments.map((d) => (d === null ? '·' : String(d))).join('\u00a0') })}</p>
       )}
       {result.masterCode && <p className="result-lede">{t('Master Lab exit code:')} <b>{result.masterCode}</b></p>}
+      {exitReady(result) && exit.phase !== 'done' && (
+        <section className="result-exit" aria-labelledby="result-exit-title">
+          <div className="eyebrow">{t('EXIT READY')}</div>
+          <h2 id="result-exit-title">{t('Every fragment of this laboratory is yours.')}</h2>
+          <p>{t('Your investigations assembled the exit code {code}. Open the door now: nothing to retype.', { code: earnedCode(result).split('').join(' ') })}</p>
+          {exit.phase === 'error' && <div className="feedback wrong" role="alert"><X size={16} aria-hidden="true" /><div><b>{t('The exit did not open.')}</b><p>{describeError(exit.error)}</p></div></div>}
+          <button type="button" className="primary result-open-exit" disabled={exit.phase === 'busy'} aria-busy={exit.phase === 'busy'} onClick={() => void openExit()}>
+            {exit.phase === 'busy' ? t('Opening…') : <><DoorOpen size={18} aria-hidden="true" /> {t('Open the laboratory exit')}</>}
+          </button>
+        </section>
+      )}
+      {exit.phase === 'done' && (
+        <section className="result-exit escaped" role="status" aria-labelledby="result-escaped-title">
+          <div className="eyebrow">{t('LABORATORY ESCAPED')}</div>
+          <h2 id="result-escaped-title" className="celebrate"><strong>{exit.already ? t('{lab} was already unlocked.', { lab: t(exit.labName) }) : t('{lab} unlocked.', { lab: t(exit.labName) })}</strong></h2>
+          {exit.badges.length > 0 && <ul className="badge-chips celebrate" aria-label={t('New badges')}>{exit.badges.map((b) => <li key={b.id}><Trophy size={15} aria-hidden="true" />{t(b.name)}</li>)}</ul>}
+          <p>{t('Its results are now available.')}</p>
+        </section>
+      )}
       {result.newBadges.length > 0 && (
         <div role="status">
           <p className="badge-chips-label">{result.newBadges.length === 1 ? t('New badge earned') : t('New badges earned')}</p>
@@ -793,6 +883,14 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onRe
             {result.newBadges.map((b) => <li key={b.id}><Trophy size={15} aria-hidden="true" />{t(b.name)}</li>)}
           </ul>
         </div>
+      )}
+      {nextMission && (
+        <section className="result-next" aria-labelledby="result-next-title">
+          <div className="eyebrow">{t('RECOMMENDED NEXT')}</div>
+          <h2 id="result-next-title">{t(nextMission.title)}</h2>
+          <p>{t(nextMission.reason)} {t('Laboratory: {lab}.', { lab: t(labName(nextMission.labSlug)) })}</p>
+          {onStartMission && <button type="button" className="ghost result-next-start" disabled={replayBusy} onClick={() => onStartMission(nextMission.missionId)}>{t('Start {title}', { title: t(nextMission.title) })} <ArrowRight size={16} aria-hidden="true" /></button>}
+        </section>
       )}
       {replayError !== null && replayError !== undefined && <div className="feedback wrong" role="alert"><X size={16} aria-hidden="true" /><div><b>{t('The mission could not be restarted.')}</b><p>{describeError(replayError)}</p></div></div>}
       <div className="result-actions">

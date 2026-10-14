@@ -447,7 +447,8 @@ export class Game {
         return { correct: true, feedback, fragment, completed: false as const, attempt: this.attemptView(this.attemptRow(a.id, uid)) };
       }
       const result = this.complete(uid, a, m, t, fragment);
-      return { correct: true, feedback, fragment: result.fragment, completed: true as const, result: result.payload, attempt: this.attemptView(this.attemptRow(a.id, uid)) };
+      // The final answer embeds the same complete result as GET /attempts/:id/result (vault, competencies, recommendation): one screen, one source.
+      return { correct: true, feedback, fragment: result.fragment, completed: true as const, result: this.result(uid, a.id), attempt: this.attemptView(this.attemptRow(a.id, uid)) };
     });
   }
 
