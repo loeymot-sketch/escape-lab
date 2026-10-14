@@ -1,7 +1,8 @@
 import { DatabaseSync } from 'node:sqlite';
 import { expect, type Locator, type Page } from '@playwright/test';
 
-export const API = 'http://localhost:3000/api';
+/** The API under test: playwright.config.ts exports the port it chose, so the helpers follow an E2E_API_PORT override. */
+export const API = `http://localhost:${process.env.E2E_API_PORT ?? '3000'}/api`;
 export const TOKEN_KEY = 'escape-demo-token';
 export const ATTEMPT_KEY = 'escape-demo-attempt';
 

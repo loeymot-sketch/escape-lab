@@ -37,7 +37,7 @@ test.describe('production bundle', () => {
     const domContentLoaded = await page.evaluate(() => (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming).domContentLoadedEventEnd);
     expect(domContentLoaded).toBeLessThan(3_000);
 
-    expect([...apiOrigins]).toEqual(['http://localhost:3000']);
+    expect([...apiOrigins]).toEqual([`http://localhost:${process.env.E2E_API_PORT ?? '3000'}`]);
     expect(problems).toEqual([]);
   });
 
