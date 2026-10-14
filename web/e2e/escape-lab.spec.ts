@@ -1,28 +1,28 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { navigateSection, ARTWORK, clickArtwork, continueStep, moveContent, prepareContentStatus, startMissionViaUi, statusPill, DECISION, HOME_HEADING } from './support/helpers';
+import { API, navigateSection, ARTWORK, clickArtwork, continueStep, moveContent, prepareContentStatus, startMissionViaUi, statusPill, DECISION, HOME_HEADING } from './support/helpers';
 
 test.describe('Escape Lab critical paths', () => {
   async function resetDemoStudent(page: import('@playwright/test').Page) {
     await expect.poll(() => page.evaluate(() => sessionStorage.getItem('escape-demo-token'))).toBeTruthy();
-    await page.evaluate(async () => {
+    await page.evaluate(async (api) => {
       const token = sessionStorage.getItem('escape-demo-token');
       sessionStorage.removeItem('escape-demo-attempt');
-      const response = await fetch('http://localhost:3000/api/demo/reset', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const response = await fetch(`${api}/demo/reset`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       if (!response.ok) throw new Error(`demo reset failed: ${response.status} ${await response.text()}`);
-    });
+    }, API);
     await page.reload();
     await page.getByRole('heading', { name: HOME_HEADING }).waitFor();
   }
 
   async function openMission(page: import('@playwright/test').Page, missionId: string) {
-    await page.evaluate(async (id) => {
+    await page.evaluate(async ([id, api]) => {
       const token = sessionStorage.getItem('escape-demo-token');
-      const response = await fetch(`http://localhost:3000/api/missions/${id}/start`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const response = await fetch(`${api}/missions/${id}/start`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       if (!response.ok) throw new Error(`mission start failed: ${response.status}`);
       const payload = await response.json();
       sessionStorage.setItem('escape-demo-attempt', payload.attempt.attemptId);
-    }, missionId);
+    }, [missionId, API] as const);
     await page.reload();
   }
 
@@ -138,8 +138,8 @@ test.describe('Escape Lab critical paths', () => {
 
   test('browser requests cannot forge score, timer or lab unlock state', async ({ page }) => {
     await page.goto('/');
-    const proof = await page.evaluate(async () => {
-      const registered = await fetch('http://localhost:3000/api/auth/register', {
+    const proof = await page.evaluate(async (api) => {
+      const registered = await fetch(`${api}/auth/register`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ name: 'Browser Tamper Probe', email: `tamper-${Date.now()}@example.test`, password: 'browser tamper password' }),
@@ -147,7 +147,7 @@ test.describe('Escape Lab critical paths', () => {
       const token = (await registered.json()).token as string;
       const headers = { Authorization: `Bearer ${token}`, 'content-type': 'application/json' };
       const request = async (path: string, body?: unknown) => {
-        const response = await fetch(`http://localhost:3000/api${path}`, { method: 'POST', headers, body: body === undefined ? undefined : JSON.stringify(body) });
+        const response = await fetch(`${api}${path}`, { method: 'POST', headers, body: body === undefined ? undefined : JSON.stringify(body) });
         return { status: response.status, body: await response.json() };
       };
       const started = await request('/missions/hem-01/start');
@@ -160,11 +160,11 @@ test.describe('Escape Lab critical paths', () => {
         timeLimitSec: 999999,
         penalties: -999999,
       });
-      const current = await fetch(`http://localhost:3000/api/attempts/${attempt.attemptId}`, { headers }).then(async response => ({ status: response.status, body: await response.json() }));
+      const current = await fetch(`${api}/attempts/${attempt.attemptId}`, { headers }).then(async response => ({ status: response.status, body: await response.json() }));
       const forgedUnlock = await request('/labs/hematology/unlock', { code: '742', unlocked: true, score: 999999 });
       const earlyUnlock = await request('/labs/hematology/unlock', { code: '742' });
       return { forgedAnswer, current, forgedUnlock, earlyUnlock };
-    });
+    }, API);
     expect(proof.forgedAnswer.status).toBe(400);
     expect(proof.current.status).toBe(200);
     expect(proof.current.body.wrongTotal).toBe(0);

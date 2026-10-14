@@ -587,11 +587,9 @@ button.mission-row:hover { background: rgb(13 82 112 / 38%); }
 /* About page: headings and body text on the page background (the light cards keep their own palette). */
 .about-head h1, .about-section h2, .about-loop-title { color: #f4fbff; text-shadow: 0 0 22px rgb(25 216 255 / 14%); }
 .about-principle { color: #8ceeff; border-left-color: #ff6571; }
-.about-lede, .about-intro, .about-loop-note, .about-points dd, .about-step-note { color: #b7d0e2; }
+.about-lede, .about-intro, .about-loop-note, .about-points dd { color: #b7d0e2; }
 .about-points dt { color: #eaf5ff; }
 .about-points > div { border-top-color: rgb(53 109 140 / 44%); }
-.about-state { color: #9fbfd5; }
-.about-chip.quiet { background: #0b3c56; color: #d5f1ff; }
 .about-step:not(:last-child)::after { background: rgb(53 109 140 / 60%); }
 
 /* Guided multi-zone point step: the observation checklist as real rows (2026-10-14 audit, D3 / E7). */

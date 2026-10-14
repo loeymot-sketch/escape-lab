@@ -41,6 +41,8 @@ test.describe('dark-theme readability', () => {
     await resetDemo(page);
     await navigateSection(page, 'Lab results');
     await expect(page.getByRole('heading', { name: 'Lab results' })).toBeVisible();
+    // The results of each escaped lab load after the heading: wait for the first card before measuring.
+    await expect(page.locator('.result-lab .mission-row').first()).toBeVisible();
     await readable(page, '.result-lab .mission-row > span');
     await readable(page, '.result-lab .mission-row small');
     await readable(page, '.result-lab .bar-row > span');

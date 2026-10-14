@@ -1974,7 +1974,7 @@ test.describe('round 14 frontend fixes', () => {
   test('R14-B-01: sidebar navigation and guest actions reach 44px on a rotated touch phone (landscape widths)', async ({ browser }) => {
     const token = await freshStudent();
     for (const [width, height] of [[812, 375], [844, 390], [740, 360], [667, 375]] as const) {
-      const context = await browser.newContext({ viewport: { width, height }, hasTouch: true, isMobile: true, baseURL: 'http://127.0.0.1:5173' });
+      const context = await browser.newContext({ viewport: { width, height }, hasTouch: true, isMobile: true, baseURL: `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? '5173'}` });
       try {
         const page = await context.newPage();
         await openAs(page, token);
@@ -1998,7 +1998,7 @@ test.describe('round 14 frontend fixes', () => {
 
   test('R14-B-01: no button, select or input on the main student screens is under 44px high on a rotated touch phone', async ({ browser }) => {
     const token = await freshStudent();
-    const context = await browser.newContext({ viewport: { width: 812, height: 375 }, hasTouch: true, isMobile: true, baseURL: 'http://127.0.0.1:5173' });
+    const context = await browser.newContext({ viewport: { width: 812, height: 375 }, hasTouch: true, isMobile: true, baseURL: `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? '5173'}` });
     try {
       const page = await context.newPage();
       await openAs(page, token);
