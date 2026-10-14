@@ -110,11 +110,15 @@ Points du rapport **écartés avec raison** : remplacer le coffre à code par un
 | Contrôle | Résultat |
 |---|---|
 | Tests backend (dont `pedagogy.test.ts`) | **279 / 279**, typecheck propre (une erreur de typage héritée corrigée dans `content.test.ts`) |
-| Tests frontend (26 fichiers) | **389 / 389** |
-| Build de production | JS entrée **412 650 / 440 000 o** (123 Ko gzip), JS différé 116 659 / 160 000 o, CSS **133 238 / 140 000 o** (29 Ko gzip) |
-| Playwright intégral, tous projets | **589 / 589 en 9,3 min** : Chromium 553, iPhone 13 émulé 23, bundle de production 3, WebKit bureau 5, WebKit iPhone 5 |
+| Tests frontend (26 fichiers) | **394 / 394** |
+| Build de production | JS entrée **414 414 / 440 000 o** (123 Ko gzip), JS différé 116 972 / 160 000 o, CSS **133 342 / 140 000 o** (29 Ko gzip) |
+| Playwright intégral, tous projets | **590 / 590 en 9,4 min** (après la passe de relecture) : Chromium 554, iPhone 13 émulé 23, bundle de production 3, WebKit bureau 5, WebKit iPhone 5 |
 | Captures après passe | tableau de bord, salle, mission (journal), résultat (débriefing, sortie), téléphone et bureau, FR et EN |
 
-## 3. Toujours humain
+## 3. Relecture indépendante et correctifs
+
+Un relecteur à contexte neuf a relu l'ensemble de la passe : aucun bloquant, trois points importants corrigés avec test rouge puis vert (le débriefing proposait la recommandation secondaire au lieu de la prochaine mission du parcours ; le bouton « Commencer » du débriefing échouait en silence ; la lecture du résultat complet s'exécutait dans la transaction de la réponse finale), et les mineurs retenus (pluriel français du journal, `!important`, journal d'une tentative expirée, ombre du panneau, branches E2E figées, test de rendu d'un ancien résultat).
+
+## 4. Toujours humain
 
 Inchangé : validation scientifique des contenus (dont le pilote multi-zones hérité), provenance et licences des images, relecture native du français, Safari sur appareil physique, lecteur d'écran réel. Les seuils de maîtrise (80 % / 50 %) sont une règle de produit à confirmer par l'équipe pédagogique ; ils sont publiés par le serveur et modifiables en un endroit (`be/src/scoring.ts`).
