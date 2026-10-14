@@ -25,3 +25,6 @@ web/src/assets/mission-master-*.png
 
 # Plan execution scratch (ledgers, briefs)
 .superpowers/
+
+# Local audit evidence (Playwright reports, screenshots): kept on disk, never committed again (946 MB landed in 5e35be3).
+.ci-artifacts/
