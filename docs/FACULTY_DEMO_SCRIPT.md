@@ -111,7 +111,7 @@ Gestes de sécurité : ne cliquez pas « Mark reviewed ». Pour la ligne 5, arr�
 ### 3.1 Variante 7 minutes : ce qu'il faut ajouter
 
 - **+30 s, étape 2** : ouvrez la carte des labos. Montrez trois disciplines jouables, le Master Lab et les labos « Coming soon ».
-- **+30 s, étape 5** : terminez Fix the Sample et montrez l'écran de résultat (« Server-calculated », « Official timer »). Dites : « Le score et le temps viennent du serveur, pas du navigateur. »
+- **+30 s, étape 5** : terminez Fix the Sample et montrez l'écran de résultat (« Server-calculated », « Official timer »). Dites : « Le score et le temps viennent du serveur, pas du navigateur. » Depuis le 15 octobre 2026, le même écran montre aussi la **progression personnelle** (meilleur précédent → maintenant), les **compétences** démontrées, un **débriefing par étape** (chaque question, ses erreurs, son explication) et la **mission recommandée** ; quand tous les fragments d'un laboratoire sont réunis, un bloc « Sortie prête » **ouvre la porte sans retaper le code** (le serveur vérifie toujours). Pendant la mission, le **journal d'enquête** (colonne de droite) nomme la compétence de chaque étape et ce qu'elle a coûté.
 - **+30 s, étape 7** : ouvrez le détail d'un étudiant, puis Content review. Expliquez : « Approved dans l'outil ne vaut pas validation scientifique. »
 - **+15 s, étape 3** : montrez le point de l'image et l'étiquette « illustrative ».
 - Total estimé : environ 6 min 45 s avec les déplacements (le rapport du round 17 donne « 6:45-7:15 », et 7:45 sur téléphone) ; le guide intégré additionne 390 s hors déplacements et affiche « environ 7 minutes ». Ces trois chiffres sont des estimations non chronométrées par un humain, volontairement du même ordre. Gardez 15 s de marge.

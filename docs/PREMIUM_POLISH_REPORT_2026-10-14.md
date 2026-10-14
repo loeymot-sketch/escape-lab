@@ -82,3 +82,39 @@ Le commit `5e35be3` (« upp », fait depuis le poste du propriétaire pendant la
 - Pendant la première seconde du compteur de score, un lecteur d'écran peut lire une valeur intermédiaire ; la barre de score porte la valeur serveur (`aria-valuenow`).
 - Sur la liste d'observations, `aria-pressed` signifie « cible active » alors que le mot visible dit « Sélectionnée / En attente » (sémantique héritée).
 - Les cinq feuilles de style superposées ne sont pas fusionnées ; les budgets ont été relevés plutôt que la dette réduite.
+
+---
+
+# Passe 2 — la boucle pédagogique visible (15 octobre 2026)
+
+Point de départ : le rapport d'audit remis par le propriétaire le 15 octobre (« Rapport d'audit — Escape Lab »). Lecture de superviseur : ses sections UI/UX, progression et écran de résultat relèvent de la démonstration (phase 1) et sont réalisables sans inventer de contenu biomédical ; le studio enseignant, les comptes et la production (phases 2 et 3) sont des semaines de travail sensibles en sécurité et ne sont pas un polish UI/UX. Spécification : `docs/superpowers/specs/2026-10-15-escape-lab-pedagogical-loop-design.md` ; plan : `docs/superpowers/plans/2026-10-15-escape-lab-pedagogical-loop.md`.
+
+## 1. Ce qui a été ajouté (données serveur uniquement, aucun contenu biomédical nouveau)
+
+| Où | Quoi | Donnée serveur (nouvelle ou existante) | Preuve |
+|---|---|---|---|
+| Mission | **Journal d'enquête** : une ligne par étape (compétence entraînée, prouvée / en cours / à venir, erreurs et indices) | `attempt.journal` et `step.competency` (nouveaux, sans aucune question ni clé) | `pedagogy.test.ts` (API), `render.test.ts`, `pedagogy.spec.ts` |
+| Résultat | **Progression personnelle** : meilleur précédent → maintenant, écart | `result.previousBest` (nouveau, figé avec le résultat) | idem |
+| Résultat | **Compétences** démontrées (barres, point fort, axe de travail) | `result.competencies / strongest / improvement` (existaient, le client les ignorait) | idem |
+| Résultat | **Débriefing par étape** : question, compétence, erreurs, indices, explication | `result.steps` (nouveau, explications gagnées à la fin) | idem |
+| Résultat | **Sortie prête** : ouvre la porte avec les fragments gagnés, sans retaper le code | route `/labs/:slug/unlock` existante, chiffres de `result.fragments` | `pedagogy.spec.ts` (sortie serveur `exited: true`, refus 429 affiché tel quel) |
+| Résultat et tableau de bord | **Mission recommandée** avec sa raison et un bouton Commencer | `recommended` (règle unique partagée serveur) | `pedagogy.test.ts`, `pedagogy.spec.ts` |
+| Salle de laboratoire | **Parcours** missions → fragments → sortie, et pastilles **Maîtrisée / À revoir** | `mission.mastery` (nouveau : ≥ 80 % maîtrisée, < 50 % à revoir, seuils publiés dans `/api/rules`) | idem |
+| Mission | Lueur persistante réservée aux actions et aux récompenses | — | captures |
+| Réponse finale | La réponse finale embarque le même résultat complet que `GET /attempts/:id/result` : un seul écran, une seule source | — | `pedagogy.test.ts`, `authority.spec.ts` |
+
+Points du rapport **écartés avec raison** : remplacer le coffre à code par un déverrouillage automatique (identité « escape », script de démo et douze fichiers E2E ; la sortie ouverte depuis le résultat supprime la ressaisie sans changer la règle serveur) ; nouvelles zones, calques et comparaisons d'images (contenu biomédical à valider) ; studio enseignant, comptes, production, exports, notifications (phases 2 et 3).
+
+## 2. Preuves (locales, Node v22.23.2)
+
+| Contrôle | Résultat |
+|---|---|
+| Tests backend (dont `pedagogy.test.ts`) | **279 / 279**, typecheck propre (une erreur de typage héritée corrigée dans `content.test.ts`) |
+| Tests frontend (26 fichiers) | **389 / 389** |
+| Build de production | JS entrée **412 650 / 440 000 o** (123 Ko gzip), JS différé 116 659 / 160 000 o, CSS **133 238 / 140 000 o** (29 Ko gzip) |
+| Playwright intégral, tous projets | **589 / 589 en 9,3 min** : Chromium 553, iPhone 13 émulé 23, bundle de production 3, WebKit bureau 5, WebKit iPhone 5 |
+| Captures après passe | tableau de bord, salle, mission (journal), résultat (débriefing, sortie), téléphone et bureau, FR et EN |
+
+## 3. Toujours humain
+
+Inchangé : validation scientifique des contenus (dont le pilote multi-zones hérité), provenance et licences des images, relecture native du français, Safari sur appareil physique, lecteur d'écran réel. Les seuils de maîtrise (80 % / 50 %) sont une règle de produit à confirmer par l'équipe pédagogique ; ils sont publiés par le serveur et modifiables en un endroit (`be/src/scoring.ts`).

@@ -154,3 +154,7 @@ Spécification : `docs/superpowers/specs/2026-10-14-escape-lab-premium-polish-de
 - Budgets de build relevés une fois (JS 400 000 → 440 000 o, CSS 120 000 → 140 000 o) avec la mesure gzip inscrite dans `check-build-budget.mjs`.
 - Preuves locales sous Node v22.23.2 : backend `276/276`, frontend `371/371` (26 fichiers), build JS entrée `401 857/440 000`, lazy `114 879/160 000`, CSS `126 431/140 000`, 34 rasters conformes ; les totaux Playwright figurent dans le rapport.
 - Restent humains : validation scientifique indépendante des zones et réponses, provenance et licences des images, relecture native FR/EN, Safari sur appareil physique (le moteur WebKit est couvert).
+
+## Passe 2 — boucle pédagogique visible (15 octobre 2026)
+
+Rapport détaillé : `docs/PREMIUM_POLISH_REPORT_2026-10-14.md`, section « Passe 2 ». Journal d'enquête en mission, débriefing par compétence et par étape, progression personnelle, sortie ouverte avec les fragments gagnés, mission recommandée, parcours et maîtrise dans la salle de laboratoire : tout vient du serveur (`journal`, `competency`, `previousBest`, `steps`, `recommended`, `mastery`, seuils dans `/api/rules`). Preuves : backend 279/279, frontend 389/389, Playwright 589/589 (dont WebKit), build JS 412 650/440 000 et CSS 133 238/140 000.
