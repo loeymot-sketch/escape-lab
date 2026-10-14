@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { plural, t, useLang } from '../i18n';
 import type { Competencies } from '../lib/competency';
 
-export type View = 'home' | 'labs' | 'lab' | 'progress' | 'results' | 'profile' | 'teacher' | 'student' | 'content' | 'about';
+export type View = 'home' | 'labs' | 'lab' | 'progress' | 'badges' | 'leaderboard' | 'results' | 'profile' | 'teacher' | 'student' | 'content' | 'about';
 
 /** The screens only a Faculty guest sees. 'about' (the About & demo guide) belongs to both roles. */
 export const FACULTY_VIEWS: View[] = ['teacher', 'student', 'content'];

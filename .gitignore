@@ -5,6 +5,8 @@ web/dist-e2e/
 web/dist-e2e-unconfigured/
 web/playwright-report/
 web/test-results/
+.ci-artifacts/visual-gameplay-*/
+.ci-artifacts/result-trophy-*/
 *.tsbuildinfo
 
 # Local data and secrets
@@ -17,3 +19,9 @@ be/data/
 
 # macOS
 .DS_Store
+
+# Unreferenced 2.3 MB source renders (the Master scenes ship as web/src/assets/lab-master*.webp)
+web/src/assets/mission-master-*.png
+
+# Plan execution scratch (ledgers, briefs)
+.superpowers/

@@ -47,7 +47,7 @@ const S = {
     type: 'object', required: ['stepId', 'response'], additionalProperties: false,
     properties: {
       stepId: str(1, 64),
-      response: { type: 'object', description: 'Engine specific. point: {x,y} (0-100). choice: {choice}. decision: {decision}. order: {order:[ids]}. match: {pairs:{leftId:rightId}}.' },
+      response: { type: 'object', description: 'Engine specific. point: {x,y} (0-100), or guided point: {points:{targetId:{x,y}}} / {selections:{targetId:string}}; these maps may be combined across observations. choice: {choice}. decision: {decision}. order: {order:[ids]}. match: {pairs:{leftId:rightId}}.' },
     },
   } satisfies Schema,
   hint: { type: 'object', required: ['stepId'], additionalProperties: false, properties: { stepId: str(1, 64) } } satisfies Schema,

@@ -100,6 +100,7 @@ export default {
   'Now reviewed': 'Désormais relu',
   'Now approved': 'Désormais approuvé',
   'No review recorded yet.': 'Aucune relecture enregistrée pour l’instant.',
+  'Visual observations: {count} · multi-zone: {multi}': 'Observations visuelles : {count} · multi-zone : {multi}',
   'Mark reviewed': 'Marquer comme relu',
   Approve: 'Approuver',
   'Return to draft': 'Remettre en brouillon',

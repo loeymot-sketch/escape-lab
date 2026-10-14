@@ -88,7 +88,7 @@
 .aside-card h2{font-size:15px;margin:18px 0 7px;color:#173344}
 .aside-card p{color:#41595e}
 .status-list{margin:0}
-.status-list .status-row{color:#41595e}
+.status-list .status-row{color:#41595e;min-height:44px}
 .status-list dt,.status-list dd{margin:0}
 .status-list dd{color:#173344;font-weight:700}
 .fragment-reveal.inline{max-width:none;margin:14px 0 0;text-align:left}

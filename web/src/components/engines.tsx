@@ -1,17 +1,17 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
-import { ArrowDown, ArrowUp, GripVertical, ImageOff, X, ZoomIn } from 'lucide-react';
+import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
+import { ArrowDown, ArrowUp, Check, GripVertical, ImageOff, X, ZoomIn } from 'lucide-react';
 import { SCIENTIFIC_ASSETS } from '../lib/assets';
 import cultureObservation1 from '../assets/culture-observation-01.webp';
 import cultureObservation2 from '../assets/culture-observation-02.webp';
 import cultureObservation3 from '../assets/culture-observation-03.webp';
 import cultureObservation4 from '../assets/culture-observation-04.webp';
-import type { AssetTextAlternative } from '../lib/assets';
+import type { ScientificAsset } from '../lib/assets';
 import type { PublicStep } from '../lib/attempt';
 import { optionLetter } from '../lib/labels';
 import { FLAG_WORDS } from '../ui/common';
 import { t, useLang } from '../i18n';
 
-export type EngineAnswer = { x?: number; y?: number; choice?: string; decision?: string; order?: string[]; pairs?: Record<string, string> };
+export type EngineAnswer = { x?: number; y?: number; points?: Record<string, { x: number; y: number }>; selections?: Record<string, string>; choice?: string; decision?: string; order?: string[]; pairs?: Record<string, string> };
 
 export function pointAsPercent(clientX: number, clientY: number, rect: { left: number; top: number; width: number; height: number }) {
   return {
@@ -20,15 +20,17 @@ export function pointAsPercent(clientX: number, clientY: number, rect: { left: n
   };
 }
 
+
 /** What an engine starts with. An order list starts as the server's arrangement, which is itself a submittable answer. */
 export function initialAnswer(step: PublicStep): EngineAnswer {
-  return step.kind === 'order' ? { order: (step.items ?? []).map((item) => item.id) } : {};
+  if (step.kind === 'order') return { order: (step.items ?? []).map((item) => item.id) };
+  return step.pointTargets ? { points: {} } : {};
 }
 
 /** Presentation-only completeness check: enough input to send. The server alone decides correctness. */
 export function isAnswerReady(step: PublicStep, answer: EngineAnswer): boolean {
   switch (step.kind) {
-    case 'point': return answer.x !== undefined && answer.y !== undefined;
+    case 'point': return step.pointTargets ? step.pointTargets.every((target) => answer.points?.[target.id] !== undefined || answer.selections?.[target.id] !== undefined) : answer.x !== undefined && answer.y !== undefined;
     case 'choice': return Boolean(answer.choice);
     case 'decision': return Boolean(answer.decision);
     case 'order': return (answer.order?.length ?? 0) === (step.items?.length ?? -1);
@@ -51,11 +53,11 @@ const matchingEvidence: Record<string, { src: string; alt: string }> = {
 };
 
 /** Inspect the supplied observation without changing or submitting the learner's answer. */
-function CultureEvidence({ evidence, observation }: { evidence: { src: string; alt: string }; observation: string }) {
+function CultureEvidence({ evidence, observation, inspected, onInspected }: { evidence: { src: string; alt: string }; observation: string; inspected: boolean; onInspected: () => void }) {
   const viewer = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
-  const scrollStyles = useRef<{ overflow: string; gutter: string } | null>(null);
   const titleId = useId();
+  const scrollStyles = useRef<{ overflow: string; gutter: string } | null>(null);
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -97,10 +99,10 @@ function CultureEvidence({ evidence, observation }: { evidence: { src: string; a
     <div className="culture-photo">
       <button ref={opener} type="button" className={`culture-thumb${failed ? ' culture-thumb-failed' : ''}`}
         aria-label={t(failed ? 'Retry image for {item}' : 'Inspect image: {item}', { item: observation })}
-        onClick={failed ? retry : () => setOpen(true)}>
+        onClick={failed ? retry : () => { setOpen(true); onInspected(); }}>
         {failed
           ? <><ImageOff size={25} aria-hidden="true" /><span>{t('Retry image')}</span></>
-          : <><img src={source} alt={t(evidence.alt)} width="720" height="720" loading="lazy" decoding="async" onError={() => setFailed(true)} /><span className="culture-zoom" aria-hidden="true"><ZoomIn size={16} /></span></>}
+          : <><img src={source} alt={t(evidence.alt)} width="720" height="720" loading="lazy" onError={() => setFailed(true)} /><span className="culture-zoom" data-inspected={inspected ? 'true' : undefined} aria-hidden="true">{inspected ? <Check size={15} /> : <ZoomIn size={16} />}</span></>}
       </button>
       {failed && <p className="culture-image-error" role="status">{t('Image unavailable. The observation remains below.')}</p>}
       <dialog ref={viewer} className="culture-viewer" aria-labelledby={titleId}
@@ -127,7 +129,7 @@ function CultureEvidence({ evidence, observation }: { evidence: { src: string; a
         {open && <div className="culture-viewer-body">
           {failed
             ? <div className="culture-viewer-error" role="alert"><ImageOff size={32} aria-hidden="true" /><p>{t('This image could not be loaded. Your associations are kept.')}</p><button type="button" className="ghost" onClick={retry}>{t('Retry image')}</button></div>
-            : <img className="culture-viewer-photo" src={source} alt={t(evidence.alt)} width="720" height="720" decoding="async" onError={() => setFailed(true)} />}
+            : <img className="culture-viewer-photo" src={source} alt={t(evidence.alt)} width="720" height="720" onError={() => setFailed(true)} />}
         </div>}
         <p className="culture-viewer-caption">{t('Illustrative training image')} · {t('The mission timer keeps running.')}</p>
       </dialog>
@@ -138,11 +140,13 @@ function CultureEvidence({ evidence, observation }: { evidence: { src: string; a
 export function GameEngine(props: EngineProps) {
   const { step } = props;
   useLang();
-  if (step.kind === 'point') return <ImageIdentify {...props} />;
+  if (step.kind === 'point') return <Suspense fallback={null}><LazyPointEngine {...props} /></Suspense>;
   if (step.kind === 'order') return <DragOrder {...props} />;
   if (step.kind === 'match') return <Matching {...props} />;
   return <ChoiceLike {...props} />;
 }
+
+const LazyPointEngine = lazy(() => import('./point-engine').then(({ PointEngine }) => ({ default: PointEngine })));
 
 function ChoiceLike({ step, answer, setAnswer, disabled }: EngineProps) {
   const field = step.kind === 'decision' ? 'decision' : 'choice';
@@ -165,113 +169,6 @@ function ChoiceLike({ step, answer, setAnswer, disabled }: EngineProps) {
   );
 }
 
-/**
- * The text version of a picture that is itself a table of values (R36 B36-001): a real table for assistive technology, and one button per result so the
- * answer can be given without a pointer. A button submits the same {x, y} a click on that result cell would: the server alone decides correctness.
- */
-function PointTextAlternative({ alt, marker, disabled, choose }: { alt: AssetTextAlternative; marker: { x: number; y: number } | null; disabled: boolean; choose: (x: number, y: number) => void }) {
-  useLang();
-  const captionId = useId();
-  return (
-    <details className="point-text">
-      <summary>{t('Text version of this image')}</summary>
-      <div className="point-text-body">
-        <ul className="point-text-indices">{alt.indices.map((index) => <li key={index}>{t(index)}</li>)}</ul>
-        {/* The caption (with the "not a real report" wording) stays outside the sideways-scrolling region so it is always readable. */}
-        <p id={captionId} className="point-text-caption">{t(alt.caption)}</p>
-        <p className="point-text-hint">{t('Swipe sideways to see every column.')}</p>
-        <div className="point-text-scroll" role="region" aria-label={t('Chemistry panel table')} tabIndex={0}>
-          <table aria-labelledby={captionId}>
-            <thead><tr><th scope="col">{t('Test')}</th><th scope="col">{t('Result')}</th><th scope="col">{t('Reference')}</th><th scope="col">{t('Flag')}</th><th scope="col">{t('Choose')}</th></tr></thead>
-            <tbody>
-              {alt.rows.map((row) => {
-                const selected = marker !== null && marker.x === row.x && Math.abs(marker.y - row.y) < 0.05;
-                return (
-                  <tr key={row.test}>
-                    <th scope="row">{t(row.test)}</th>
-                    <td>{row.result} {row.unit}</td>
-                    <td>{row.reference}</td>
-                    <td>{row.flag ? t(FLAG_WORDS[row.flag] ?? row.flag) : t('none')}</td>
-                    <td><button type="button" className="ghost" aria-pressed={selected} aria-label={t('Select {test} result', { test: t(row.test) })} disabled={disabled} onClick={() => choose(row.x, row.y)}>{t('Select')}</button></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </details>
-  );
-}
-
-function ImageIdentify({ step, answer, setAnswer, disabled }: EngineProps) {
-  useLang();
-  const asset = step.image ? SCIENTIFIC_ASSETS[step.image.asset] : undefined;
-  const marker = answer.x === undefined || answer.y === undefined ? null : { x: answer.x, y: answer.y };
-
-  const pick = (e: MouseEvent<HTMLButtonElement>) => {
-    // A keyboard activation (Enter/Space) reports no pointer position: place the marker at the centre instead.
-    if (e.detail === 0) {
-      if (!marker) setAnswer({ x: 50, y: 50 });
-      return;
-    }
-    setAnswer(pointAsPercent(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect()));
-  };
-
-  const [imageFailed, setImageFailed] = useState(false);
-  const keyboard = (e: KeyboardEvent<HTMLButtonElement>) => {
-    const step_ = e.shiftKey ? 10 : 5;
-    const dx = e.key === 'ArrowRight' ? step_ : e.key === 'ArrowLeft' ? -step_ : 0;
-    const dy = e.key === 'ArrowDown' ? step_ : e.key === 'ArrowUp' ? -step_ : 0;
-    if (!dx && !dy) return;
-    e.preventDefault();
-    const current = marker ?? { x: 50, y: 50 };
-    setAnswer({ x: Math.max(0, Math.min(100, current.x + dx)), y: Math.max(0, Math.min(100, current.y + dy)) });
-  };
-
-  if (!asset) {
-    return <p className="inline-error" role="alert">{t('This illustrative image is not available in this build ({asset}).', { asset: step.image?.asset ?? 'unknown' })}</p>;
-  }
-  if (imageFailed) {
-    return (
-      <div className="inline-error" role="alert">
-        <p>{t('The illustrative image could not be loaded. Check your connection, then reload this page: your attempt is kept on the server.')}</p>
-        <button type="button" className="ghost" onClick={() => window.location.reload()}>{t('Reload')}</button>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="image-frame">
-        <button
-          type="button"
-          className="image-placeholder scientific"
-          style={{ aspectRatio: `${asset.width} / ${asset.height}` }}
-          onClick={pick}
-          onKeyDown={keyboard}
-          disabled={disabled}
-          aria-label={t('Select a point on the scientific image')}
-          aria-describedby="point-help"
-        >
-          <img className="scientific-image" src={asset.src} alt="" width={asset.width} height={asset.height} decoding="async" draggable={false} onError={() => setImageFailed(true)} />
-          {marker && <span className="marker" aria-hidden="true" style={{ left: `${marker.x}%`, top: `${marker.y}%` }} />}
-        </button>
-        {/* The label sits below the image, outside the clickable area: it never covers artwork or the marker. */}
-        <span className="image-watermark">{t('Illustrative training image')}</span>
-      </div>
-      <p id="point-help" className="image-instruction-text">
-        {t('Click the image, or focus it and use the arrow keys (Shift for larger steps) to mark the suspected finding.')}
-        {asset.textAlternative && <> {t('A text version of this image, with a button for each result, follows the image.')}</>}
-        {marker && <> {t('Marker at {x}% across, {y}% down.', { x: Math.round(marker.x), y: Math.round(marker.y) })}</>}
-      </p>
-      {asset.textAlternative && <PointTextAlternative alt={asset.textAlternative} marker={marker} disabled={disabled} choose={(x, y) => setAnswer({ x, y })} />}
-      <p className="image-caption">
-        {t('{label}: illustrative training material, not a real specimen, not a validated image and not for clinical use.', { label: t(asset.label) })}
-      </p>
-    </>
-  );
-}
 
 function DragOrder({ step, answer, setAnswer, disabled }: EngineProps) {
   useLang();
@@ -339,6 +236,7 @@ function DragOrder({ step, answer, setAnswer, disabled }: EngineProps) {
 function Matching({ step, answer, setAnswer, disabled }: EngineProps) {
   useLang();
   const fieldsId = useId();
+  const [inspected, setInspected] = useState<Set<string>>(() => new Set());
   const pairs = answer.pairs ?? {};
   const lefts = step.left ?? [];
   const rights = step.right ?? [];
@@ -359,7 +257,7 @@ function Matching({ step, answer, setAnswer, disabled }: EngineProps) {
           return (
             <div className="match-row" key={l.id}>
               <div className={evidence ? 'match-evidence' : 'match-observation'}>
-                {evidence && <CultureEvidence evidence={evidence} observation={t(l.label)} />}
+                {evidence && <CultureEvidence evidence={evidence} observation={t(l.label)} inspected={inspected.has(l.id)} onInspected={() => setInspected((current) => new Set(current).add(l.id))} />}
                 <label className={evidence ? 'match-evidence-copy' : undefined} htmlFor={fieldId}>{t(l.label)}</label>
               </div>
               <div className="match-selection">

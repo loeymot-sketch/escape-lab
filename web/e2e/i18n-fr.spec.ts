@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { ARTWORK, clickArtwork, completeLabViaApi, completeMissionViaApi, expireAttemptInDb, freshStudent, openAs, openAttemptAt, openFaculty, outage, resetDemo, startMissionViaUi, submit } from './support/helpers';
+import { navigateSection, ARTWORK, clickArtwork, completeLabViaApi, completeMissionViaApi, expireAttemptInDb, freshStudent, openAs, openAttemptAt, openFaculty, outage, resetDemo, startMissionViaUi, submit } from './support/helpers';
 import { exitCode } from './support/content';
 
 // The whole site is available in French and English. English is the default for English browsers, French for French browsers; the switch in the header
@@ -77,12 +77,12 @@ async function inFrench(page: Page, label: string, options: { axe?: boolean; tar
 test.describe('language switch', () => {
   test('all difficulty levels in lab lobbies are translated, including locked missions', async ({ page }) => {
     await resetDemo(page);
-    await page.getByRole('button', { name: 'Lab map', exact: true }).click();
+    await navigateSection(page, 'Lab map');
     await page.getByRole('button', { name: 'Review Hematology Lab' }).click();
     await FR(page).click();
     await expect(page.locator('.picker-main')).toContainText(['Débutant', 'Débutant', 'Intermédiaire']);
     expect((await page.locator('.picker-main').allTextContents()).join(' ')).not.toMatch(/Foundation|Intermediate|Advanced/);
-    await page.getByRole('button', { name: 'Carte des laboratoires', exact: true }).click();
+    await navigateSection(page, 'Carte des laboratoires');
     await page.getByRole('button', { name: 'Entrer dans Laboratoire de biochimie clinique' }).click();
     await expect(page.locator('.picker-main').last()).toContainText('Avancé');
     expect((await page.locator('.picker-main').allTextContents()).join(' ')).not.toMatch(/Foundation|Intermediate|Advanced/);
@@ -142,7 +142,7 @@ test.describe('French walk: every screen, switched in place', () => {
     test.setTimeout(240_000);
     await resetDemo(page);
     await inFrench(page, 'dashboard');
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await inFrench(page, 'laboratory map');
     await page.getByRole('button', { name: /^(Enter|Review) Hematology/ }).click();
     await expect(page.getByRole('heading', { name: 'Choose a mission' })).toBeVisible();
@@ -163,16 +163,22 @@ test.describe('French walk: every screen, switched in place', () => {
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
     await inFrench(page, 'result screen');
     await page.getByRole('button', { name: /Return to mission control/ }).click();
-    await page.getByRole('button', { name: 'Progress', exact: true }).click();
+    await navigateSection(page, 'Vault');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await inFrench(page, 'progress and Code Vault');
-    await page.getByRole('button', { name: 'Lab results' }).click();
+    await navigateSection(page, 'Badges');
+    await expect(page.locator('.badge-row').first()).toBeVisible();
+    await inFrench(page, 'badges');
+    await navigateSection(page, 'Leaderboard');
+    await expect(page.locator('.leaderboard-row').first()).toBeVisible();
+    await inFrench(page, 'leaderboard');
+    await navigateSection(page, 'Lab results');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await inFrench(page, 'lab results');
-    await page.getByRole('button', { name: 'Learning settings' }).click();
+    await navigateSection(page, 'Learning settings');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await inFrench(page, 'learning settings');
-    await page.getByRole('button', { name: 'About & demo guide' }).click();
+    await navigateSection(page, 'About & demo guide');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await inFrench(page, 'About and demo guide (student)');
   });
@@ -197,13 +203,13 @@ test.describe('French walk: every screen, switched in place', () => {
     await resetDemo(page);
     await openFaculty(page);
     await inFrench(page, 'faculty: class intelligence');
-    await page.getByRole('button', { name: 'Student detail' }).click();
+    await navigateSection(page, 'Student detail');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await inFrench(page, 'faculty: student detail');
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     await expect(page.locator('.content-row').first()).toBeVisible();
     await inFrench(page, 'faculty: content review');
-    await page.getByRole('button', { name: 'About & demo guide' }).click();
+    await navigateSection(page, 'About & demo guide');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await inFrench(page, 'About and demo guide (faculty)');
   });
@@ -237,7 +243,7 @@ test.describe('French error and edge states', () => {
     const token = await freshStudent();
     await completeLabViaApi(token, 'hematology', false);
     await openAs(page, token);
-    await page.getByRole('button', { name: 'Progress', exact: true }).click();
+    await navigateSection(page, 'Vault');
     const input = page.getByLabel(/Exit code for Hematology Lab/);
     await input.fill('000');
     await page.getByRole('button', { name: 'Unlock' }).click();
@@ -263,7 +269,7 @@ test.describe('French error and edge states', () => {
     await inFrench(page, 'expired attempt');
     await page.getByRole('button', { name: /Exit mission/ }).click();
     const down = await outage(page, '**/api/labs');
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await expect(page.getByRole('alert')).toBeVisible();
     await inFrench(page, 'server outage on the laboratory map');
     down.lift();
@@ -280,7 +286,7 @@ test.describe('French on a phone', () => {
     await inFrench(page, 'phone: guest options sheet', { targets: true, axe: false });
     // Pressing the language buttons outside the sheet closes it; close it ourselves only if it is still open.
     if (await page.getByRole('button', { name: 'Close' }).isVisible()) await page.getByRole('button', { name: 'Close' }).click();
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await inFrench(page, 'phone: laboratory map', { targets: true });
     await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
     await inFrench(page, 'phone: point mission', { targets: true });
@@ -289,9 +295,15 @@ test.describe('French on a phone', () => {
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
     await inFrench(page, 'phone: result', { targets: true });
     await page.getByRole('button', { name: /Return to mission control/ }).click();
-    await page.getByRole('button', { name: 'Progress', exact: true }).click();
+    await navigateSection(page, 'Vault');
     await inFrench(page, 'phone: progress and Code Vault', { targets: true });
-    await page.getByRole('button', { name: 'About & demo guide' }).click();
+    await navigateSection(page, 'Badges');
+    await expect(page.locator('.badge-row').first()).toBeVisible();
+    await inFrench(page, 'phone: badges', { targets: true });
+    await navigateSection(page, 'Leaderboard');
+    await expect(page.locator('.leaderboard-row').first()).toBeVisible();
+    await inFrench(page, 'phone: leaderboard', { targets: true });
+    await navigateSection(page, 'About & demo guide');
     await inFrench(page, 'phone: About and demo guide', { targets: true });
   });
 

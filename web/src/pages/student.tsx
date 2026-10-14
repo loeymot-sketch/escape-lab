@@ -1,9 +1,10 @@
-import { ArrowRight, Beaker, Check, ChevronRight, Clock3, Hourglass, LockKeyhole, Sparkles, Trophy } from 'lucide-react';
+import { ArrowRight, Beaker, Check, ChevronRight, Clock3, Droplet, FlaskConical, Hourglass, LockKeyhole, Microscope, Sparkles, Trophy } from 'lucide-react';
 import { createElement } from 'react';
-import hematologyArt from '../assets/lab-hematology.webp';
-import microbiologyArt from '../assets/lab-microbiology.webp';
-import biochemistryArt from '../assets/lab-biochemistry.webp';
-import vaultArt from '../assets/progression-vault.webp';
+import hematologyArt from '../assets/lab-hematology-door.webp';
+import microbiologyArt from '../assets/lab-microbiology-door.webp';
+import biochemistryArt from '../assets/lab-biochemistry-door.webp';
+import masterArt from '../assets/lab-master.webp';
+import masterOpenArt from '../assets/lab-master-open.webp';
 import { api } from '../lib/api';
 import { formatInt, plural, t } from '../i18n';
 import { engineLabel, outOf } from '../lib/labels';
@@ -86,8 +87,9 @@ export function LabCard({ lab, level }: { lab: Lab; level: 2 | 3 }) {
   const soon = lab.state === 'coming_soon';
   const locked = lab.state === 'locked' || soon;
   const stateLabel = lab.state === 'completed' ? t('CLEARED') : lab.state === 'locked' ? t('LOCKED') : t('ACTIVE');
-  const art = lab.discipline === 'hematology' ? hematologyArt : lab.discipline === 'microbiology' ? microbiologyArt : lab.discipline === 'biochemistry' ? biochemistryArt : lab.discipline === 'master' ? vaultArt : null;
+  const art = lab.discipline === 'hematology' ? hematologyArt : lab.discipline === 'microbiology' ? microbiologyArt : lab.discipline === 'biochemistry' ? biochemistryArt : lab.discipline === 'master' ? locked ? masterArt : masterOpenArt : null;
   const slotCount = Math.min(4, lab.fragments.total);
+  const Emblem = lab.discipline === 'hematology' ? Droplet : lab.discipline === 'microbiology' ? Microscope : lab.discipline === 'biochemistry' ? FlaskConical : Beaker;
   return (
     <article className={`lab-card ${tone(lab.discipline)} ${locked ? 'locked' : ''}`}>
       <div className="lab-card-scene" aria-hidden="true">
@@ -96,7 +98,8 @@ export function LabCard({ lab, level }: { lab: Lab; level: 2 | 3 }) {
           <span className="lab-index">{String(lab.ordinal).padStart(2, '0')}</span>
           {soon ? null : locked ? <LockKeyhole size={16} /> : <span className="lab-state">{stateLabel}</span>}
         </div>
-        <div className="lab-emblem">{soon ? <Hourglass size={22} /> : <Beaker size={24} />}</div>
+        <div className="lab-emblem">{soon ? <Hourglass size={22} /> : <Emblem size={24} />}</div>
+        {art && lab.discipline !== 'master' && <span className="lab-door-nameplate">{t(lab.name.replace(' Lab', ''))}</span>}
       </div>
       <div className="lab-card-content">
         {createElement(`h${level}`, null, t(lab.name.replace(' Lab', '')))}

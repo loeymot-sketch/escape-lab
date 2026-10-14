@@ -1,0 +1,3 @@
+/* Isolated component comparisons exclude fixed chrome only.
+   Page screenshots and interaction/bounds checks retain both actual bars. */
+.player > header, .game-primary-nav { visibility: hidden !important; }

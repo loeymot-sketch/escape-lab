@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { ARTWORK, clickArtwork, moveContent, prepareContentStatus, startMissionViaUi, statusPill, DECISION, HOME_HEADING } from './support/helpers';
+import { navigateSection, ARTWORK, clickArtwork, continueStep, moveContent, prepareContentStatus, startMissionViaUi, statusPill, DECISION, HOME_HEADING } from './support/helpers';
 
 test.describe('Escape Lab critical paths', () => {
   async function resetDemoStudent(page: import('@playwright/test').Page) {
@@ -30,16 +30,18 @@ test.describe('Escape Lab critical paths', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Content review' })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Vault');
     await expect(page.getByRole('heading', { name: 'Progress vault' })).toBeVisible();
+    await navigateSection(page, 'Badges');
     await expect(page.getByRole('heading', { name: 'Milestones', exact: true })).toBeVisible();
     await expect(page.getByTestId('badge-count')).toHaveText(/^\d+ of \d+ earned$/);
-    await expect(page.getByText('Leaderboard')).toBeVisible();
-    await page.getByRole('button', { name: 'Learning settings' }).click();
+    await navigateSection(page, 'Leaderboard');
+    await expect(page.getByRole('heading', { level: 1, name: 'Leaderboard' })).toBeVisible();
+    await navigateSection(page, 'Learning settings');
     await expect(page.getByText('Learning environment')).toBeVisible();
     await expect(page.getByText(/No personal account or learner profile is created/)).toBeVisible();
     await expect(page.getByText('Alex Martin')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Lab results' }).click();
+    await navigateSection(page, 'Lab results');
     await expect(page.getByRole('heading', { name: 'Lab results' })).toBeVisible();
     await expect(page.locator('.crumb')).toHaveText('Lab results');
     await page.getByRole('button', { name: 'Reset guest session' }).click();
@@ -50,7 +52,7 @@ test.describe('Escape Lab critical paths', () => {
   test('profile preference failure is announced and rolled back', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible();
-    await page.getByRole('button', { name: 'Learning settings' }).click();
+    await navigateSection(page, 'Learning settings');
     const sound = page.getByRole('checkbox', { name: 'Reduce motion' });
     const initial = await sound.isChecked();
     await page.route('**/api/profile', async route => {
@@ -67,7 +69,7 @@ test.describe('Escape Lab critical paths', () => {
     await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible();
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     await expect(page.getByRole('heading', { name: 'Class intelligence' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Investigations' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Rooms' })).toHaveCount(0);
     await expect(page.getByText('MISSION SIGNAL')).toBeVisible();
     await expect(page.getByText('ROSTER')).toBeVisible();
     const results = await new AxeBuilder({ page }).analyze();
@@ -81,10 +83,10 @@ test.describe('Escape Lab critical paths', () => {
     await page.goto('/');
     await resetDemoStudent(page);
     await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
-    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
+    await expect(page.locator('.player-title').getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     await expect(page.getByText('STEP 1 / 1')).toBeVisible();
     await page.reload();
-    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
+    await expect(page.locator('.player-title').getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     await expect(page.getByText('STEP 1 / 1')).toBeVisible();
   });
 
@@ -180,9 +182,11 @@ test.describe('Escape Lab critical paths', () => {
     await page.getByRole('button', { name: DECISION.reject }).click();
     await expect(page.getByRole('button', { name: 'Submit answer' })).toBeEnabled();
     await page.getByRole('button', { name: 'Submit answer' }).click();
+    await continueStep(page);
     await expect(page.getByText('Sample 2')).toBeVisible();
     await page.getByRole('button', { name: DECISION.repeat }).click();
     await page.getByRole('button', { name: 'Submit answer' }).click();
+    await continueStep(page);
     await expect(page.getByText('Sample 3')).toBeVisible();
     await page.getByRole('button', { name: DECISION.accept }).click();
     await page.getByRole('button', { name: 'Submit answer' }).click();
@@ -193,8 +197,10 @@ test.describe('Escape Lab critical paths', () => {
     await page.getByRole('button', { name: /Microcytic/ }).click();
     await expect(page.getByRole('button', { name: 'Submit answer' })).toBeEnabled();
     await page.getByRole('button', { name: 'Submit answer' }).click();
+    await continueStep(page);
     await page.getByRole('button', { name: /Iron deficiency anemia/ }).click();
     await page.getByRole('button', { name: 'Submit answer' }).click();
+    await continueStep(page);
     await page.getByRole('button', { name: /Evaluate for a source/ }).click();
     await page.getByRole('button', { name: 'Submit answer' }).click();
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
@@ -233,10 +239,10 @@ test.describe('Escape Lab critical paths', () => {
     await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible();
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     await expect(page.getByRole('heading', { name: 'Class intelligence' })).toBeVisible();
-    await page.getByRole('button', { name: 'Student detail' }).click();
+    await navigateSection(page, 'Student detail');
     await expect(page.getByRole('heading', { name: 'Student detail' })).toBeVisible();
     await expect(page.getByText('ATTEMPT HISTORY')).toBeVisible();
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     await expect(page.getByRole('heading', { name: 'Content review' })).toBeVisible();
     await expect(page.getByText('SCIENTIFIC GOVERNANCE')).toBeVisible();
     await expect(page.getByTestId('approval-note')).toContainText('“Approved” is a faculty workflow flag in this demonstration. It is not a biomedical or scientific validation');
@@ -257,7 +263,7 @@ test.describe('Escape Lab critical paths', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
     await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible();
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Vault');
     await expect(page.getByRole('heading', { name: 'Progress vault' })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
     expect(overflow).toBe(false);
@@ -269,7 +275,7 @@ test.describe('Escape Lab critical paths', () => {
     page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
     await page.goto('/');
     await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible();
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Vault');
     await expect(page.getByRole('heading', { name: 'Progress vault' })).toBeVisible();
     expect(errors).toEqual([]);
   });
@@ -300,7 +306,7 @@ test.describe('Escape Lab critical paths', () => {
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations).toEqual([]);
     await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
-    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
+    await expect(page.locator('.player-title').getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     const missionResults = await new AxeBuilder({ page }).analyze();
     expect(missionResults.violations).toEqual([]);
   });
@@ -339,7 +345,7 @@ test.describe('Escape Lab critical paths', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible();
     // Reach the first navigation button the way a keyboard user does, so :focus-visible really applies.
-    const enter = page.getByRole('button', { name: 'Investigations' });
+    const enter = page.getByRole('button', { name: 'Rooms' });
     await expect(enter).not.toBeFocused();
     // The first tab stop is the skip link; it jumps past the sidebar to the page content.
     await page.keyboard.press('Tab');

@@ -444,6 +444,7 @@ export function ContentReview() {
                       <div className="content-title">
                         <b id={`content-title-${m.missionId}`}>{t(m.title)}</b>
                         <ReviewTrail mission={m} />
+                        {m.visualAudit.pointSteps > 0 && <small className="review-trail" data-testid={`visual-audit-${m.missionId}`}>{t('Visual observations: {count} · multi-zone: {multi}', { count: m.visualAudit.pointSteps, multi: m.visualAudit.multiZoneSteps })}</small>}
                       </div>
                       <span>{t(labName(m.labSlug))}</span>
                       <span className={`status-pill ${m.status}`}>{statusWord(m.status)}</span>

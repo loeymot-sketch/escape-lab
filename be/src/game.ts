@@ -1092,7 +1092,19 @@ export class Game {
   contentMissions() {
     const st = new Map(this.all<{ mission_id: string; status: string; reviewed_by: string | null; updated_at: number }>('SELECT * FROM content_status').map((r) => [r.mission_id, r]));
     return {
-      missions: MISSIONS.map((m) => { const r = st.get(m.id); return { missionId: m.id, title: m.title, labSlug: m.labSlug, status: (r?.status ?? 'draft') as 'draft' | 'reviewed' | 'approved', reviewedBy: r?.reviewed_by ?? null, updatedAt: r?.updated_at ?? null }; }),
+      missions: MISSIONS.map((m) => {
+        const r = st.get(m.id);
+        const visualSteps = m.steps.filter((step) => step.key.kind === 'point');
+        return {
+          missionId: m.id, title: m.title, labSlug: m.labSlug,
+          status: (r?.status ?? 'draft') as 'draft' | 'reviewed' | 'approved',
+          reviewedBy: r?.reviewed_by ?? null, updatedAt: r?.updated_at ?? null,
+          visualAudit: {
+            pointSteps: visualSteps.length,
+            multiZoneSteps: visualSteps.filter((step) => step.key.kind === 'point' && (step.key.targets?.length ?? 0) > 1).length,
+          },
+        };
+      }),
       note: 'Sample clinical content is illustrative until faculty approve it.',
     };
   }

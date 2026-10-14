@@ -139,6 +139,8 @@ test('content approval: draft -> reviewed -> approved, students cannot see or ch
   const list = (await h.call('GET', '/api/content/missions', { token: claire })).body;
   assert.equal(list.missions.length, 10);
   assert.ok(list.missions.every((m: any) => m.status === 'draft'));
+  assert.deepEqual(list.missions.find((m: any) => m.missionId === 'hem-01').visualAudit, { pointSteps: 1, multiZoneSteps: 0 });
+  assert.deepEqual(list.missions.find((m: any) => m.missionId === 'bio-02').visualAudit, { pointSteps: 1, multiZoneSteps: 1 });
   const skip = await h.call('PUT', '/api/content/missions/hem-01/status', { token: claire, body: { status: 'approved' } });
   assert.equal(skip.status, 409);
   assert.equal(skip.body.error.code, 'review_required');

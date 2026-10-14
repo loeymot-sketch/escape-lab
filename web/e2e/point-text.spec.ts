@@ -13,6 +13,17 @@ test.describe('Lab Value Hacker has a text version of its panel, solvable with t
     await openAs(page, token);
     await startMissionViaUi(page, 'Clinical Biochemistry Lab', 'Lab Value Hacker');
 
+    // The new contract requires both observations: place the hemolysis marker with the keyboard first,
+    // then use the text table for the affected result.
+    const image = page.locator('.scientific');
+    await image.focus();
+    await page.keyboard.press('Shift+ArrowLeft', { delay: 10 });
+    await page.keyboard.press('Shift+ArrowLeft', { delay: 10 });
+    await page.keyboard.press('Shift+ArrowLeft', { delay: 10 });
+    await page.keyboard.press('Shift+ArrowUp', { delay: 10 });
+    await page.keyboard.press('Shift+ArrowUp', { delay: 10 });
+    await page.keyboard.press('Shift+ArrowUp', { delay: 10 });
+
     // The text version is announced from the image control and opens with the keyboard.
     await expect(page.locator('#point-help')).toContainText('text version');
     const summary = page.getByText('Text version of this image', { exact: true });
@@ -62,6 +73,14 @@ test.describe('Lab Value Hacker has a text version of its panel, solvable with t
     await completeMissionViaApi(token, 'bio-01');
     await openAs(page, token);
     await startMissionViaUi(page, 'Clinical Biochemistry Lab', 'Lab Value Hacker');
+    const image = page.locator('.scientific');
+    await image.focus();
+    await page.keyboard.press('Shift+ArrowLeft');
+    await page.keyboard.press('Shift+ArrowLeft');
+    await page.keyboard.press('Shift+ArrowLeft');
+    await page.keyboard.press('Shift+ArrowUp');
+    await page.keyboard.press('Shift+ArrowUp');
+    await page.keyboard.press('Shift+ArrowUp');
     await page.getByText('Text version of this image', { exact: true }).click();
     const buttons = page.getByRole('button', { name: /^Select .* result$/ });
     await expect(buttons).toHaveCount(8);
@@ -80,6 +99,14 @@ test.describe('Lab Value Hacker has a text version of its panel, solvable with t
     await completeMissionViaApi(token, 'bio-01');
     await openAs(page, token);
     await startMissionViaUi(page, 'Clinical Biochemistry Lab', 'Lab Value Hacker');
+    const image = page.locator('.scientific');
+    await image.focus();
+    await page.keyboard.press('Shift+ArrowLeft');
+    await page.keyboard.press('Shift+ArrowLeft');
+    await page.keyboard.press('Shift+ArrowLeft');
+    await page.keyboard.press('Shift+ArrowUp');
+    await page.keyboard.press('Shift+ArrowUp');
+    await page.keyboard.press('Shift+ArrowUp');
     await page.getByText('Text version of this image', { exact: true }).click();
     // The "not a real report" wording must be readable without scrolling sideways.
     await expect(page.locator('.point-text-scroll')).not.toContainText('not a real report');
@@ -95,6 +122,14 @@ test.describe('Lab Value Hacker has a text version of its panel, solvable with t
     await completeMissionViaApi(token, 'bio-01');
     await openAs(page, token);
     await startMissionViaUi(page, 'Clinical Biochemistry Lab', 'Lab Value Hacker');
+    const image = page.locator('.scientific');
+    await image.focus();
+    await page.keyboard.press('Shift+ArrowLeft');
+    await page.keyboard.press('Shift+ArrowLeft');
+    await page.keyboard.press('Shift+ArrowLeft');
+    await page.keyboard.press('Shift+ArrowUp');
+    await page.keyboard.press('Shift+ArrowUp');
+    await page.keyboard.press('Shift+ArrowUp');
     await page.getByText('Text version of this image', { exact: true }).click();
     await page.getByRole('button', { name: 'Select Potassium result' }).click();
     const width = (name: string) => page.getByRole('button', { name }).evaluate((el) => parseFloat(getComputedStyle(el).borderTopWidth));

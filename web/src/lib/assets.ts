@@ -19,13 +19,12 @@ export type AssetTextRow = {
   unit: string;
   reference: string;
   flag: string;
-  /** Centre of this result cell, in percent of the artwork: the point the server receives when the row is chosen instead of a click. */
-  x: number;
-  y: number;
 };
 
 export type AssetTextAlternative = {
   caption: string;
+  /** Target identifier used when a table row is the accessible equivalent of one visual observation. */
+  targetId?: string;
   /** Specimen indices drawn above the table, in reading order. */
   indices: string[];
   rows: AssetTextRow[];
@@ -39,16 +38,17 @@ export const SCIENTIFIC_ASSETS: Record<string, ScientificAsset> = {
     // Transcribed from the text of chemistry-panel.svg (assets.test.ts compares every cell with the SVG). The values are the picture's own: nothing is added, reordered or interpreted.
     textAlternative: {
       caption: 'Chemistry panel with specimen indices (illustrative training image, not a real report)',
+      targetId: 'potassium-result',
       indices: ['Hemolysis index 3+', 'Icterus index 0', 'Lipemia index 0'],
       rows: [
-        { test: 'Sodium', result: '139', unit: 'mmol/L', reference: '135 - 145', flag: '', x: 55, y: 36.1 },
-        { test: 'Potassium', result: '6.4', unit: 'mmol/L', reference: '3.5 - 5.1', flag: 'H', x: 55, y: 43.9 },
-        { test: 'Chloride', result: '103', unit: 'mmol/L', reference: '98 - 107', flag: '', x: 55, y: 51.7 },
-        { test: 'Bicarbonate', result: '24', unit: 'mmol/L', reference: '22 - 29', flag: '', x: 55, y: 59.4 },
-        { test: 'Urea', result: '5.1', unit: 'mmol/L', reference: '2.5 - 7.8', flag: '', x: 55, y: 67.2 },
-        { test: 'Creatinine', result: '78', unit: 'µmol/L', reference: '55 - 100', flag: '', x: 55, y: 75 },
-        { test: 'Glucose', result: '5.4', unit: 'mmol/L', reference: '3.9 - 5.6', flag: '', x: 55, y: 82.8 },
-        { test: 'Calcium', result: '2.35', unit: 'mmol/L', reference: '2.15 - 2.55', flag: '', x: 55, y: 90.6 },
+        { test: 'Sodium', result: '139', unit: 'mmol/L', reference: '135 - 145', flag: '' },
+        { test: 'Potassium', result: '6.4', unit: 'mmol/L', reference: '3.5 - 5.1', flag: 'H' },
+        { test: 'Chloride', result: '103', unit: 'mmol/L', reference: '98 - 107', flag: '' },
+        { test: 'Bicarbonate', result: '24', unit: 'mmol/L', reference: '22 - 29', flag: '' },
+        { test: 'Urea', result: '5.1', unit: 'mmol/L', reference: '2.5 - 7.8', flag: '' },
+        { test: 'Creatinine', result: '78', unit: 'µmol/L', reference: '55 - 100', flag: '' },
+        { test: 'Glucose', result: '5.4', unit: 'mmol/L', reference: '3.9 - 5.6', flag: '' },
+        { test: 'Calcium', result: '2.35', unit: 'mmol/L', reference: '2.15 - 2.55', flag: '' },
       ],
     },
   },

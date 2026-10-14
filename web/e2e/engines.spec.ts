@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ARTWORK, arrangeOrder, caseStatus, chooseCorrectOption, clickArtwork, completeMissionViaApi, freshStudent, openAs, resetDemo, startMissionViaUi, submit, DECISION } from './support/helpers';
+import { navigateSection, ARTWORK, arrangeOrder, caseStatus, chooseCorrectOption, clickArtwork, completeMissionViaApi, continueStep, freshStudent, openAs, resetDemo, startMissionViaUi, submit, DECISION } from './support/helpers';
 import { MISSION_BY_ID } from './support/content';
 
 const wrongAnswers = (page: Page) => caseStatus(page, 'Wrong answers');
@@ -24,7 +24,7 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await expect(submit(page)).toBeEnabled();
 
     await page.reload();
-    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
+    await expect(page.locator('.player-title').getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     await expect(wrongAnswers(page)).toHaveText('1');
     await expect(penalty(page)).toHaveText('-10');
     await expect(submit(page)).toBeDisabled();
@@ -34,23 +34,60 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await expect(page.getByText('1 wrong')).toBeVisible();
   });
 
+  test('point image has a precise inspection mode that preserves the answer until submit', async ({ page }) => {
+    let answerRequests = 0;
+    await page.route('**/attempts/*/answer', async (route) => { answerRequests += 1; await route.continue(); });
+    await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
+    await page.getByRole('button', { name: 'Inspect image: Stylised blood smear' }).click();
+    const viewer = page.locator('dialog[aria-label="Stylised blood smear"]');
+    await expect(viewer).toBeVisible();
+    await expect(viewer).toHaveAttribute('aria-label', 'Stylised blood smear');
+    await viewer.locator('.point-viewer-image').focus();
+    await viewer.locator('.point-viewer-image').press('ArrowRight');
+    await expect(page.locator('.marker')).toBeVisible();
+    expect(answerRequests).toBe(0);
+    await viewer.locator('.point-viewer-image').click({ position: { x: 220, y: 100 } });
+    await expect(viewer).toBeVisible();
+    await expect(page.locator('.marker')).toBeVisible();
+    expect(answerRequests).toBe(0);
+    await viewer.getByRole('button', { name: 'Close image viewer' }).click();
+    await expect(viewer).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Inspect image: Stylised blood smear' })).toBeFocused();
+    await expect(submit(page)).toBeEnabled();
+    await page.getByRole('button', { name: 'Inspect image: Stylised blood smear' }).click();
+    await expect(viewer).toBeVisible();
+    await viewer.press('Escape');
+    await expect(viewer).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Inspect image: Stylised blood smear' })).toBeFocused();
+  });
+
   test('point on the second artwork: the visible potassium cell is correct, the neighbouring row is not', async ({ page }) => {
     // bio-02 is locked for the prepared demo learner, so a fresh learner finishes bio-01 through the API first.
     const token = await freshStudent();
     await completeMissionViaApi(token, 'bio-01');
     await openAs(page, token);
     await startMissionViaUi(page, 'Clinical Biochemistry Lab', 'Lab Value Hacker');
+    // Guided point missions require both authored observations: first the specimen index, then potassium.
+    await clickArtwork(page, { width: 1600, height: 900, x: 290, y: 167 });
+    await expect(submit(page)).toBeDisabled();
     // The sodium result sits one row (70 of 900 artwork px) above potassium.
     await clickArtwork(page, { ...ARTWORK.panel, y: ARTWORK.panel.y - 70 });
+    await expect(submit(page)).toBeEnabled();
     await submit(page).click();
     await expect(page.getByRole('alert')).toContainText('Not quite.');
+    await expect(page.getByRole('progressbar', { name: 'Observation progress' })).toHaveAttribute('aria-valuenow', '1');
+    await expect(page.getByRole('progressbar', { name: 'Observation progress' })).toHaveAttribute('aria-valuemax', '2');
+    // A retry starts with a clean local selection while the server keeps the penalty.
+    await page.reload();
+    await expect(page.getByText('Select each observation on the image.')).toBeVisible();
+    await clickArtwork(page, { width: 1600, height: 900, x: 290, y: 167 });
     await clickArtwork(page, ARTWORK.panel);
     await submit(page).click();
     await complete(page);
   });
 
   test('a locked mission cannot be started from the lobby', async ({ page }) => {
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await page.getByRole('button', { name: 'Enter Clinical Biochemistry Lab' }).click();
     await expect(page.getByRole('button', { name: 'Locked Lab Value Hacker' })).toBeDisabled();
     await expect(page.getByText('Complete mission 01 to unlock')).toBeVisible();
@@ -68,12 +105,13 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await expect(submit(page)).toBeEnabled();
 
     await page.reload();
-    await expect(page.getByText('CASE FILE · Clinical Biochemistry', { exact: true })).toBeVisible();
+    await expect(page.locator('.player-title').getByText('CASE FILE · Clinical Biochemistry', { exact: true })).toBeVisible();
     await expect(wrongAnswers(page)).toHaveText('1');
     await expect(penalty(page)).toHaveText('-10');
     await option(page, 'Kidney').click();
     await submit(page).click();
-    await expect(page.getByRole('status').filter({ hasText: 'Correct.' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Step 1 correct.' })).toBeVisible();
+    await continueStep(page);
     await expect(page.getByText('STEP 2 / 3')).toBeVisible();
   });
 
@@ -88,11 +126,13 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await expect(page.getByText('STEP 1 / 3')).toBeVisible();
     await page.getByRole('button', { name: DECISION.reject }).click();
     await submit(page).click();
+    await continueStep(page);
     await expect(page.getByText('STEP 2 / 3')).toBeVisible();
     await expect(page.getByText(/Sample 2\./)).toBeVisible();
     await expect(wrongAnswers(page)).toHaveText('1');
     await page.getByRole('button', { name: DECISION.repeat }).click();
     await submit(page).click();
+    await continueStep(page);
     await page.getByRole('button', { name: DECISION.accept }).click();
     await submit(page).click();
     await complete(page);
@@ -104,6 +144,7 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await expect(page.locator('.value', { hasText: 'MCV' })).toBeVisible();
     await option(page, 'Microcytic').click();
     await submit(page).click();
+    await continueStep(page);
     await expect(page.getByText('STEP 2 / 3')).toBeVisible();
     // Step 2 introduces ferritin/TIBC/RDW; the server also keeps Hb and MCV from step 1.
     for (const name of ['Hb', 'MCV', 'Ferritin', 'TIBC', 'RDW']) await expect(page.locator('.value').filter({ hasText: new RegExp(`^${name}`) })).toHaveCount(1);
@@ -121,6 +162,7 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     for (const name of ['Hb', 'MCV', 'Ferritin']) await expect(page.locator('.value').filter({ hasText: new RegExp(`^${name}`) })).toHaveCount(1);
     await option(page, 'Iron deficiency anemia').click();
     await submit(page).click();
+    await continueStep(page);
     await option(page, /Evaluate for a source/).click();
     await submit(page).click();
     await complete(page);
@@ -203,7 +245,10 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     for (const [index] of MISSION_BY_ID.get('bio-01')!.steps.entries()) {
       await chooseCorrectOption(page, 'bio-01', index);
       await submit(page).click();
-      if (index < 2) await page.getByRole('button', { name: 'Continue to next step' }).click();
+      if (index < 2) {
+        await continueStep(page);
+        await expect(page.getByText(`STEP ${index + 2} / 3`, { exact: true })).toBeVisible();
+      }
     }
     await complete(page);
     await page.getByRole('button', { name: 'Back to the laboratory' }).click();
@@ -213,7 +258,7 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await expect(savedMission.getByRole('button', { name: 'Replay Organ Rescue Mission' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start Lab Value Hacker' })).toBeEnabled();
     await page.reload();
-    await page.getByRole('button', { name: 'Lab map', exact: true }).click();
+    await navigateSection(page, 'Lab map');
     await page.getByRole('button', { name: 'Enter Clinical Biochemistry Lab' }).click();
     await expect(savedMission).toContainText('Completed');
     await expect(page.getByRole('button', { name: 'Start Lab Value Hacker' })).toBeEnabled();

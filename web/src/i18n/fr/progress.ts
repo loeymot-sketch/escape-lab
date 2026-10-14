@@ -3,6 +3,12 @@ export default {
   // Progress hub
   'Progress vault': 'Coffre de progression',
   'PROGRESSION SYSTEM': 'SYSTÈME DE PROGRESSION',
+  'Your discovered fragments and unlocked laboratory exits.': 'Vos fragments découverts et vos sorties de laboratoire déverrouillées.',
+  'Your achievements, awarded by the server as you investigate.': 'Vos jalons, accordés par le serveur au fil de vos enquêtes.',
+  'BADGES': 'JALONS',
+  'Loading your badges…': 'Chargement de vos badges…',
+  'Compare the recorded XP and laboratory progress in your class.': 'Comparez les XP enregistrés et la progression des laboratoires dans votre classe.',
+  'Loading the leaderboard…': 'Chargement du classement…',
   'Every fragment and badge below comes from the server record. Nothing is awarded by the interface.': "Chaque fragment et chaque badge ci-dessous provient du registre du serveur. Rien n'est attribué par l'interface.",
   'The vault could not be refreshed': "Le coffre n'a pas pu être actualisé",
   'Opening the vault…': 'Ouverture du coffre…',

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { ATTEMPT_KEY, homeHeading, openFaculty, resetDemo, watchProblems } from './support/helpers';
+import { navigateSection, ATTEMPT_KEY, homeHeading, openFaculty, resetDemo, watchProblems } from './support/helpers';
 import { auditPage } from './support/audit';
 
 // The About & demo guide: a static page for both roles, reachable from the section navigation, presentation-ready in 5 to 7 minutes.
@@ -12,7 +12,7 @@ const mainText = (page: Page) => page.locator('main').innerText();
 const VIEWPORTS = [[320, 700], [375, 812], [768, 1024], [1440, 900]] as const;
 
 async function openAbout(page: Page) {
-  await navAbout(page).click();
+  await navigateSection(page, ABOUT);
   await expect(aboutHeading(page)).toBeVisible();
 }
 async function openAboutAsFaculty(page: Page) {
@@ -35,13 +35,13 @@ test.describe('About & demo guide: reach it', () => {
     await expect(navAbout(page)).toBeVisible();
     await openAbout(page);
     await expect(navAbout(page)).toHaveAttribute('aria-current', 'page');
-    await expect(page.locator('nav [aria-current="page"]')).toHaveCount(1);
+    await expect(page.locator('nav [aria-current="page"]:visible')).toHaveCount(1);
     await expect(page).toHaveTitle('About & demo guide · Escape Lab');
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
     await expect(aboutHeading(page)).toBeFocused();
     await expect(page.locator('header .crumb')).toHaveText('About & demo guide');
     // Leaving moves the current-page mark away again.
-    await page.getByRole('button', { name: 'Lab map', exact: true }).click();
+    await navigateSection(page, 'Lab map');
     await expect(navAbout(page)).not.toHaveAttribute('aria-current', 'page');
   });
 
@@ -179,7 +179,7 @@ test.describe('About & demo guide: it is static', () => {
     await page.waitForTimeout(600);
     expect(seen.filter((u) => u.includes('/api/')), 'requests issued while on the About page').toEqual([]);
     // Cut the API completely, then open the page from another screen: it renders from the bundle alone.
-    await page.getByRole('button', { name: 'Lab map', exact: true }).click();
+    await navigateSection(page, 'Lab map');
     await expect(page.getByRole('heading', { level: 1, name: 'Laboratory map' })).toBeVisible();
     await page.route('**/api/**', (route) => route.abort('connectionrefused'));
     await openAbout(page);
@@ -369,7 +369,7 @@ test.describe('round 16: About & demo guide wording and layout', () => {
     for (const y of [800, 1800, height]) {
       await page.evaluate((top) => window.scrollTo(0, top), y);
       await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThan(Math.min(y, height - 900) - 5);
-      for (const name of ['Investigations', 'Lab map', 'Learning settings', ABOUT, 'Faculty guest', 'Reset guest session']) await expect(page.getByRole('button', { name, exact: true }), `${name} at scrollY ${y}`).toBeInViewport({ ratio: 1 });
+      for (const name of ['Rooms', 'Lab map', 'Learning settings', ABOUT, 'Faculty guest', 'Reset guest session']) await expect(page.getByRole('button', { name, exact: true }), `${name} at scrollY ${y}`).toBeInViewport({ ratio: 1 });
     }
     await noHorizontalScroll(page, 'sticky sidebar 1440');
     await axeClean(page, 'sticky sidebar 1440');
@@ -387,7 +387,7 @@ test.describe('round 16: About & demo guide wording and layout', () => {
     expect(box.position).toBe('sticky');
     expect(box.client).toBeLessThanOrEqual(box.view);
     await page.evaluate(() => window.scrollTo(0, 1500));
-    for (const name of ['Investigations', 'Lab map', 'Progress', 'Lab results', 'Learning settings', ABOUT]) {
+    for (const name of ['Rooms', 'Lab map', 'Vault', 'Lab results', 'Learning settings', ABOUT]) {
       const button = page.locator('.app > aside nav').getByRole('button', { name, exact: true });
       await button.scrollIntoViewIfNeeded();
       // Browser scroll offsets can land on fractional CSS pixels (e.g. 99.69% visible at DPR 1).

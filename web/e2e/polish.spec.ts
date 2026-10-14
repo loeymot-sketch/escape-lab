@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ARTWORK, CONTINUE_HEADING, DECISION, FIRST_VISIT_HEADING, apiCall, clickArtwork, completeLabViaApi, completeMissionViaApi, freshStudent, json, openAs, openAttemptAt, openFaculty, openHome, patched, resetDemo, sessionToken, startMissionViaUi, submit, teacherToken, watchProblems } from './support/helpers';
+import { navigateSection, ARTWORK, CONTINUE_HEADING, DECISION, FIRST_VISIT_HEADING, apiCall, clickArtwork, completeLabViaApi, completeMissionViaApi, freshStudent, json, openAs, openAttemptAt, openFaculty, openHome, patched, resetDemo, sessionToken, startMissionViaUi, submit, teacherToken, watchProblems } from './support/helpers';
 import { auditPage } from './support/audit';
 
-const nav = (page: Page, name: string) => page.getByRole('button', { name, exact: true }).click();
+const nav = navigateSection;
 
 test.describe('decision and choice options: lettered chips, never the raw option id', () => {
   test('a decision step shows A/B/C chips and the full labels, with no raw id and no clipping', async ({ page }) => {
@@ -99,7 +99,7 @@ test.describe('illustrative image label and marker', () => {
 test.describe('leaderboard never prints arithmetic that is false', () => {
   test('a learner outside any class gets a neutral empty state: no row, no gap, no count', async ({ page }) => {
     await openAs(page, await freshStudent());
-    await nav(page, 'Progress');
+    await nav(page, 'Leaderboard');
     await expect(page.getByRole('heading', { name: 'Leaderboard', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'The leaderboard is not available yet' })).toBeVisible();
     await expect(page.getByText('The class leaderboard appears when your learning group is set up.')).toBeVisible();
@@ -111,7 +111,7 @@ test.describe('leaderboard never prints arithmetic that is false', () => {
 
   test('a class learner still sees real rows and a true count', async ({ page }) => {
     await resetDemo(page);
-    await nav(page, 'Progress');
+    await nav(page, 'Leaderboard');
     const count = page.locator('.leaderboard-panel .list-count');
     await expect(count).toBeVisible();
     const [, shown, total] = (await count.innerText()).match(/Showing (\d+) of (\d+) ranked students\./)!.map(Number);
@@ -122,7 +122,7 @@ test.describe('leaderboard never prints arithmetic that is false', () => {
   test('no gap row when the learner is the next rank after the listed rows', async ({ page }) => {
     await page.route('**/api/leaderboard**', (route) => patched(route, (b) => ({ ...b, rows: b.rows.slice(0, 3).map((r: any) => ({ ...r, you: false })), me: { rank: 4, name: 'Me', xp: 5, labs: 0, accuracyPct: null, you: true }, total: 4 })));
     await openHome(page);
-    await nav(page, 'Progress');
+    await nav(page, 'Leaderboard');
     await expect(page.locator('.leaderboard-row')).toHaveCount(4);
     await expect(page.locator('.leaderboard-gap')).toHaveCount(0);
     await expect(page.getByText('Showing 4 of 4 ranked students.')).toBeVisible();
@@ -330,7 +330,7 @@ test.describe('minimum type size on key pages (desktop)', () => {
     const seen: Record<string, string[]> = {};
     const check = async (name: string) => { seen[name] = (await auditPage(page)).smallText; };
     await check('dashboard');
-    for (const name of ['Lab map', 'Progress', 'Lab results', 'Learning settings']) { await nav(page, name); await expect(page.locator('h1')).toBeVisible(); await page.waitForLoadState('networkidle'); await check(name); }
+    for (const name of ['Lab map', 'Vault', 'Lab results', 'Learning settings']) { await nav(page, name); await expect(page.locator('h1')).toBeVisible(); await page.waitForLoadState('networkidle'); await check(name); }
     await openAttemptAt(page, 'hem-02', 0);
     await check('decision mission');
     await page.getByRole('button', { name: DECISION.accept }).click();

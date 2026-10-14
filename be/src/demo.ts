@@ -29,7 +29,7 @@ function good(step: Step): unknown {
   switch (k.kind) {
     case 'choice': return { choice: k.answer };
     case 'decision': return { decision: k.answer };
-    case 'point': return { x: k.x, y: k.y };
+    case 'point': return k.targets ? { points: Object.fromEntries(k.targets.map((target) => [target.id, { x: target.x, y: target.y }])) } : { x: k.x, y: k.y };
     case 'order': return { order: k.order };
     case 'match': return { pairs: k.pairs };
   }
@@ -39,7 +39,9 @@ function bad(step: Step): unknown {
   switch (k.kind) {
     case 'choice': return { choice: step.data.options!.find((o) => o.id !== k.answer)!.id };
     case 'decision': return { decision: (step.data.options ?? [{ id: 'accept' }, { id: 'reject' }, { id: 'repeat' }]).map((o) => o.id).find((i) => i !== k.answer) };
-    case 'point': return { x: (k.x + 50) % 100, y: (k.y + 50) % 100 };
+    case 'point': return k.targets
+      ? { points: Object.fromEntries(k.targets.map((target, i) => [target.id, { x: i === 0 ? (target.x + 50) % 100 : target.y, y: target.y }])) }
+      : { x: (k.x + 50) % 100, y: (k.y + 50) % 100 };
     case 'order': { const o = [...k.order]; [o[0], o[1]] = [o[1]!, o[0]!]; return { order: o }; }
     case 'match': { const l = Object.keys(k.pairs); const r = l.map((x) => k.pairs[x]!); return { pairs: Object.fromEntries(l.map((x, i) => [x, r[(i + 1) % r.length]!])) }; }
   }

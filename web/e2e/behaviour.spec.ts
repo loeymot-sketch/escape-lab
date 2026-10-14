@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
-import { ARTWORK, ATTEMPT_KEY, TOKEN_KEY, apiCall, caseStatus, clickArtwork, expireAttemptInDb, homeHeading, resetDemo, sessionToken, settle, slow, startMissionViaUi, submit, DECISION } from './support/helpers';
+import { navigateSection, ARTWORK, ATTEMPT_KEY, TOKEN_KEY, apiCall, caseStatus, clickArtwork, continueStep, expireAttemptInDb, homeHeading, resetDemo, sessionToken, settle, slow, startMissionViaUi, submit, DECISION } from './support/helpers';
 
 const complete = (page: Page) => expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
 const attemptId = (page: Page) => page.evaluate((k) => sessionStorage.getItem(k), ATTEMPT_KEY);
@@ -80,6 +80,7 @@ test.describe('time limit and expiry (the server decides)', () => {
     // Meanwhile the learner answers; the answer reply moves the mission to step 2.
     await page.getByRole('button', { name: DECISION.reject }).click();
     await submit(page).click();
+    await continueStep(page);
     await expect(page.getByText('STEP 2 / 3')).toBeVisible();
     const secondPrompt = (await page.locator('.case-panel h1').textContent())!;
     expect(secondPrompt).not.toBe(firstPrompt);
@@ -194,6 +195,7 @@ test.describe('hints', () => {
 
     await page.getByRole('button', { name: DECISION.reject }).click();
     await submit(page).click();
+    await continueStep(page);
     await expect(page.getByText('STEP 2 / 3')).toBeVisible();
     await expect(page.locator('.hint-result')).toHaveCount(0);
     await expect(page.getByText('Hints used on this step: 0 of 1.')).toBeVisible();
@@ -313,10 +315,10 @@ test.describe('session recovery', () => {
   test('a 401 in the middle of a page re-enters as a fresh guest', async ({ page }) => {
     await resetDemo(page);
     await sessionToken(page);
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await page.route('**/api/vault', (route) => route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ error: { code: 'unauthorized', message: 'Authentication required.' } }) }));
     const reentered = page.waitForRequest((r) => r.url().endsWith('/auth/demo') && r.method() === 'POST');
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Vault');
     await reentered;
     await expect(homeHeading(page)).toBeVisible();
     await expect(page.getByRole('status').filter({ hasText: 'guest session expired' })).toBeVisible();
@@ -349,10 +351,10 @@ test.describe('dashboard call to action follows the server', () => {
     await startMissionViaUi(page, 'Microbiology Lab', 'Petri Dish Mystery');
     const id = await attemptId(page);
     await page.getByRole('button', { name: /Exit mission/ }).click();
-    await page.getByRole('button', { name: 'Investigations', exact: true }).click();
+    await navigateSection(page, 'Rooms');
     await expect(homeHeading(page)).toBeVisible();
     await page.getByRole('button', { name: 'Resume active investigation' }).click();
-    await expect(page.getByText('CASE FILE · Microbiology', { exact: true })).toBeVisible();
+    await expect(page.locator('.player-title').getByText('CASE FILE · Microbiology', { exact: true })).toBeVisible();
     expect(await attemptId(page)).toBe(id);
   });
 });
@@ -361,7 +363,7 @@ test.describe('lab lobby, map and leaderboard', () => {
   test.beforeEach(async ({ page }) => { await resetDemo(page); });
 
   test('lab cards show server counts and the reason a lab is locked', async ({ page }) => {
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await expect(page.getByText('3 of 3 missions · 3 of 3 code fragments')).toBeVisible();
     await expect(page.getByText('Clear 3 labs (1 of 3 cleared)')).toBeVisible();
     await expect(page.getByRole('button', { name: /Enter Master Lab/ })).toHaveCount(0);
@@ -370,9 +372,9 @@ test.describe('lab lobby, map and leaderboard', () => {
 
   test('the lobby lets the learner pick any available mission, not always the first', async ({ page }) => {
     await startMissionViaUi(page, 'Hematology Lab', 'Anemia Detective');
-    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
+    await expect(page.locator('.player-title').getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: /Exit mission/ }).click();
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await page.getByRole('button', { name: 'Enter Clinical Biochemistry Lab' }).click();
     await expect(page.getByText('Complete mission 01 to unlock')).toHaveCount(1);
     await expect(page.getByText('Complete mission 02 to unlock')).toHaveCount(1);
@@ -386,7 +388,7 @@ test.describe('lab lobby, map and leaderboard', () => {
       me: { rank: 30, name: 'Alex M.', xp: 8240, labs: 1, accuracyPct: 87, you: true },
       total: 38,
     })));
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Leaderboard');
     const rows = page.locator('.leaderboard-row');
     await expect(rows).toHaveCount(4);
     await expect(rows.last()).toContainText('#30');
@@ -396,8 +398,8 @@ test.describe('lab lobby, map and leaderboard', () => {
   });
 
   test('student screens never show a persona name', async ({ page }) => {
-    for (const nav of ['Investigations', 'Lab map', 'Progress', 'Lab results', 'Learning settings', 'About & demo guide']) {
-      await page.getByRole('button', { name: nav, exact: true }).click();
+    for (const nav of ['Rooms', 'Lab map', 'Vault', 'Badges', 'Leaderboard', 'Lab results', 'Learning settings', 'About & demo guide']) {
+      await navigateSection(page, nav);
       await expect(page.locator('main h1')).toBeVisible();
       expect(await page.locator('body').innerText()).not.toMatch(/Alex|Martin|Bonjour/);
     }
@@ -450,6 +452,7 @@ test.describe('one request at a time (the server answers 409 hint_in_progress to
     await expect(page.getByRole('button', { name: 'Ask Lab Assistant' })).toBeDisabled();
     await page.getByRole('button', { name: 'Ask Lab Assistant' }).click({ force: true });
     gate.release();
+    await continueStep(page);
     await expect(page.getByText('STEP 2 / 3')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Ask Lab Assistant' })).toBeEnabled();
     expect(seen.hints).toBe(0);
@@ -511,7 +514,7 @@ test.describe('rate limits (429) are shown as an alert with a retry hint, and no
   });
 
   test('a rate-limited start is announced in the page alert, the lobby stays usable, and the next try starts the mission', async ({ page }) => {
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await page.getByRole('button', { name: 'Review Hematology Lab' }).click();
     await page.route('**/api/missions/hem-01/start', (route) => route.fulfill(limited(5)));
     await page.getByRole('button', { name: 'Replay Blood Smear Code' }).click();
@@ -520,7 +523,7 @@ test.describe('rate limits (429) are shown as an alert with a retry hint, and no
     expect(await attemptId(page)).toBeNull();
     await page.unroute('**/api/missions/hem-01/start');
     await page.getByRole('button', { name: 'Replay Blood Smear Code' }).click();
-    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
+    await expect(page.locator('.player-title').getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
   });
 });
 
@@ -528,7 +531,7 @@ test.describe('buttons that start something say so and cannot be pressed twice',
   test.beforeEach(async ({ page }) => { await resetDemo(page); });
 
   test('lobby: the clicked mission says "Starting…", every other action is disabled, one request is sent', async ({ page }) => {
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await page.getByRole('button', { name: 'Review Hematology Lab' }).click();
     let starts = 0;
     page.on('request', (r) => { if (r.method() === 'POST' && /\/missions\/[^/]+\/start$/.test(r.url())) starts += 1; });
@@ -542,7 +545,7 @@ test.describe('buttons that start something say so and cannot be pressed twice',
     await expect(page.locator('.picker-row button:enabled')).toHaveCount(0);
     await busy.click({ force: true });
     gate.release();
-    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
+    await expect(page.locator('.player-title').getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     expect(starts).toBe(1);
   });
 

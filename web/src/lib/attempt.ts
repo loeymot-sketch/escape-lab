@@ -22,6 +22,8 @@ export type PublicStep = {
   left?: Labelled[];
   right?: Labelled[];
   sample?: Labelled;
+  /** Public labels for a guided multi-observation point step; coordinates are never sent by the server. */
+  pointTargets?: Labelled[];
   values: LabValue[];
   hintsAvailable: number;
   wrongOnStep: number;
@@ -117,6 +119,7 @@ export function normalizeStep(value: unknown): PublicStep {
     step.image = { asset: str(image.asset, L, 'step.image.asset'), caption: str(image.caption, L, 'step.image.caption') };
   }
   if (kind === 'point' && !step.image) throw new Error(`Invalid server ${L} payload: step.image.`);
+  if (kind === 'point' && row.pointTargets !== undefined) step.pointTargets = labelledList(row.pointTargets, 'step.pointTargets');
   if (kind === 'choice' || kind === 'decision') step.options = labelledList(row.options, 'step.options');
   if (kind === 'order') step.items = labelledList(row.items, 'step.items');
   if (kind === 'match') {

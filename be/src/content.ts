@@ -232,11 +232,15 @@ const bio1: Step[] = [
 const bio2: Step[] = [{
   id: 'bio-02-s1', kind: 'point', competency: BIO,
   context: 'Panel from a morning draw. Hemolysis index 3+ (illustrative scale). Apart from the one discordant result, the panel is consistent with the patient.',
-  prompt: 'Click the result most likely affected by the specimen problem.',
-  data: { image: { asset: 'panel-hemolysis-01', caption: 'Chemistry panel with specimen indices' } },
-  // Centre of the potassium result cell in web/src/assets/chemistry-panel.svg (880,395 of 1600x900).
-  key: { kind: 'point', x: 55, y: 43.9, r: 5.5 },
-  explanation: 'Hemolysis releases potassium (and LDH and AST) from red cells; here the potassium is the discordant result, so it is the one to question.',
+  prompt: 'Identify the pre-analytical clue, then the result most likely affected.',
+  data: { image: { asset: 'panel-hemolysis-01', caption: 'Chemistry panel with specimen indices' }, pointTargets: [
+    { id: 'hemolysis-index', label: 'Hemolysis index' }, { id: 'potassium-result', label: 'Potassium result' },
+  ] },
+  // Measured on chemistry-panel.svg: hemolysis pill (290,167 of 1600x900), potassium row (880,395 of 1600x900).
+  key: { kind: 'point', x: 55, y: 43.9, r: 5.5, targets: [
+    { id: 'hemolysis-index', x: 18.1, y: 18.6, r: 8, selection: 'Hemolysis index' }, { id: 'potassium-result', x: 55, y: 43.9, r: 5.5, selection: 'Potassium' },
+  ] },
+  explanation: 'The hemolysis index identifies the specimen problem, and hemolysis releases intracellular potassium. The two observations together explain why this result must be questioned.',
   recheck: 'Which analyte is concentrated inside red cells?',
   hints: ['Look at the specimen indices before the values.', 'Only one value is out of step with the rest.'],
 }];

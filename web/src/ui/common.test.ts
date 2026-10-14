@@ -53,6 +53,8 @@ describe('resolveView (a role only ever sees its own screens)', () => {
   it('keeps each role on its own views', () => {
     expect(resolveView('labs', false)).toBe('labs');
     expect(resolveView('profile', false)).toBe('profile');
+    expect(resolveView('badges', false)).toBe('badges');
+    expect(resolveView('leaderboard', false)).toBe('leaderboard');
     expect(resolveView('teacher', true)).toBe('teacher');
     expect(resolveView('content', true)).toBe('content');
   });
@@ -62,6 +64,8 @@ describe('resolveView (a role only ever sees its own screens)', () => {
     expect(resolveView('content', false)).toBe('home');
     expect(resolveView('labs', true)).toBe('teacher');
     expect(resolveView('home', true)).toBe('teacher');
+    expect(resolveView('badges', true)).toBe('teacher');
+    expect(resolveView('leaderboard', true)).toBe('teacher');
   });
 
   it('shows the About & demo guide to both roles', () => {

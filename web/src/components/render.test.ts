@@ -2,6 +2,7 @@ import { act, createElement, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { GameEngine, initialAnswer, type EngineAnswer } from './engines';
+import { PointEngine } from './point-engine';
 import { normalizeStep } from '../lib/attempt';
 import { steps } from '../lib/fixtures';
 import { CompetencyBars } from '../ui/common';
@@ -34,9 +35,9 @@ describe('option chips', () => {
 });
 
 describe('illustrative image frame', () => {
-  it('keeps the label outside the clickable button and draws the marker without text', () => {
+  it('keeps the label outside the clickable button and draws the marker without text', async () => {
     const step = normalizeStep(steps.point);
-    act(() => root.render(createElement(GameEngine, { step, answer: { x: 40, y: 60 }, setAnswer: () => undefined, disabled: false })));
+    act(() => root.render(createElement(PointEngine, { step, answer: { x: 40, y: 60 }, setAnswer: () => undefined, disabled: false })));
     const button = host.querySelector('button.scientific')!;
     const label = host.querySelector('.image-watermark')!;
     expect(label.textContent).toBe('Illustrative training image');
@@ -46,6 +47,36 @@ describe('illustrative image frame', () => {
     expect(marker.textContent).toBe('');
     expect(marker.style.left).toBe('40%');
     expect(marker.style.top).toBe('60%');
+  });
+
+  it('renders a revisable checklist and every confirmed marker for a guided image', () => {
+    const step = normalizeStep({ ...steps.point, pointTargets: [{ id: 'index', label: 'Hemolysis index' }, { id: 'potassium', label: 'Potassium result' }] });
+    act(() => root.render(createElement(PointEngine, { step, answer: { points: { index: { x: 18, y: 18 }, potassium: { x: 55, y: 44 } } }, setAnswer: () => undefined, disabled: false })));
+    expect(host.querySelectorAll('.image-frame .marker')).toHaveLength(2);
+    expect(host.querySelectorAll('.status-list .status-row')).toHaveLength(2);
+    expect(host.textContent).toContain('Hemolysis index');
+    expect(host.textContent).toContain('Potassium result');
+    expect(host.querySelectorAll('.status-row b')[0]?.textContent).toBe('Selected');
+  });
+
+  it('does not revisit a semantic observation when advancing through a third visual zone', () => {
+    const step = normalizeStep({ ...steps.point, image: { asset: 'panel-hemolysis-01', caption: 'A chemistry panel' }, pointTargets: [
+      { id: 'index', label: 'Hemolysis index' },
+      { id: 'potassium-result', label: 'Potassium result' },
+      { id: 'third', label: 'Third observation' },
+    ] });
+    function Harness() {
+      const [answer, setAnswer] = useState<EngineAnswer>({ points: { index: { x: 18, y: 18 } } });
+      return createElement(PointEngine, { step, answer, setAnswer, disabled: false });
+    }
+    act(() => root.render(createElement(Harness)));
+    const rows = () => Array.from(host.querySelectorAll<HTMLButtonElement>('.status-row'));
+    act(() => { rows()[1]!.click(); });
+    act(() => { (host.querySelector('summary') as HTMLElement).click(); });
+    act(() => { host.querySelector<HTMLButtonElement>('[aria-label="Select Potassium result"]')!.click(); });
+    expect(rows()[2]!.getAttribute('aria-pressed')).toBe('true');
+    act(() => { (host.querySelector('button.scientific') as HTMLButtonElement).click(); });
+    expect(rows()[2]!.getAttribute('aria-pressed')).toBe('true');
   });
 });
 

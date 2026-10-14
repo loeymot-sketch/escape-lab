@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { ARTWORK, apiCall, chooseCorrectOption, clickArtwork, completeLabViaApi, freshStudent, openAs, resetDemo, startMissionViaUi, submit, HOME_HEADING } from './support/helpers';
+import { navigateSection, ARTWORK, apiCall, chooseCorrectOption, clickArtwork, completeLabViaApi, continueStep, freshStudent, openAs, resetDemo, startMissionViaUi, submit, HOME_HEADING } from './support/helpers';
 import { exitCode } from './support/content';
 
 test.describe('Code Vault: fragments, unlock and results', () => {
@@ -20,7 +20,7 @@ test.describe('Code Vault: fragments, unlock and results', () => {
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     // The record is the server's: the vault shows the same digit.
     await page.getByRole('button', { name: 'Return to mission control' }).click();
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Vault');
     await expect(page.getByRole('list', { name: 'Hematology Lab code fragments' }).getByRole('listitem').first()).toContainText('7');
   });
 
@@ -42,7 +42,7 @@ test.describe('Code Vault: fragments, unlock and results', () => {
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
     await expect(page.locator('.result-score-card')).toBeVisible();
-    await expect(page.getByText(/Vault progress for this laboratory: 7 4 2/)).toBeVisible();
+    await expect(page.getByText('Vault progress for this laboratory: 7 4 2', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Return to mission control' }).click();
     await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible();
   });
@@ -62,6 +62,7 @@ test.describe('Code Vault: fragments, unlock and results', () => {
         await expect(note).toBeVisible();
         await expect(note.locator('strong')).toHaveText(digits[i]!);
         await expect(note).toContainText(`Position ${i + 1}`);
+        await continueStep(page);
       }
     }
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
@@ -73,7 +74,7 @@ test.describe('Code Vault: fragments, unlock and results', () => {
     const token = await freshStudent();
     await completeLabViaApi(token, 'hematology', false);
     await openAs(page, token);
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Vault');
     const input = page.getByLabel(/Exit code for Hematology Lab/);
     await expect(input).toBeVisible();
     await expect(input).toHaveAttribute('inputmode', 'numeric');
@@ -102,7 +103,7 @@ test.describe('Code Vault: fragments, unlock and results', () => {
     await expect(page.getByLabel(/Exit code for Hematology Lab/)).toHaveCount(0);
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
-    await page.getByRole('button', { name: 'Lab results' }).click();
+    await navigateSection(page, 'Lab results');
     await expect(page.getByRole('heading', { name: 'Escape confirmed' })).toBeVisible();
     await expect(page.getByText('Hematology Lab').first()).toBeVisible();
     await expect(page.getByRole('list', { name: 'Hematology Lab score ledger' })).toBeVisible();
@@ -113,7 +114,7 @@ test.describe('Code Vault: fragments, unlock and results', () => {
     const token = await freshStudent();
     await completeLabViaApi(token, 'hematology', false);
     await openAs(page, token);
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Vault');
     const input = page.getByLabel(/Exit code for Hematology Lab/);
     await input.fill('000');
     let requests = 0;
@@ -133,7 +134,7 @@ test.describe('Code Vault: fragments, unlock and results', () => {
 
   test('the exit code is refused until every fragment is found (no input is offered)', async ({ page }) => {
     const token = await resetDemo(page);
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Vault');
     await expect(page.getByText('2 of 3 fragments found')).toBeVisible();
     await expect(page.getByLabel(/Exit code for/)).toHaveCount(0);
     const early = await apiCall(token, '/labs/microbiology/unlock', { method: 'POST', body: { code: exitCode('microbiology') } });

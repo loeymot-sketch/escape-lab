@@ -20,6 +20,12 @@ describe('answer readiness (presentation only: the server decides correctness)',
     expect(isAnswerReady(normalizeStep(steps.choice), { choice: 'A' })).toBe(true);
     expect(isAnswerReady(normalizeStep(steps.decision), { decision: 'reject' })).toBe(true);
   });
+  it('requires every guided observation before Submit is offered', () => {
+    const step = normalizeStep({ ...steps.point, pointTargets: [{ id: 'index', label: 'Hemolysis index' }, { id: 'potassium', label: 'Potassium result' }] });
+    expect(initialAnswer(step)).toEqual({ points: {} });
+    expect(isAnswerReady(step, { points: { index: { x: 18, y: 18 } } })).toBe(false);
+    expect(isAnswerReady(step, { points: { index: { x: 18, y: 18 }, potassium: { x: 55, y: 44 } } })).toBe(true);
+  });
   it('treats the server order as a complete answer from the start and keeps it coherent', () => {
     const step = normalizeStep(steps.order);
     expect(initialAnswer(step)).toEqual({ order: ['x', 'y'] });

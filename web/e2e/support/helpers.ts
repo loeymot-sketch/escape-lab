@@ -17,6 +17,18 @@ export const CONTINUE_HEADING = /Choose a laboratory/;
 export const HOME_HEADING = /Choose a laboratory/;
 export const homeHeading = (page: Page) => page.getByRole('heading', { name: HOME_HEADING });
 
+/** Follow the visible game navigation. Secondary screens live in the phone menu, never behind a hidden click. */
+export async function navigateSection(page: Page, name: string, touch = false) {
+  const labels: Record<string, string> = { Investigations: 'Rooms', Progress: 'Vault', Enquêtes: 'Salles', Progression: 'Coffre' };
+  const target = page.getByRole('button', { name: labels[name] ?? name, exact: true });
+  const menu = page.getByRole('button', { name: /^(Guest options|Options invité)$/ });
+  if (!await target.isVisible() && await menu.isVisible()) {
+    if (await menu.getAttribute('aria-expanded') !== 'true') { if (touch) await menu.tap(); else await menu.click(); }
+  }
+  await expect(target).toBeVisible();
+  if (touch) await target.tap(); else await target.click();
+}
+
 /** The three decision options as the learner reads them (the backend's authored labels; the option ids are never shown). */
 export const DECISION = { accept: /Accept and report/, reject: /Reject and request a new sample/, repeat: /Correct the interference and re-measure/ };
 
@@ -77,7 +89,7 @@ export async function openAs(page: Page, token: string) {
 
 /** Starts a mission through the real lab lobby UI. */
 export async function startMissionViaUi(page: Page, labName: RegExp | string, missionTitle: string) {
-  await page.getByRole('button', { name: 'Lab map' }).click();
+  await navigateSection(page, 'Lab map');
   await page.getByRole('button', { name: new RegExp(`^(Enter|Review) ${typeof labName === 'string' ? labName : labName.source}`) }).click();
   await expect(page.getByRole('heading', { name: 'Choose a mission' })).toBeVisible();
   await page.getByRole('button', { name: new RegExp(`^(Start|Resume|Replay) ${missionTitle}$`) }).click();
@@ -85,6 +97,13 @@ export async function startMissionViaUi(page: Page, labName: RegExp | string, mi
 }
 
 export const submit = (page: Page) => page.getByRole('button', { name: /Submit answer|Checking…/ });
+
+/** The learner reads the server-confirmed correction, then explicitly opens the saved next step. */
+export async function continueStep(page: Page) {
+  await expect(page.locator('.step-review')).toBeVisible();
+  await page.getByRole('button', { name: /^(Continue|Continuer)$/ }).click();
+  await expect(page.locator('.step-review')).toHaveCount(0);
+}
 
 /** Click the visible feature of an artwork, computed from the rendered image rectangle. */
 export async function clickArtwork(page: Page, art: { width: number; height: number; x: number; y: number }, offset = { x: 0, y: 0 }) {

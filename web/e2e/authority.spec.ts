@@ -2,7 +2,7 @@
 // and compares them with what the page shows, then patches the server payload in flight to different numbers and
 // requires the page to show the patched (server) values: a page that recomputed anything would fail the second half.
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { ARTWORK, apiCall, clickArtwork, freshStudent, openAs, patched, resetDemo, sessionToken, startMissionViaUi, submit, HOME_HEADING } from './support/helpers';
+import { navigateSection, ARTWORK, apiCall, clickArtwork, freshStudent, openAs, patched, resetDemo, sessionToken, startMissionViaUi, submit, HOME_HEADING } from './support/helpers';
 
 type Ledger = { id: string; label: string; reason: string; points: number; kind: string };
 type ServerResult = {
@@ -120,7 +120,7 @@ test.describe('XP and level on the dashboard and in the lab results are the serv
     const reply = await (await answered).json();
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
     await page.getByRole('button', { name: 'Return to mission control' }).click();
-    await page.getByRole('button', { name: 'Investigations', exact: true }).click();
+    await navigateSection(page, 'Rooms');
     await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible();
 
     const dash = (await apiCall(token, '/dashboard')).body as { user: { xp: number; level: number } };
@@ -148,7 +148,7 @@ test.describe('XP and level on the dashboard and in the lab results are the serv
       ledger: Ledger[];
     };
     expect(stored.missions.length).toBeGreaterThan(0);
-    await page.getByRole('button', { name: 'Lab results', exact: true }).click();
+    await navigateSection(page, 'Lab results');
     const lab = page.locator('.result-lab').first();
     await expect(lab.locator('.tag')).toHaveText(`${stored.xp} XP`);
     const rows = lab.locator('.mission-row');
@@ -172,7 +172,7 @@ test.describe('XP and level on the dashboard and in the lab results are the serv
       xp: 31337,
       missions: body.missions.map((m: any, i: number) => ({ ...m, score: 1000 + i, maxScore: 2000 + i })),
     })));
-    await page.getByRole('button', { name: 'Lab results', exact: true }).click();
+    await navigateSection(page, 'Lab results');
     const lab = page.locator('.result-lab').first();
     await expect(lab.locator('.tag')).toHaveText('31337 XP');
     await expect(lab.locator('.mission-row b').first()).toHaveText('1000 of 2000 XP');

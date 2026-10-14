@@ -6,7 +6,7 @@ import { normalizeDemoLogin, normalizeDemoReset, normalizeMe, type Me } from './
 import { About } from './pages/about';
 import { Mission } from './pages/mission';
 import { ContentReview, StudentDetail, Teacher } from './pages/faculty';
-import { LabResults, Profile, ProgressHub, loadSettings } from './pages/progress';
+import { BadgesPage, LeaderboardPage, LabResults, Profile, ProgressHub, loadSettings } from './pages/progress';
 import { GuestGate, Shell, requestShellFocus, type GuestBusy } from './pages/shell';
 import { Dashboard, LabLobbyPage, LabMap } from './pages/student';
 import { getLang, loadFrench, t, useLang } from './i18n';
@@ -338,6 +338,8 @@ function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student,
       case 'labs': return <LabMap />;
       case 'lab': return <LabLobbyPage />;
       case 'progress': return <ProgressHub />;
+      case 'badges': return <BadgesPage />;
+      case 'leaderboard': return <LeaderboardPage />;
       case 'results': return <LabResults />;
       case 'profile': return <Profile store={{ load: settings.state, reload: settings.reload, setData: settings.setData }} />;
       case 'teacher': return <Teacher />;

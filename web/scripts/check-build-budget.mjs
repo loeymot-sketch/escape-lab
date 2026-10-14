@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 const distDir = join(process.cwd(), process.env.BUDGET_DIR ?? 'dist');
 const assetsDir = join(distDir, 'assets');
+const publicDir = join(process.cwd(), 'public');
 const files = readdirSync(assetsDir);
 /**
  * `js` is the ENTRY file that index.html loads on every first visit (the original 400 kB budget, unchanged).
@@ -22,6 +23,12 @@ for (const file of files) {
   if (kind === 'js') measured[file === entryName ? 'js' : 'lazyJs'] += size;
   else if (kind) measured[kind] += size;
   else if (/\.(png|jpe?g|webp|gif|avif|bmp)$/i.test(file)) images.push({ file, size });
+}
+
+// Static public assets bypass Vite's dist/assets inventory, so include them in the same raster budget.
+for (const file of readdirSync(publicDir)) {
+  const path = join(publicDir, file);
+  if (/\.(png|jpe?g|webp|gif|avif|bmp)$/i.test(file)) images.push({ file: `public/${file}`, size: statSync(path).size });
 }
 
 for (const kind of Object.keys(budgets)) {
