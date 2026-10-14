@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it } from 'vitest';
-import { earnedCode, exitReady, investigationPhase, progressDelta, SavedResponse, xpGained } from './mission';
+import { earnedCode, exitReady, investigationPhase, nextSteps, progressDelta, SavedResponse, xpGained } from './mission';
 import { normalizeStep } from '../lib/attempt';
 import { steps } from '../lib/fixtures';
 import { initLang } from '../i18n/core';
@@ -91,5 +91,19 @@ describe('result debrief helpers (presentation of server fields)', () => {
     expect(progressDelta({ score: 120, previousBest: 150 })).toBe(-30);
     expect(progressDelta({ score: 180, previousBest: null })).toBeNull();
     expect(progressDelta({ score: 180 })).toBeNull();
+  });
+});
+
+describe('nextSteps (which mission the debrief proposes, from the server continue target and recommendation)', () => {
+  const cont = { kind: 'mission' as const, missionId: 'hem-02', labSlug: 'hematology', title: 'Fix the Sample', resume: false };
+  const rec = { missionId: 'mic-01', labSlug: 'microbiology', title: 'Microbe Detective', reason: 'Next mission in an open lab.' };
+  it('puts the continue target first and the recommendation second when they differ', () => {
+    expect(nextSteps({ mission: { id: 'hem-01' }, continue: cont, recommended: rec })).toEqual({ primary: { missionId: 'hem-02', labSlug: 'hematology', title: 'Fix the Sample', reason: null }, secondary: rec });
+  });
+  it('never proposes the mission just finished, nor an unlock target, nor a duplicate', () => {
+    expect(nextSteps({ mission: { id: 'hem-02' }, continue: cont, recommended: rec })).toEqual({ primary: { ...rec }, secondary: null });
+    expect(nextSteps({ mission: { id: 'hem-01' }, continue: { ...cont, kind: 'unlock', missionId: null }, recommended: rec })).toEqual({ primary: rec, secondary: null });
+    expect(nextSteps({ mission: { id: 'hem-01' }, continue: cont, recommended: { ...rec, missionId: 'hem-02', title: 'Fix the Sample' } })).toEqual({ primary: { missionId: 'hem-02', labSlug: 'hematology', title: 'Fix the Sample', reason: null }, secondary: null });
+    expect(nextSteps({ mission: { id: 'hem-01' } })).toEqual({ primary: null, secondary: null });
   });
 });

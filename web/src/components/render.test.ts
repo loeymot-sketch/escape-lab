@@ -6,7 +6,7 @@ import { PointEngine } from './point-engine';
 import { normalizeStep } from '../lib/attempt';
 import { steps } from '../lib/fixtures';
 import { CompetencyBars } from '../ui/common';
-import { JournalCard } from '../pages/mission';
+import { JournalCard, ResultScreen } from '../pages/mission';
 import { RouteStrip } from '../pages/student';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -230,6 +230,13 @@ describe('investigation journal (server rows, display only)', () => {
     act(() => root.render(createElement(JournalCard, { journal: [] })));
     expect(host.querySelector('.journal-card')).toBeNull();
   });
+  it('drops the current marker and says Closed once the attempt is closed (time up, reset elsewhere)', () => {
+    act(() => root.render(createElement(JournalCard, { journal: rows, closed: true })));
+    const items = Array.from(host.querySelectorAll('.journal-row'));
+    expect(items[1]!.getAttribute('aria-current')).toBeNull();
+    expect(items[1]!.textContent).toContain('Closed');
+    expect(items[1]!.textContent).not.toContain('In progress');
+  });
 });
 
 describe('laboratory route (lobby missions, fragments and exit from the server)', () => {
@@ -254,5 +261,36 @@ describe('laboratory route (lobby missions, fragments and exit from the server)'
     expect(host.querySelector('.route-exit')?.getAttribute('data-exit')).toBe('ready');
     act(() => root.render(createElement(RouteStrip, { missions, vault: { labSlug: 'hematology', codeLength: 3, slots: [7, 4, 2], complete: true, exited: true } })));
     expect(host.querySelector('.route-exit')?.getAttribute('data-exit')).toBe('open');
+  });
+});
+
+describe('result screen sections follow the server fields (older results have none)', () => {
+  // jsdom has no layout: the debrief's scroll-to-top is a no-op here.
+  beforeEach(() => { window.scrollTo = () => undefined; });
+  const base = {
+    attemptId: 'a1', mission: { id: 'hem-01', title: 'Blood Smear Code', labSlug: 'hematology' }, finalExplanation: 'Schistocytes are fragments.',
+    score: 150, maxScore: 180, xpAwarded: 0, totalXp: 8240, newBest: false,
+    ledger: [{ id: 'base', label: 'Base mission', reason: 'Mission completed', points: 100, kind: 'earned' as const }],
+    stats: { accuracyPct: 100, elapsed: '00:30', elapsedSec: 30, hintsUsed: 0, wrongAnswers: 0, firstTrySteps: 1, steps: 1 }, newBadges: [],
+  };
+  it('renders no progress, competencies, debrief, exit or next block for a result stored before these fields existed', () => {
+    act(() => root.render(createElement(ResultScreen, { result: base, newFragments: [], onExit: () => undefined })));
+    for (const selector of ['.result-progress', '.result-competencies', '.result-debrief', '.result-exit', '.result-next']) expect(host.querySelector(selector), selector).toBeNull();
+    expect(host.querySelectorAll('.result-actions button')).toHaveLength(1);
+  });
+  it('puts the laboratory\'s next mission first and the recommendation second, and offers the exit only with a complete vault', () => {
+    const full = {
+      ...base, previousBest: 120, steps: [{ ordinal: 1, id: 'hem-01-s1', prompt: 'Click the schistocyte.', competency: 'Hematology interpretation', wrong: 0, hints: 0, explanation: 'Fragments.' }],
+      competencies: { items: [{ name: 'Hematology interpretation', pct: 100, steps: 1 }], strongest: 'Hematology interpretation', improvement: null },
+      continue: { kind: 'mission' as const, missionId: 'hem-02', labSlug: 'hematology', title: 'Fix the Sample', resume: false },
+      recommended: { missionId: 'mic-01', labSlug: 'microbiology', title: 'Microbe Detective', reason: 'Next mission in an open lab.' },
+      lab: { slug: 'hematology', exited: false }, fragments: [7, null, null], masterCode: null,
+    };
+    act(() => root.render(createElement(ResultScreen, { result: full, newFragments: [], onExit: () => undefined, onStartMission: async () => null })));
+    expect(host.querySelector('.result-progress')?.textContent).toContain('Previous best 120 XP');
+    expect(host.querySelector('.result-debrief')).not.toBeNull();
+    expect(host.querySelector('.result-next h2')?.textContent).toBe('Fix the Sample');
+    expect(host.querySelector('.result-next .result-next-secondary')?.textContent).toContain('Microbe Detective');
+    expect(host.querySelector('.result-exit')).toBeNull();
   });
 });

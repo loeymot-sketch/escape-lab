@@ -7,7 +7,7 @@ import { ApiError, api, demoSession } from '../lib/api';
 import { PayloadError } from '../lib/guard';
 import {
   normalizeAttempt, normalizeAttemptResult, normalizeHint, normalizeMissionAnswer, normalizeStart,
-  type Attempt, type Fragment, type JournalRow, type MissionResult, type PublicStep,
+  type Attempt, type Fragment, type JournalRow, type MissionResult, type PublicStep, type Recommendation,
 } from '../lib/attempt';
 import { normalizeRules, normalizeUnlock, type Rules } from '../lib/student';
 import { GameEngine, initialAnswer, isAnswerReady, type EngineAnswer } from '../components/engines';
@@ -42,7 +42,7 @@ export const investigationPhase = (kind: PublicStep['kind']): string => ({
 }[kind]);
 
 /** The investigation journal the server keeps for the attempt: which competencies are proven, where the learner stands, what each step cost. */
-export function JournalCard({ journal }: { journal: JournalRow[] }) {
+export function JournalCard({ journal, closed = false }: { journal: JournalRow[]; closed?: boolean }) {
   if (journal.length === 0) return null;
   const solved = journal.filter((row) => row.state === 'solved').length;
   const cost = (row: JournalRow) => [row.wrong > 0 ? plural(row.wrong, 'wrong', 'wrong') : '', row.hints > 0 ? plural(row.hints, 'hint') : ''].filter(Boolean).join(' · ');
@@ -52,11 +52,11 @@ export function JournalCard({ journal }: { journal: JournalRow[] }) {
       <p className="journal-summary">{t('{solved} of {total} steps proven', { solved: formatInt(solved), total: formatInt(journal.length) })}</p>
       <ol className="journal-list">
         {journal.map((row) => (
-          <li key={row.stepId} className="journal-row" data-state={row.state} aria-current={row.state === 'current' ? 'step' : undefined}>
+          <li key={row.stepId} className="journal-row" data-state={row.state} aria-current={row.state === 'current' && !closed ? 'step' : undefined}>
             <span className="journal-mark" aria-hidden="true">{row.state === 'solved' ? <Check size={13} /> : String(row.ordinal).padStart(2, '0')}</span>
             <span className="journal-body">
               <b>{t(row.competency)}</b>
-              <small>{row.state === 'solved' ? t('Proven') : row.state === 'current' ? t('In progress') : t('Upcoming')}{row.state !== 'upcoming' && cost(row) ? ` · ${cost(row)}` : ''}</small>
+              <small>{row.state === 'solved' ? t('Proven') : row.state === 'current' ? (closed ? t('Closed') : t('In progress')) : t('Upcoming')}{row.state !== 'upcoming' && cost(row) ? ` · ${cost(row)}` : ''}</small>
             </span>
           </li>
         ))}
@@ -79,7 +79,7 @@ function MissionScene({ stepId }: { stepId: string }) {
   </figure>;
 }
 
-export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission }: { initial: Attempt; onExit: () => void; onDone: () => void; onReturnToLab?: () => void; onStartMission?: (missionId: string) => void }) {
+export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission }: { initial: Attempt; onExit: () => void; onDone: () => void; onReturnToLab?: () => void; onStartMission?: (missionId: string) => Promise<unknown> }) {
   // Re-renders the whole screen when the display language is switched; the attempt, the answer and the timer live in state and are kept.
   useLang();
   const [attempt, setAttempt] = useState(initial);
@@ -689,7 +689,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
               <div className="status-row"><dt>{t('XP penalty so far')}</dt><dd>{formatInt(attempt.penaltyXp)}</dd></div>
             </dl>
           </div>
-          <JournalCard journal={attempt.journal} />
+          <JournalCard journal={attempt.journal} closed={closed} />
         </aside>
       </main>
     </div>
@@ -757,6 +757,20 @@ export const exitReady = (result: Pick<MissionResult, 'lab' | 'fragments'>): boo
 /** The code the learner earned, in vault order: the digits the server revealed, nothing else. */
 export const earnedCode = (result: Pick<MissionResult, 'fragments'>): string => (result.fragments ?? []).map((digit) => (digit === null ? '' : String(digit))).join('');
 
+export type NextStep = { missionId: string; labSlug: string; title: string; reason: string | null };
+/**
+ * What the debrief proposes next: the server's continue target first (the next mission of the laboratory being filled), the server's
+ * recommendation second. Never the mission just finished, never an unlock target (the exit block handles it), never the same mission twice.
+ */
+export function nextSteps(result: { mission: { id: string }; continue?: MissionResult['continue']; recommended?: MissionResult['recommended'] }): { primary: NextStep | null; secondary: Recommendation | null } {
+  const cont = result.continue && result.continue.kind === 'mission' && result.continue.missionId !== null && result.continue.missionId !== result.mission.id
+    ? { missionId: result.continue.missionId, labSlug: result.continue.labSlug, title: result.continue.title, reason: null }
+    : null;
+  const rec = result.recommended && result.recommended.missionId !== result.mission.id ? result.recommended : null;
+  if (cont) return { primary: cont, secondary: rec && rec.missionId !== cont.missionId ? rec : null };
+  return { primary: rec, secondary: null };
+}
+
 /** Score minus the previous best, only when the server sent a previous best. */
 export const progressDelta = (result: Pick<MissionResult, 'score' | 'previousBest'>): number | null =>
   (result.previousBest === undefined || result.previousBest === null ? null : result.score - result.previousBest);
@@ -770,7 +784,7 @@ export function resultXpNote(result: Pick<MissionResult, 'newBest' | 'xpAwarded'
 
 type ExitState = { phase: 'idle' } | { phase: 'busy' } | { phase: 'done'; labName: string; badges: { id: string; name: string }[]; already: boolean } | { phase: 'error'; error: unknown };
 
-export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onStartMission, onReplay, replayBusy = false, replayError = null }: { result: MissionResult; newFragments: Fragment[]; onExit: () => void; onReturnToLab?: () => void; onStartMission?: (missionId: string) => void; onReplay?: () => void; replayBusy?: boolean; replayError?: unknown }) {
+export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onStartMission, onReplay, replayBusy = false, replayError = null }: { result: MissionResult; newFragments: Fragment[]; onExit: () => void; onReturnToLab?: () => void; onStartMission?: (missionId: string) => Promise<unknown>; onReplay?: () => void; replayBusy?: boolean; replayError?: unknown }) {
   useLang();
   // The result replaces a long case page: start at its top, not wherever the Submit button was.
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -794,7 +808,15 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onSt
       setExit({ phase: 'error', error: e });
     }
   };
-  const nextMission = result.recommended && result.recommended.missionId !== result.mission.id ? result.recommended : null;
+  const next = nextSteps(result);
+  // Starting the next mission from here: the app reports the failure back, so the result screen can say so (the shell is not mounted meanwhile).
+  const [starting, setStarting] = useState<{ phase: 'idle' } | { phase: 'busy' } | { phase: 'error'; error: unknown }>({ phase: 'idle' });
+  const startNext = async (missionId: string) => {
+    if (!onStartMission || starting.phase === 'busy') return;
+    setStarting({ phase: 'busy' });
+    const failure = await onStartMission(missionId);
+    setStarting(failure === null || failure === undefined ? { phase: 'idle' } : { phase: 'error', error: failure });
+  };
   return (
     <main className={`result-screen result-${result.mission.labSlug}`}>
       <section className="result-hero" aria-labelledby="result-title">
@@ -909,12 +931,14 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onSt
           </ul>
         </div>
       )}
-      {nextMission && (
+      {next.primary && (
         <section className="result-next" aria-labelledby="result-next-title">
-          <div className="eyebrow">{t('RECOMMENDED NEXT')}</div>
-          <h2 id="result-next-title">{t(nextMission.title)}</h2>
-          <p>{t(nextMission.reason)} {t('Laboratory: {lab}.', { lab: t(labName(nextMission.labSlug)) })}</p>
-          {onStartMission && <button type="button" className="ghost result-next-start" disabled={replayBusy} onClick={() => onStartMission(nextMission.missionId)}>{t('Start {title}', { title: t(nextMission.title) })} <ArrowRight size={16} aria-hidden="true" /></button>}
+          <div className="eyebrow">{next.primary.reason === null ? t('NEXT STEP') : t('RECOMMENDED NEXT')}</div>
+          <h2 id="result-next-title">{t(next.primary.title)}</h2>
+          <p>{next.primary.reason === null ? (next.primary.labSlug === result.mission.labSlug ? t('Next mission in this laboratory.') : t('Next mission on your route.')) : t(next.primary.reason)} {t('Laboratory: {lab}.', { lab: t(labName(next.primary.labSlug)) })}</p>
+          {next.secondary && <p className="result-next-secondary">{t('Also recommended: {title}.', { title: t(next.secondary.title) })} {t(next.secondary.reason)}</p>}
+          {starting.phase === 'error' && <div className="feedback wrong" role="alert"><X size={16} aria-hidden="true" /><div><b>{t('The mission could not be started.')}</b><p>{describeError(starting.error)}</p></div></div>}
+          {onStartMission && <button type="button" className="ghost result-next-start" disabled={replayBusy || starting.phase === 'busy'} aria-busy={starting.phase === 'busy'} onClick={() => void startNext(next.primary!.missionId)}>{starting.phase === 'busy' ? t('Starting…') : <>{t('Start {title}', { title: t(next.primary.title) })} <ArrowRight size={16} aria-hidden="true" /></>}</button>}
         </section>
       )}
       {replayError !== null && replayError !== undefined && <div className="feedback wrong" role="alert"><X size={16} aria-hidden="true" /><div><b>{t('The mission could not be restarted.')}</b><p>{describeError(replayError)}</p></div></div>}

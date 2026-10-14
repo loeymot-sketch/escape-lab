@@ -407,7 +407,7 @@ export class Game {
     const verdict = checkResponse(step, response);
 
     const staleStep = a.current_step;
-    return tx(this.db, () => {
+    const outcome = tx(this.db, () => {
       // The checks above ran before the write lock: re-read the attempt now that it is held, so a second process (or a request that
       // slipped in between) cannot apply the same step twice or skip one.
       const a = this.attemptRow(attemptId, uid);
@@ -447,9 +447,12 @@ export class Game {
         return { correct: true, feedback, fragment, completed: false as const, attempt: this.attemptView(this.attemptRow(a.id, uid)) };
       }
       const result = this.complete(uid, a, m, t, fragment);
-      // The final answer embeds the same complete result as GET /attempts/:id/result (vault, competencies, recommendation): one screen, one source.
-      return { correct: true, feedback, fragment: result.fragment, completed: true as const, result: this.result(uid, a.id), attempt: this.attemptView(this.attemptRow(a.id, uid)) };
+      return { correct: true, feedback, fragment: result.fragment, completed: true as const, attempt: this.attemptView(this.attemptRow(a.id, uid)) };
     });
+    // The final answer embeds the same complete result as GET /attempts/:id/result (vault, competencies, next steps): one screen, one source.
+    // Read AFTER the commit: the completion is durable whatever the enrichment does, and the write lock is not held for its queries.
+    if (outcome.correct && outcome.completed) return { ...outcome, result: this.result(uid, a.id) };
+    return outcome;
   }
 
   /** Called inside the answer transaction when the last step is solved. */
@@ -590,11 +593,13 @@ export class Game {
     const exited = exits.has(slug);
     const comp = this.competencies(uid);
     const done = this.completedIds(uid);
+    const cont = this.continueTarget(uid, done, exits);
     return {
       ...payload,
       lab: { slug, exited },
-      // The same recommendation rule as the dashboard, so the debrief's "next step" and Mission control never disagree.
-      recommended: this.recommendation(uid, done, exits, this.continueTarget(uid, done, exits)),
+      // The same continue target and recommendation rule as the dashboard, so the debrief's "next step" and Mission control never disagree.
+      continue: cont,
+      recommended: this.recommendation(uid, done, exits, cont),
       fragments: this.fragmentDigits(uid, slug),
       // The Master Lab code is only shown once the lab has actually been escaped.
       masterCode: slug === 'master' && exited ? exitCode('master') : null,

@@ -226,24 +226,28 @@ function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student,
 
   // Bumped whenever the learner navigates: a mission start that was already in flight must not take over the new screen when it finally answers.
   const navEpoch = useRef(0);
-  const startMission = useCallback(async (missionId: string) => {
-    if (starting.current) return;
+  /** Resolves with the failure (null on success), so a screen without the shell (the result debrief) can report it itself. */
+  const startMission = useCallback(async (missionId: string): Promise<unknown> => {
+    if (starting.current) return null;
     starting.current = true;
     setStartingId(missionId);
     setFailure(null);
     const epoch = navEpoch.current;
+    let failure: unknown = null;
     try {
       const started = normalizeStart(await api(`/missions/${missionId}/start`, { method: 'POST' }));
       // The attempt exists on the server (the dashboard offers it as "Resume"); only the surprise screen change is dropped.
-      if (navEpoch.current !== epoch) return;
+      if (navEpoch.current !== epoch) return null;
       demoSession.setAttemptId(started.attempt.attemptId);
       setPlay(started.attempt);
     } catch (e) {
+      failure = e;
       if (navEpoch.current === epoch) setFailure({ cause: e });
     } finally {
       starting.current = false;
       setStartingId(null);
     }
+    return failure;
   }, []);
 
   const exitMission = (toHome = false) => {
@@ -331,7 +335,7 @@ function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student,
       </main>
     );
   }
-  if (play) return <ErrorBoundary><Mission key={play.attemptId} initial={play} onExit={() => exitMission()} onDone={() => exitMission(true)} onReturnToLab={returnToLab} onStartMission={(id) => void startMission(id)} /></ErrorBoundary>;
+  if (play) return <ErrorBoundary><Mission key={play.attemptId} initial={play} onExit={() => exitMission()} onDone={() => exitMission(true)} onReturnToLab={returnToLab} onStartMission={startMission} /></ErrorBoundary>;
 
   const page = (() => {
     switch (view) {

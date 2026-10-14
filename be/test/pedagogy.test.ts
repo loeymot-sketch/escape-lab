@@ -63,6 +63,10 @@ test('a completed result carries the step debrief, the previous best and the das
     assert.equal(r1.body.previousBest, null);
     const dash = await h.call('GET', '/api/dashboard', { token });
     assert.deepEqual(r1.body.recommended, dash.body.recommended, 'one recommendation rule for the result and the dashboard');
+    // The debrief's primary next step is the same continue target as Mission control: the next mission of the lab being filled.
+    assert.deepEqual(r1.body.continue, dash.body.continue, 'the result carries the dashboard continue target');
+    assert.equal(r1.body.continue.missionId, 'hem-02', 'after Blood Smear Code the next step is Fix the Sample, not another lab');
+    assert.deepEqual(first.last.result.continue, r1.body.continue, 'embedded in the final answer too');
     assert.ok(r1.body.recommended, 'something is recommended after the first mission');
     assert.notEqual(r1.body.recommended.missionId, 'hem-01');
     const startable = await h.call('POST', `/api/missions/${r1.body.recommended.missionId}/start`, { token });

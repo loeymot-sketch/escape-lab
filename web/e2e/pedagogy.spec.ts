@@ -55,6 +55,7 @@ test('the debrief shows the previous best, the competencies, every step and the 
   const result = (await apiCall(token, `/attempts/${id}/result`)).body as {
     score: number; previousBest: number; steps: { ordinal: number; prompt: string; wrong: number; explanation: string }[];
     competencies: { name: string; pct: number }[]; recommended: { missionId: string; title: string; reason: string } | null;
+    continue: { kind: string; missionId: string | null; title: string } | null;
   };
   expect(result.previousBest).toBeGreaterThan(0);
   await expect(page.locator('.result-progress')).toContainText(`Previous best ${result.previousBest.toLocaleString('en')} XP`);
@@ -76,12 +77,15 @@ test('the debrief shows the previous best, the competencies, every step and the 
     await expect(debrief.nth(i).locator('details > p').last()).toHaveText(s.explanation);
   }
   expect(result.steps[2]!.wrong).toBe(1);
-  if (result.recommended && result.recommended.missionId !== 'hem-02') {
-    await expect(page.locator('.result-next h2')).toHaveText(result.recommended.title);
-    await expect(page.locator('.result-next')).toContainText(result.recommended.reason);
-  } else {
-    await expect(page.locator('.result-next')).toHaveCount(0);
-  }
+  // The demo learner's next step after Fix the Sample is the lab's next unfinished mission (Microbiology's Petri Dish Mystery): it comes
+  // first, exactly as Mission control says, and the recommendation is only a second line.
+  expect(result.continue).toMatchObject({ kind: 'mission' });
+  expect(result.continue!.missionId).not.toBe('hem-02');
+  await expect(page.locator('.result-next h2')).toHaveText(result.continue!.title);
+  // Hematology is complete for the demo learner: the next step lives in another laboratory, and the wording says so.
+  await expect(page.locator('.result-next')).toContainText('Next mission on your route.');
+  expect(result.recommended).not.toBeNull();
+  if (result.recommended!.missionId !== result.continue!.missionId) await expect(page.locator('.result-next-secondary')).toContainText(result.recommended!.title);
   await expect(page.locator('.result-actions').getByRole('button')).toHaveCount(3);
 });
 
@@ -164,13 +168,29 @@ test('the lobby route and chips carry the server mastery, the fragments and the 
 test('the dashboard recommendation is the server\'s, with its reason', async ({ page }) => {
   const token = await resetDemo(page);
   const dashboard = (await apiCall(token, '/dashboard')).body as { recommended: { missionId: string; title: string; reason: string } | null; continue: { missionId: string | null } | null };
-  if (dashboard.recommended && dashboard.recommended.missionId !== dashboard.continue?.missionId) {
-    await expect(page.locator('.dashboard-recommended h2')).toHaveText(dashboard.recommended.title);
-    await expect(page.locator('.dashboard-recommended')).toContainText(dashboard.recommended.reason);
-    await page.locator('.dashboard-recommended').getByRole('button').click();
-    await expect(page.locator('.case-panel h1')).toBeVisible();
-    await expect(page.locator('.player-title b')).toHaveText(dashboard.recommended.title);
-  } else {
-    await expect(page.locator('.dashboard-recommended')).toHaveCount(0);
-  }
+  // The prepared demo learner always has a recommendation distinct from the continue target: the block must be there.
+  expect(dashboard.recommended).not.toBeNull();
+  expect(dashboard.recommended!.missionId).not.toBe(dashboard.continue?.missionId);
+  await expect(page.locator('.dashboard-recommended h2')).toHaveText(dashboard.recommended!.title);
+  await expect(page.locator('.dashboard-recommended')).toContainText(dashboard.recommended!.reason);
+  await page.locator('.dashboard-recommended').getByRole('button').click();
+  await expect(page.locator('.case-panel h1')).toBeVisible();
+  await expect(page.locator('.player-title b')).toHaveText(dashboard.recommended!.title);
+});
+
+test('starting the next mission from the debrief reports a refusal on the debrief itself', async ({ page }) => {
+  const token = await resetDemo(page);
+  const start = await apiCall(token, '/missions/hem-02/start', { method: 'POST' });
+  const id = start.body.attempt.attemptId as string;
+  for (const step of MISSION_BY_ID.get('hem-02')!.steps) await apiCall(token, `/attempts/${id}/answer`, { method: 'POST', body: { stepId: step.id, response: correctResponse(step.key as never) } });
+  await page.evaluate(([k, v]) => sessionStorage.setItem(k!, v!), [ATTEMPT_KEY, id]);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
+  await page.route('**/api/missions/*/start', (route) => route.fulfill({ status: 429, contentType: 'application/json', headers: { 'retry-after': '30' }, body: JSON.stringify({ error: { code: 'rate_limited', message: 'Too many mission starts. Wait before trying again.' } }) }));
+  const button = page.locator('.result-next-start');
+  await expect(button).toBeVisible();
+  await button.click();
+  await expect(page.locator('.result-next [role="alert"]')).toContainText('Too many mission starts');
+  await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
+  await expect(button).toBeEnabled();
 });

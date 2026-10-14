@@ -229,7 +229,18 @@ export type MissionResult = {
   /** Competency figures and the recommendation, on GET /attempts/:id/result only. */
   competencies?: Competencies;
   recommended?: Recommendation | null;
+  /** The dashboard's continue target, carried by the result since 2026-10-15 so the debrief's next step never contradicts Mission control. */
+  continue?: ContinueTarget | null;
 };
+export type ContinueTarget = { kind: 'mission' | 'unlock'; missionId: string | null; labSlug: string; title: string; resume: boolean };
+
+export function normalizeContinueTarget(value: unknown, label: string, field = 'continue'): ContinueTarget {
+  const c = rec(value, label, field);
+  const kind = oneOf(c.kind, ['mission', 'unlock'] as const, label, `${field}.kind`);
+  const missionId = nullable(c.missionId, (v) => str(v, label, `${field}.missionId`));
+  if (kind === 'mission' && missionId === null) throw new Error(`Invalid server ${label} payload: ${field}.missionId.`);
+  return { kind, missionId, labSlug: str(c.labSlug, label, `${field}.labSlug`), title: str(c.title, label, `${field}.title`), resume: bool(c.resume, label, `${field}.resume`) };
+}
 export type ResultStep = { ordinal: number; id: string; prompt: string; competency: string; wrong: number; hints: number; explanation: string };
 export type Recommendation = { missionId: string; labSlug: string; title: string; reason: string };
 
@@ -295,6 +306,7 @@ function readResult(payload: unknown): MissionResult {
     // strongest/improvement travel with the competency list; a reply that omits them is read as having none to name.
     competencies: root.competencies === undefined ? undefined : normalizeCompetencies({ competencies: root.competencies, strongest: root.strongest ?? null, improvement: root.improvement ?? null }, R),
     recommended: root.recommended === undefined ? undefined : nullable(root.recommended, (v) => normalizeRecommendation(v, R)),
+    continue: root.continue === undefined ? undefined : nullable(root.continue, (v) => normalizeContinueTarget(v, R)),
     // The vault context travels with the stored result and, since 2026-10-15, with the final answer too; GET still requires it (below).
     lab: root.lab === undefined ? undefined : readLab(root.lab),
     fragments: root.fragments === undefined ? undefined : readFragments(root.fragments),

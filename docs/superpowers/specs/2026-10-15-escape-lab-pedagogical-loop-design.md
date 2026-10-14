@@ -34,7 +34,7 @@ Make every screen answer "what did I just prove, what did it change, what should
 | `publicStep()` | `competency: string` | the step's competency label (not a key, not an answer) |
 | `attemptView()` | `journal: { ordinal, stepId, competency, state: 'solved' \| 'current' \| 'upcoming', wrong, hints }[]` | one row per step from `step_results`; completed attempts list every step as solved |
 | `complete()` payload | `previousBest: number \| null`, `steps: { ordinal, id, prompt, competency, wrong, hints, explanation }[]` | frozen at completion; explanations are all earned at that point |
-| `result()` | `recommended` | same object as the dashboard's recommendation (one shared helper) |
+| `result()` | `continue`, `recommended` | the dashboard's continue target (the lab's next mission, shown first) and the same recommendation object (one shared helper) |
 | `labLobby()` missions | `mastery: 'mastered' \| 'completed' \| 'review' \| null` | from `bestScore / maxScore`: ≥ 80 % mastered, < 50 % review, otherwise completed; null without a best |
 | `scoringRules()` | `mastery: { masteredPct: 80, reviewPct: 50, note }` | thresholds published, never computed by the client |
 
@@ -43,7 +43,7 @@ Older stored results have no `previousBest` / `steps`: the client treats them as
 ## 4. Client
 
 - Normalisers: `PublicStep.competency?`, `Attempt.journal` (default `[]`), `MissionResult.previousBest?`, `steps?`, `competencies?` (existing `normalizeCompetencies`), `recommended?`; lobby `mastery`.
-- After the final answer the embedded result is shown at once, then enriched by `GET /attempts/:id/result` (fragments, competencies, recommendation); a failed enrichment keeps the embedded result.
+- The final answer embeds the same complete result as `GET /attempts/:id/result` (vault, competencies, continue target, recommendation), read by the server **after** the completion commit: one screen, one source, no second request, and a failing enrichment can never roll back a completion.
 - Mission page: `JournalCard` in the aside (desktop) and under the status card (phone).
 - Result screen, in order after the XP note: personal progress (previous best → now), competencies (`CompetencyBars`), step debrief (`<details>` per step: prompt, competency, wrong/hints, explanation), ledger, fragments, vault line, **Exit ready** block (button posts `/labs/:slug/unlock` with the earned digits; success shows the escape and new badges; refusals are shown as sent), new badges, **Recommended next** (button starts the mission through the app), actions (still exactly three buttons).
 - Lobby: `RouteStrip` (mission dots coloured by state/mastery → fragment slots → exit lock state) and a mastery chip per row; the word "Completed" stays in completed rows.

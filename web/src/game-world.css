@@ -676,7 +676,7 @@ html[data-reduce-motion="true"] .timer.critical { animation: none; }
 .debrief-list .had-mistakes .debrief-meta { color: #ffb1b8; }
 .debrief-list .clean .debrief-meta { color: #70f5d7; }
 .debrief-list details > p { margin: 0 14px 12px; color: #d4e8f4; font-size: 14px; line-height: 1.6; }
-.debrief-competency { color: #8ceeff !important; font-size: 12px !important; }
+.debrief-list details > p.debrief-competency { color: #8ceeff; font-size: 12px; }
 .result-exit { border-color: #e3b33e; background: radial-gradient(ellipse at 50% 0, rgb(123 86 22 / 45%), transparent 70%), linear-gradient(140deg, rgb(8 39 63 / 92%), rgb(5 24 42 / 96%)); box-shadow: 0 0 24px rgb(255 200 61 / 18%); }
 .result-exit .eyebrow { color: #ffd565; }
 .result-exit p { margin: 0 0 12px; color: #e9f3fa; font-size: 14px; line-height: 1.6; }
@@ -685,6 +685,7 @@ html[data-reduce-motion="true"] .timer.critical { animation: none; }
 .result-exit.escaped .eyebrow { color: #70f5d7; }
 .result-exit.escaped h2 strong { display: inline-block; color: #a9f5d3; }
 .result-next { border-color: #2fcfff; }
+.result-next-secondary { color: #a9c4d8 !important; font-size: 13px !important; }
 .result-next-start { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; margin-top: 12px; padding-inline: 18px; border-radius: 12px; }
 @media (max-width: 600px) { .result-progress, .result-competencies, .result-debrief, .result-exit, .result-next { width: calc(100% - 26px); padding: 14px; } }
 
@@ -729,5 +730,6 @@ html[data-reduce-motion="true"] .timer.critical { animation: none; }
 .dashboard-recommended .ghost { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding-inline: 18px; border-radius: 12px; white-space: nowrap; }
 @media (max-width: 600px) { .dashboard-recommended { grid-template-columns: minmax(0,1fr); } .dashboard-recommended .ghost { width: 100%; justify-content: center; } .route-strip { padding: 12px; } }
 /* Focus: persistent glow reserved for the action and the reward; information cards stay flat (report §1). */
-.case-panel, .case-aside .aside-card, .values .value, .values-block { box-shadow: none; }
+.case-panel { box-shadow: 0 16px 38px rgb(0 0 0 / 20%); }
+.case-aside .aside-card, .values .value, .values-block { box-shadow: none; }
 .mission-scene.hero-science { box-shadow: 0 10px 28px rgb(0 0 0 / 30%); }
