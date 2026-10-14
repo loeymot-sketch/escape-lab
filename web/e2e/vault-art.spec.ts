@@ -30,12 +30,18 @@ async function vaultGeometry(page: Page) {
       if (i) expect(slots[i]!.left - slots[i - 1]!.right).toBeGreaterThanOrEqual(5);
     }
   }
+  // The hero is a capped, cover-cropped scene with the copy laid over its lower part (2026-10-14 audit, D4): no empty band under the art.
   const hero = page.locator('.vault-hero');
   expect(await hero.evaluate((el) => {
-    const image = el.querySelector('img')!.getBoundingClientRect();
-    const copy = el.querySelector('.vault-hero-copy')!.getBoundingClientRect();
+    const frame = el.getBoundingClientRect();
     const asset = el.querySelector('img')!;
-    return asset.naturalWidth === 1400 && asset.naturalHeight === 934 && getComputedStyle(asset).objectFit === 'contain' && Math.abs(image.width / image.height - 1400 / 934) < .001 && copy.top >= image.bottom - .5;
+    const image = asset.getBoundingClientRect();
+    const copy = el.querySelector('.vault-hero-copy')!.getBoundingClientRect();
+    // The frame rectangle includes the hero's 1 px border on each side; the art fills the padding box behind it.
+    const covers = Math.abs(image.width - frame.width) <= 3 && Math.abs(image.height - frame.height) <= 3;
+    const compact = frame.height <= (innerWidth >= 768 ? 440 : 400);
+    const copyInside = copy.left >= frame.left - .5 && copy.right <= frame.right + .5 && copy.top >= frame.top - .5 && copy.bottom <= frame.bottom + .5;
+    return asset.naturalWidth === 1400 && asset.naturalHeight === 934 && getComputedStyle(asset).objectFit === 'cover' && covers && compact && copyInside;
   })).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }

@@ -604,3 +604,10 @@ button.mission-row:hover { background: rgb(13 82 112 / 38%); }
 .observation-row.selected i { border-color: #27dcb4; background: rgb(8 92 78 / 55%); color: #70f5d7; }
 .observation-row.selected b { color: #70f5d7; }
 button.observation-row:hover { border-color: #8ceeff; }
+
+/* Progress vault hero: a capped, cover-cropped scene with the copy over its lower part (2026-10-14 audit, D4 / E6). */
+.vault-hero { position: relative; display: flex; flex-direction: column; justify-content: flex-end; min-height: clamp(250px, 34vw, 420px); }
+.vault-hero>img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 38%; }
+.vault-hero-copy { position: relative; z-index: 1; margin-top: clamp(150px, 20vw, 250px); background: linear-gradient(180deg, rgb(6 26 44 / 0%), rgb(6 26 44 / 92%) 38%); }
+.vault-card-head span.ready { color: #ffd15b; border-color: #e3b33e; box-shadow: 0 0 14px rgb(255 200 61 / 30%); }
+.vault-card .success-note { border-color: #27dcb4; background: rgb(8 92 78 / 45%); color: #a9f5d3; }

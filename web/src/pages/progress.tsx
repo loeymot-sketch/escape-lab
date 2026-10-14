@@ -173,7 +173,7 @@ function VaultCard({ vault, lab, name, outcome, setOutcome, refresh }: { vault: 
   return (
     <div className="vault-card" ref={cardRef} tabIndex={-1}>
       {art && <img className="vault-door" src={art} alt="" aria-hidden="true" loading="lazy" decoding="async" />}
-      <div className="vault-card-head"><b>{labName}</b><span>{vault.exited ? t('ESCAPED') : vault.complete ? t('READY') : found === 0 ? t('NOT STARTED') : t('IN PROGRESS')}</span></div>
+      <div className="vault-card-head"><b>{labName}</b><span className={vault.complete && !vault.exited ? 'ready' : undefined}>{vault.exited ? t('ESCAPED') : vault.complete ? t('READY') : found === 0 ? t('NOT STARTED') : t('IN PROGRESS')}</span></div>
       <div className="code-slots" role="list" aria-label={t('{lab} code fragments', { lab: labName })}>
         {vault.slots.map((digit, i) => (
           <span role="listitem" className={digit === null ? 'empty' : ''} key={i}>
