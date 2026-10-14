@@ -113,6 +113,8 @@ export interface PublicStep {
   of: number;
   kind: Step['kind'];
   prompt: string;
+  /** The competency this step trains (a label, never a key). */
+  competency: string;
   context?: string;
   image?: { asset: string; caption: string };
   options?: Option[];
@@ -129,7 +131,7 @@ export interface PublicStep {
 export function publicStep(step: Step, index: number, total: number): PublicStep {
   const d = step.data;
   return {
-    id: step.id, ordinal: index + 1, of: total, kind: step.kind, prompt: step.prompt, context: step.context,
+    id: step.id, ordinal: index + 1, of: total, kind: step.kind, prompt: step.prompt, competency: step.competency, context: step.context,
     image: d.image, items: d.items, left: d.left, right: d.right, sample: d.sample, pointTargets: d.pointTargets,
     options: step.kind === 'decision' ? (d.options ?? DEFAULT_DECISIONS) : d.options,
     values: d.values ?? [],

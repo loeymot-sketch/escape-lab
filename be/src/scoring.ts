@@ -81,6 +81,17 @@ export function computeScore(i: ScoreInput): ScoreResult {
   return { total, max: maxScore(p, i.stepCount), rows };
 }
 
+/** Mastery of a mission, read from the best score against the maximum: published in /api/rules, never recomputed by the client. */
+export const MASTERY_PCT = 80;
+export const REVIEW_PCT = 50;
+export type Mastery = 'mastered' | 'completed' | 'review';
+export const masteryOf = (best: number | null, max: number): Mastery | null => {
+  if (best === null || max <= 0) return null;
+  if (best * 100 >= max * MASTERY_PCT) return 'mastered';
+  if (best * 100 < max * REVIEW_PCT) return 'review';
+  return 'completed';
+};
+
 /** Level n starts at 250 * n * (n - 1) XP: 0, 500, 1500, 3000, 5000, 7500, 10500 ... (the same curve as the design system's XPIndicator). */
 export const levelStart = (n: number) => 250 * n * (n - 1);
 export const levelOf = (xp: number) => {

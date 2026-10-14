@@ -124,7 +124,7 @@ test('every guided visual step keeps public labels and private targets in exact 
         assert.ok(target.x - target.r >= 0 && target.x + target.r <= 100 && target.y - target.r >= 0 && target.y + target.r <= 100, `${step.id}/${target.id} stays inside the artwork`);
       }
     } else {
-      assert.equal(key.targets, undefined, `${step.id} single-point content must not have hidden multi-zone targets`);
+      assert.equal((key as { targets?: unknown }).targets, undefined, `${step.id} single-point content must not have hidden multi-zone targets`);
     }
     const publicView = publicStep(step, 0, 1);
     const serialized = JSON.stringify(publicView);

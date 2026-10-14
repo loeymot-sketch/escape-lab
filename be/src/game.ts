@@ -8,7 +8,7 @@ import { tx } from './db.ts';
 import { checkResponse, publicStep, recheckForResponse, revealedValues } from './engines.ts';
 import { ApiError, bad, conflict, forbidden, hasVisibleCharacter, notFound, visibleLength } from './http.ts';
 import { classNameKey, hasBidiControl, imitatesReviewerSuffix, isBlankName, nameKey, sameName } from './names.ts';
-import { HINT_PENALTY, WRONG_PENALTY, computeScore, levelProgress, maxScore, mmss } from './scoring.ts';
+import { HINT_PENALTY, WRONG_PENALTY, computeScore, levelProgress, masteryOf, maxScore, mmss } from './scoring.ts';
 import type { LedgerRow } from './scoring.ts';
 import type { Lab, Mission, Step } from './types.ts';
 
@@ -193,6 +193,7 @@ export class Game {
       unlocksWith: st.state === 'locked' ? st.lockedReason : unlocksWith,
       bestScore: bests.get(m.id) ?? null,
       maxScore: maxScore(m.scoring, m.steps.length),
+      mastery: masteryOf(bests.get(m.id) ?? null, maxScore(m.scoring, m.steps.length)),
       inProgress: active.has(m.id),
     }));
     return { lab: this.labSummary(lab), state: st.state, lockedReason: st.lockedReason, missions, vault: this.vaultFor(uid, lab, exits) };
@@ -352,6 +353,7 @@ export class Game {
       stepsSolved: a.status === 'completed' ? m.steps.length : a.current_step,
       wrongTotal: a.wrong_total, hintsUsed: a.hints_total,
       penaltyXp: this.penaltySoFar(a, m, Math.round(elapsedMs / 1000)),
+      journal: this.journal(a, m),
     };
     if (a.status === 'completed') return { ...view, step: null, revealed: [] as ReturnType<typeof revealedValues> };
     const step = m.steps[a.current_step]!;
@@ -365,6 +367,19 @@ export class Game {
       },
       revealed: revealedValues(m, a.current_step),
     };
+  }
+
+  /**
+   * The investigation journal: one row per step with the competency it trains and the counters of this attempt. States follow the
+   * attempt's position (a completed attempt lists every step as solved). No prompt, explanation or key: a label and two counters only.
+   */
+  private journal(a: AttemptRow, m: Mission) {
+    const rows = new Map(this.all<{ step_id: string; wrong: number; hints: number }>('SELECT step_id, wrong, hints FROM step_results WHERE attempt_id = ?', a.id).map((r) => [r.step_id, r]));
+    return m.steps.map((s, i) => ({
+      ordinal: i + 1, stepId: s.id, competency: s.competency,
+      state: i < a.current_step ? 'solved' as const : i === a.current_step ? 'current' as const : 'upcoming' as const,
+      wrong: rows.get(s.id)?.wrong ?? 0, hints: rows.get(s.id)?.hints ?? 0,
+    }));
   }
 
   /** Hints already delivered (and paid for) on `step`, by level. Text comes from the log; rows written before it was stored fall back to the faculty hint when they were standard, and are left out when they were AI-written. */
@@ -475,12 +490,19 @@ export class Game {
       finalExplanation: m.steps.at(-1)?.explanation ?? '',
       score: score.total, maxScore: score.max,
       xpAwarded: earnedNow - xpBefore, totalXp, newBest: !prev || score.total > prev.best_score,
+      // The best score before this attempt, so the debrief can show personal progress without the client comparing anything.
+      previousBest: prev ? prev.best_score : null,
       ledger: score.rows as LedgerRow[],
       stats: {
         accuracyPct: Math.round((100 * m.steps.length) / (m.steps.length + wrong)),
         elapsedSec, elapsed: mmss(elapsedSec), hintsUsed: hints, wrongAnswers: wrong, firstTrySteps: firstTry, steps: m.steps.length,
       },
       newBadges,
+      // Debrief by step: every explanation is earned once the last step is solved; the counters are this attempt's own.
+      steps: m.steps.map((s, i) => {
+        const r = srs.find((x) => x.step_id === s.id);
+        return { ordinal: i + 1, id: s.id, prompt: s.prompt, competency: s.competency, wrong: r?.wrong ?? 0, hints: r?.hints ?? 0, explanation: s.explanation };
+      }),
     };
     this.run('UPDATE attempts SET result_json = ? WHERE id = ?', JSON.stringify(payload), a.id);
     return { payload, fragment };
@@ -563,11 +585,15 @@ export class Game {
     // Older completed attempts predate this field; derive it only after completion and keep them readable without a data migration.
     if (typeof payload.finalExplanation !== 'string') payload.finalExplanation = MISSION_BY_ID.get(payload.mission.id)?.steps.at(-1)?.explanation ?? '';
     const slug = payload.mission.labSlug;
-    const exited = this.exits(uid).has(slug);
+    const exits = this.exits(uid);
+    const exited = exits.has(slug);
     const comp = this.competencies(uid);
+    const done = this.completedIds(uid);
     return {
       ...payload,
       lab: { slug, exited },
+      // The same recommendation rule as the dashboard, so the debrief's "next step" and Mission control never disagree.
+      recommended: this.recommendation(uid, done, exits, this.continueTarget(uid, done, exits)),
       fragments: this.fragmentDigits(uid, slug),
       // The Master Lab code is only shown once the lab has actually been escaped.
       masterCode: slug === 'master' && exited ? exitCode('master') : null,
@@ -613,6 +639,20 @@ export class Game {
     return n;
   }
 
+  /** The next mission worth opening: the first open mission that is not the continue target, else the lowest best score to replay. Shared by the dashboard and the result debrief. */
+  private recommendation(uid: number, done: Set<string>, exits: Set<string>, cont: { missionId: string | null } | null): { missionId: string; labSlug: string; title: string; reason: string } | null {
+    for (const lab of LABS.filter((l) => l.playable)) {
+      if (this.labState(uid, lab, exits).state === 'locked') continue;
+      const ms = this.missionStates(uid, lab.slug, done, new Set());
+      const next = ms.find((x) => x.state === 'current' && x.mission.id !== cont?.missionId) ?? ms.find((x) => x.state === 'available' && x.mission.id !== cont?.missionId);
+      if (next) return { missionId: next.mission.id, labSlug: lab.slug, title: next.mission.title, reason: 'Next mission in an open lab.' };
+    }
+    const low = this.one<{ mission_id: string }>('SELECT mission_id FROM mission_best WHERE user_id = ? ORDER BY best_score ASC LIMIT 1', uid);
+    if (!low) return null;
+    const m = MISSION_BY_ID.get(low.mission_id)!;
+    return { missionId: m.id, labSlug: m.labSlug, title: m.title, reason: 'Replay your lowest score.' };
+  }
+
   private continueTarget(uid: number, done: Set<string>, exits: Set<string>): { kind: 'mission' | 'unlock'; missionId: string | null; labSlug: string; title: string; resume: boolean } | null {
     this.expireStale(uid);
     const act = this.one<{ mission_id: string }>("SELECT mission_id FROM attempts WHERE user_id = ? AND status = 'in_progress' ORDER BY started_at DESC LIMIT 1", uid);
@@ -644,17 +684,7 @@ export class Game {
     const totalMissions = STANDARD_MISSION_COUNT;
     const standardDone = [...done].filter((id) => MISSION_BY_ID.get(id)?.labSlug !== 'master').length;
 
-    let recommended: { missionId: string; labSlug: string; title: string; reason: string } | null = null;
-    for (const lab of LABS.filter((l) => l.playable)) {
-      if (this.labState(uid, lab, exits).state === 'locked') continue;
-      const ms = this.missionStates(uid, lab.slug, done, new Set());
-      const next = ms.find((x) => x.state === 'current' && x.mission.id !== cont?.missionId) ?? ms.find((x) => x.state === 'available' && x.mission.id !== cont?.missionId);
-      if (next) { recommended = { missionId: next.mission.id, labSlug: lab.slug, title: next.mission.title, reason: 'Next mission in an open lab.' }; break; }
-    }
-    if (!recommended) {
-      const low = this.one<{ mission_id: string }>('SELECT mission_id FROM mission_best WHERE user_id = ? ORDER BY best_score ASC LIMIT 1', uid);
-      if (low) { const m = MISSION_BY_ID.get(low.mission_id)!; recommended = { missionId: m.id, labSlug: m.labSlug, title: m.title, reason: 'Replay your lowest score.' }; }
-    }
+    const recommended = this.recommendation(uid, done, exits, cont);
 
     const badges = this.badges(uid);
     return {

@@ -1,5 +1,5 @@
 import { MASTER_SCORING, STANDARD_SCORING } from './content.ts';
-import { HINT_PENALTY, TIME_PAR_SHARE, WRONG_PENALTY, maxScore } from './scoring.ts';
+import { HINT_PENALTY, MASTERY_PCT, REVIEW_PCT, TIME_PAR_SHARE, WRONG_PENALTY, maxScore } from './scoring.ts';
 
 export function scoringRules() {
   return {
@@ -12,6 +12,7 @@ export function scoringRules() {
     timeBonus: `Full bonus up to ${TIME_PAR_SHARE * 100}% of the time limit, then linear down to 0 at the limit.`,
     xp: 'Total XP is the sum of your best score per mission, so replays can improve but never farm XP.',
     levels: 'Level n starts at 250 x n x (n - 1) XP: 0, 500, 1500, 3000, 5000, 7500 and so on.',
+    mastery: { masteredPct: MASTERY_PCT, reviewPct: REVIEW_PCT, note: `Mission mastery is read from your best score: mastered at or above ${MASTERY_PCT}% of the maximum, to review under ${REVIEW_PCT}%, completed in between.` },
     accuracy: 'Mission accuracy = steps solved / (steps solved + wrong answers), taken from your best attempt. Lab and overall accuracy are the mean of mission accuracies.',
     labsCompleted: 'Labs completed counts the three standard labs (Hematology, Microbiology, Clinical Biochemistry) whose missions are all complete, out of 3, on the dashboard, the profile, the leaderboard and the teacher views. Entering an exit code is tracked separately. The Master Lab is the capstone: it has its own Clinical Detective badge and is not counted in this figure.',
     needsAttention: 'Teacher view: a student needs attention after 7 days without activity while unfinished, or with accuracy under 60%.',
