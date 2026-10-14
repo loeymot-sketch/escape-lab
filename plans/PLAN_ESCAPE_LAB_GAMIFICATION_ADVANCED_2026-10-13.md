@@ -140,3 +140,17 @@ Améliorer le caractère jouable et impressionnant d’Escape Lab avec des inter
 - Vérification après cette amélioration : frontend `357/357`, build `PASS` avec JS entrée `398767/400000`, lazy JS `114338/160000`, CSS `119980/120000`, et E2E image/scènes `32/32` réussis aux largeurs et états prévus.
 - Le flux de revue enseignant expose maintenant un audit visuel non sensible par mission : nombre d’étapes d’observation et nombre d’étapes multi-zones, sans coordonnées ni clés de correction. Le serveur calcule ces compteurs depuis le catalogue ; le client les normalise et les affiche seulement dans la revue facultaire.
 - Preuves après cette intégration : backend `276/276`, frontend `357/357`, revue facultaire ciblée `4/4`, build `PASS` avec JS entrée `399256/400000`, lazy JS `114451/160000`, CSS `119980/120000`, rasters conformes.
+
+## Passe premium — 14 octobre 2026 (branche `feat/premium-polish-2026-10-14`)
+
+Spécification : `docs/superpowers/specs/2026-10-14-escape-lab-premium-polish-design.md` ; plan d'exécution : `docs/superpowers/plans/2026-10-14-escape-lab-premium-polish.md` ; rapport : `docs/PREMIUM_POLISH_REPORT_2026-10-14.md`.
+
+- Audit visuel de 106 captures (bureau 1440 / téléphone 390, EN / FR) sur tous les écrans : dix défauts repérés, neuf corrigés (le dixième, le bouton Valider désactivé après expiration, est conservé car dix tests E2E encodent volontairement ce comportement).
+- Lisibilité réparée sur les écrans Enseignant, Résultats des laboratoires, À propos et Paramètres (palette claire héritée jamais surchargée) ; un spec `readability.spec.ts` mesure désormais le contraste rendu (≥ 4,5:1) de chaque sélecteur réparé.
+- Robot de l'assistant replacé sur sa propre carte (`.assistant-card`) : plus de chevauchement des titres ni de la carte État du dossier sur téléphone (`assistant-art.spec.ts`).
+- Liste d'observations multi-zones rendue en vraies lignes numérotées/cochées ; hero du coffre recadré avec le texte superposé ; champ de code du coffre thématisé.
+- Gamification à données serveur uniquement : barre de niveau sur le tableau de bord (`levelProgress` du serveur, `dashboard-level.spec.ts`), compte à rebours de score et statistique « Étapes sans faute » sur le résultat (`result-celebration.spec.ts`, `useCountUp` motion-safe), dates d'obtention et cadenas sur les badges, podium des rangs 1 à 3, tonalités d'urgence du chronomètre (`timer-tone.spec.ts`).
+- Infrastructure : `E2E_API_PORT` / `E2E_WEB_PORT` pour lancer la suite quand 3000/5173 sont occupés ; deux projets WebKit réels (`webkit-smoke`, `webkit-iphone13`) exécutant `webkit.spec.ts`.
+- Budgets de build relevés une fois (JS 400 000 → 440 000 o, CSS 120 000 → 140 000 o) avec la mesure gzip inscrite dans `check-build-budget.mjs`.
+- Preuves locales sous Node v22.23.2 : backend `276/276`, frontend `371/371` (26 fichiers), build JS entrée `401 857/440 000`, lazy `114 879/160 000`, CSS `126 431/140 000`, 34 rasters conformes ; les totaux Playwright figurent dans le rapport.
+- Restent humains : validation scientifique indépendante des zones et réponses, provenance et licences des images, relecture native FR/EN, Safari sur appareil physique (le moteur WebKit est couvert).
