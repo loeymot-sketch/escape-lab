@@ -87,7 +87,7 @@ body::before { opacity: .22; background-size: 56px 56px; }
 .text-button { min-height: 44px; }
 
 /* Each laboratory gets its own cinematic scene and a server-backed progress strip. */
-.lab-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+.lab-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: stretch; }
 .map-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .lab-card {
   min-height: 0;
@@ -330,8 +330,10 @@ body::before { opacity: .22; background-size: 56px 56px; }
 .picker-row .ghost { border-radius: 12px; color: #b8c8d6; border-color: #52697b; }
 .map-note { color: #bdd6e7; }
 
-@media (max-width: 1000px) {
+@media (max-width: 1350px) {
   .lab-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 1000px) {
   .progress-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 700px) {

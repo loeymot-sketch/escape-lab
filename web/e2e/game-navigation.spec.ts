@@ -115,6 +115,22 @@ for (const width of [320, 390, 600, 601, 768, 1280]) test(`game navigation and s
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 });
 
+test('the four laboratory cards form balanced rows at laptop and desktop widths', async ({ page }) => {
+  for (const [width, expectedColumns] of [[1280, 2], [1440, 4]] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await resetDemo(page);
+    await stable(page);
+    const cards = await page.locator('.lab-strip .lab-card').evaluateAll((items) => items.map((item) => {
+      const box = item.getBoundingClientRect();
+      return { x: Math.round(box.x), y: Math.round(box.y) };
+    }));
+    expect(cards).toHaveLength(4);
+    const rows = [...new Set(cards.map(({ y }) => y))];
+    expect(rows).toHaveLength(4 / expectedColumns);
+    for (const y of rows) expect(cards.filter((card) => card.y === y)).toHaveLength(expectedColumns);
+  }
+});
+
 test('French labels, active states and no new English text on the four game screens', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await resetDemo(page);
