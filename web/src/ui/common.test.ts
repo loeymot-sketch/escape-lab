@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatSeconds, initialOf, resolveView, secondsLeft } from './common';
+import { formatSeconds, initialOf, resolveView, secondsLeft, timerTone } from './common';
 
 describe('secondsLeft', () => {
   it('counts down from the server snapshot', () => {
@@ -71,5 +71,16 @@ describe('resolveView (a role only ever sees its own screens)', () => {
   it('shows the About & demo guide to both roles', () => {
     expect(resolveView('about', false)).toBe('about');
     expect(resolveView('about', true)).toBe('about');
+  });
+});
+
+describe('timerTone (presentation of the server countdown)', () => {
+  it('is calm above a minute, warning at 60 s and below, critical at 20 s and below, calm without a limit', () => {
+    expect(timerTone(61)).toBe('');
+    expect(timerTone(60)).toBe('warning');
+    expect(timerTone(21)).toBe('warning');
+    expect(timerTone(20)).toBe('critical');
+    expect(timerTone(0)).toBe('critical');
+    expect(timerTone(null)).toBe('');
   });
 });

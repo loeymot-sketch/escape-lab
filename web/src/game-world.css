@@ -641,3 +641,15 @@ html[data-reduce-motion="true"] .result-score-bar i { transition: none; }
 /* Milestones: the server's earned date under an earned badge (E4). */
 .badge-row time { display: block; margin-top: 3px; color: #8ceeff; font-size: 11px; }
 .badge-row:not(.earned) .badge-icon { border-color: rgb(53 109 140 / 60%); color: #7fa6bf; }
+
+/* Timer urgency tones from the server countdown (E8) and podium ranks on the leaderboard (E5). */
+.timer.warning { border-color: #ffb13b; color: #ffcf6b; background: rgb(84 52 8 / 55%); }
+.timer.critical { border-color: #ff6571; color: #ffb1b8; background: rgb(101 26 42 / 60%); animation: timer-pulse 1s ease-in-out infinite; }
+@keyframes timer-pulse { 50% { box-shadow: 0 0 0 4px rgb(255 101 113 / 22%); } }
+@media (prefers-reduced-motion: reduce) { .timer.critical { animation: none; } }
+html[data-reduce-motion="true"] .timer.critical { animation: none; }
+.leaderboard-row.rank-1 > span:first-child, .leaderboard-row.rank-2 > span:first-child, .leaderboard-row.rank-3 > span:first-child { font-weight: 800; }
+.leaderboard-row.rank-1 > span:first-child { color: #ffd15b; }
+.leaderboard-row.rank-2 > span:first-child { color: #d9e4ee; }
+.leaderboard-row.rank-3 > span:first-child { color: #e0a06a; }
+.leaderboard-row.rank-1:not(.you) { background: linear-gradient(90deg, rgb(92 65 21 / 40%), transparent 60%); }

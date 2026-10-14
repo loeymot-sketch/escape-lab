@@ -90,6 +90,9 @@ export function initialOf(name: string): string {
 
 export const FLAG_WORDS: Record<string, string> = { L: 'Low', H: 'High', LL: 'Critically low', HH: 'Critically high' };
 
+/** Urgency tone of the countdown from the server's remaining seconds: warning at 60 s and below, critical at 20 s and below. Presentation only. */
+export const timerTone = (left: number | null): '' | 'warning' | 'critical' => (left === null ? '' : left <= 20 ? 'critical' : left <= 60 ? 'warning' : '');
+
 export function formatSeconds(total: number): string {
   const s = Math.max(0, Math.floor(total));
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;

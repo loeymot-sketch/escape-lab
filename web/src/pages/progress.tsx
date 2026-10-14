@@ -230,7 +230,7 @@ function BoardRow({ row, unranked = false }: { row: LeaderboardRow; unranked?: b
   // A viewer without XP is not ranked: the server gives them total + 1 only so that no count can overshoot, so that figure is never shown as a rank.
   if (unranked) return <li className="leaderboard-row you unranked"><b>{t('You: not ranked yet ({xp} XP)', { xp: formatInt(row.xp) })}</b></li>;
   return (
-    <li className={`leaderboard-row ${row.you ? 'you' : ''}`}>
+    <li className={`leaderboard-row ${row.you ? 'you' : ''}${row.rank >= 1 && row.rank <= 3 ? ` rank-${row.rank}` : ''}`}>
       <span>#{row.rank}</span>
       <b>{row.you ? t('You') : <bdi>{displayName(row.name)}</bdi>}</b>
       <span>{formatInt(row.xp)} XP</span>

@@ -14,7 +14,7 @@ import { GameEngine, initialAnswer, isAnswerReady, type EngineAnswer } from '../
 import { STEP_LABELS, labName, optionLetter, outOf } from '../lib/labels';
 import { SCIENTIFIC_ASSETS } from '../lib/assets';
 import { missionScene } from '../lib/mission-scenes';
-import { FLAG_WORDS, Stat, formatSeconds, secondsLeft, useDocumentTitle, useMediaQuery } from '../ui/common';
+import { FLAG_WORDS, Stat, formatSeconds, secondsLeft, timerTone, useDocumentTitle, useMediaQuery } from '../ui/common';
 import { describeError, useLoad } from '../ui/state';
 import { useCountUp } from '../ui/motion';
 import { LanguageSwitch, formatInt, plural, t, useLang } from '../i18n';
@@ -515,7 +515,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab }: { initial: A
           <span className="eyebrow">{t('CASE FILE · {lab}', { lab: t(labName(attempt.labSlug)) })}</span>
           <b>{t(attempt.missionTitle)}</b>
         </div>
-        <div className="timer" role="timer" aria-label={expired ? t('Time is up') : gone ? t('Attempt closed') : left === null ? t('No time limit') : t('Time left {time}', { time: formatSeconds(left) })}>
+        <div className={`timer ${live ? timerTone(left) : ''}`.trim()} role="timer" aria-label={expired ? t('Time is up') : gone ? t('Attempt closed') : left === null ? t('No time limit') : t('Time left {time}', { time: formatSeconds(left) })}>
           <Clock3 size={16} aria-hidden="true" /> <span aria-hidden="true">{expired ? t('Time is up') : gone ? t('Closed') : left === null ? '—' : formatSeconds(left)}</span>
         </div>
         <LanguageSwitch />
