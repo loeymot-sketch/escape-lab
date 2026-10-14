@@ -1,5 +1,5 @@
 import { useId, useRef, useState, type FormEvent } from 'react';
-import { ArrowRight, Check, Clock3, Sparkles, Trophy } from 'lucide-react';
+import { ArrowRight, Check, Clock3, LockKeyhole, Sparkles, Trophy } from 'lucide-react';
 import vaultArt from '../assets/progression-vault.webp';
 import hematologyArt from '../assets/lab-hematology-door.webp';
 import microbiologyArt from '../assets/lab-microbiology-door.webp';
@@ -11,7 +11,7 @@ import { describeBoard, normalizeBadges, normalizeLabResult, normalizeLeaderboar
 import { normalizeLabs, normalizeUnlock, type Lab } from '../lib/student';
 import { displayName } from '../lib/faculty';
 import { normalizeProfileSettings, type ProfileSettings } from '../lib/profile';
-import { formatInt, plural, t } from '../i18n';
+import { formatDateTime, formatInt, plural, t } from '../i18n';
 import { CompetencyBars, PageIntro, Stat, useDocumentTitle, useNav } from '../ui/common';
 import { EmptyPanel, ErrorPanel, Loaded, LoadingPanel, describeError, useLoad, type Load } from '../ui/state';
 
@@ -104,11 +104,18 @@ export function LeaderboardPage() {
   </div>;
 }
 
-function BadgeRow({ badge }: { badge: BadgeItem }) {
+/** One milestone as the server awarded it: the earned date is the server's timestamp, never a date the interface invented. */
+export function BadgeRow({ badge }: { badge: BadgeItem }) {
+  const earnedOn = badge.earned && badge.earnedAt !== null ? new Date(badge.earnedAt) : null;
+  const dated = earnedOn !== null && !Number.isNaN(earnedOn.getTime());
   return (
     <li className={`badge-row ${badge.earned ? 'earned' : ''}`}>
-      <span className="badge-icon" aria-hidden="true"><Trophy size={15} /></span>
-      <div><b>{t(badge.name)}</b><small>{t(badge.description)}</small></div>
+      <span className="badge-icon" aria-hidden="true">{badge.earned ? <Trophy size={15} /> : <LockKeyhole size={15} />}</span>
+      <div>
+        <b>{t(badge.name)}</b>
+        <small>{t(badge.description)}</small>
+        {dated && <time dateTime={earnedOn.toISOString()}>{t('Earned on {date}', { date: formatDateTime(earnedOn) })}</time>}
+      </div>
       <span className="badge-state">{badge.earned ? t('EARNED') : t('LOCKED')}</span>
     </li>
   );

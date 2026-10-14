@@ -21,6 +21,7 @@ export default {
   'No badges defined': 'Aucun badge défini',
   'The server did not list any badge.': "Le serveur n'a listé aucun badge.",
   'EARNED': 'OBTENU',
+  'Earned on {date}': 'Obtenu le {date}',
   'LOCKED': 'VERROUILLÉ',
 
   // Code Vault cards
