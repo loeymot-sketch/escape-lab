@@ -58,10 +58,17 @@ export function PointEngine({ step, answer, setAnswer, disabled }: EngineProps) 
       <span className="image-watermark">{t('Illustrative training image')}</span>
     </div>
     <PointImageViewer asset={asset} marker={activeMarker} points={points} d={disabled} choose={choosePoint} />
-    {targets.length > 0 && <div className="status-list" role="group" aria-label={t('Observation checklist')}>
-      {targets.map((target) => { const point = points[target.id]; const selection = selections[target.id]; const selected = Boolean(point || selection); const content = <><span>{selected ? '✓' : '○'} {t(target.label)}</span><b>{selected ? t('Selected') : t('Pending')}</b></>; return disabled
-        ? <div className="status-row" key={target.id}>{content}</div>
-        : <button type="button" className="status-row" key={target.id} aria-pressed={activeTarget?.id === target.id} onClick={() => setActiveId(target.id)}>{content}</button>; })}
+    {targets.length > 0 && <div className="observation-list" role="group" aria-label={t('Observation checklist')}>
+      {targets.map((target, index) => {
+        const selected = Boolean(points[target.id] || selections[target.id]);
+        const active = activeTarget?.id === target.id;
+        const className = `observation-row${selected ? ' selected' : ''}${active && !disabled ? ' active' : ''}`;
+        // The glyph is decorative: the state word next to it carries the meaning for assistive technology.
+        const content = <><i aria-hidden="true">{selected ? '✓' : String(index + 1)}</i><span>{t(target.label)}</span><b>{selected ? t('Selected') : t('Pending')}</b></>;
+        return disabled
+          ? <div className={className} key={target.id}>{content}</div>
+          : <button type="button" className={className} key={target.id} aria-pressed={active} onClick={() => setActiveId(target.id)}>{content}</button>;
+      })}
     </div>}
     <p id="point-help" className="image-instruction-text">
       {targets.length ? <>{t('Select each observation on the image.')} {activeTarget && t('Current observation: {target}.', { target: t(activeTarget.label) })} {t('{done} of {total} observations selected.', { done: new Set([...Object.keys(points), ...Object.keys(selections)]).size, total: targets.length })}</> : <>{t('Click the image, or focus it and use the arrow keys (Shift for larger steps) to mark the suspected finding.')}{marker && <> {t('Marker at {x}% across, {y}% down.', { x: Math.round(marker.x), y: Math.round(marker.y) })}</>}</>}

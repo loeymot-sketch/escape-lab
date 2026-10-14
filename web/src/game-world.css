@@ -593,3 +593,14 @@ button.mission-row:hover { background: rgb(13 82 112 / 38%); }
 .about-state { color: #9fbfd5; }
 .about-chip.quiet { background: #0b3c56; color: #d5f1ff; }
 .about-step:not(:last-child)::after { background: rgb(53 109 140 / 60%); }
+
+/* Guided multi-zone point step: the observation checklist as real rows (2026-10-14 audit, D3 / E7). */
+.observation-list { display: grid; gap: 8px; margin: 14px 0 6px; }
+.observation-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px; padding: 8px 12px; border: 1px solid #216d91; border-radius: 12px; background: rgb(8 46 71 / 90%); color: #e5f5ff; font: inherit; font-size: 13px; text-align: left; }
+.observation-row i { display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 26px; border: 1px solid #2fcfff; border-radius: 50%; font: 700 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-style: normal; color: #8ceeff; }
+.observation-row span { flex: 1 1 auto; min-width: 0; }
+.observation-row b { flex: 0 0 auto; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #9fbfd5; }
+.observation-row.active { border-color: #8ceeff; box-shadow: 0 0 0 1px rgb(25 216 255 / 35%), 0 0 16px rgb(25 216 255 / 18%); }
+.observation-row.selected i { border-color: #27dcb4; background: rgb(8 92 78 / 55%); color: #70f5d7; }
+.observation-row.selected b { color: #70f5d7; }
+button.observation-row:hover { border-color: #8ceeff; }

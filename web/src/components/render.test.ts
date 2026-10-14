@@ -53,10 +53,10 @@ describe('illustrative image frame', () => {
     const step = normalizeStep({ ...steps.point, pointTargets: [{ id: 'index', label: 'Hemolysis index' }, { id: 'potassium', label: 'Potassium result' }] });
     act(() => root.render(createElement(PointEngine, { step, answer: { points: { index: { x: 18, y: 18 }, potassium: { x: 55, y: 44 } } }, setAnswer: () => undefined, disabled: false })));
     expect(host.querySelectorAll('.image-frame .marker')).toHaveLength(2);
-    expect(host.querySelectorAll('.status-list .status-row')).toHaveLength(2);
+    expect(host.querySelectorAll('.observation-list .observation-row')).toHaveLength(2);
     expect(host.textContent).toContain('Hemolysis index');
     expect(host.textContent).toContain('Potassium result');
-    expect(host.querySelectorAll('.status-row b')[0]?.textContent).toBe('Selected');
+    expect(host.querySelectorAll('.observation-row b')[0]?.textContent).toBe('Selected');
   });
 
   it('does not revisit a semantic observation when advancing through a third visual zone', () => {
@@ -70,7 +70,7 @@ describe('illustrative image frame', () => {
       return createElement(PointEngine, { step, answer, setAnswer, disabled: false });
     }
     act(() => root.render(createElement(Harness)));
-    const rows = () => Array.from(host.querySelectorAll<HTMLButtonElement>('.status-row'));
+    const rows = () => Array.from(host.querySelectorAll<HTMLButtonElement>('button.observation-row'));
     act(() => { rows()[1]!.click(); });
     act(() => { (host.querySelector('summary') as HTMLElement).click(); });
     act(() => { host.querySelector<HTMLButtonElement>('[aria-label="Select Potassium result"]')!.click(); });
@@ -179,5 +179,29 @@ describe('mission result XP note (R9-B-13)', () => {
     expect(resultXpNote({ newBest: true, xpAwarded: 168 })).toBe('New personal best: +168 XP added to your total.');
     expect(resultXpNote({ newBest: true, xpAwarded: 0 })).toBe('No XP was added to your total.');
     expect(resultXpNote({ newBest: false, xpAwarded: 0 })).toBe('This replay did not beat your best score, so your total XP is unchanged.');
+  });
+});
+
+describe('observation checklist (guided multi-zone point step)', () => {
+  it('numbers pending observations, ticks selected ones and exposes the active target', () => {
+    const step = normalizeStep({ ...steps.point, pointTargets: [{ id: 'index', label: 'Hemolysis index' }, { id: 'potassium', label: 'Potassium result' }] });
+    act(() => root.render(createElement(PointEngine, { step, answer: { points: { index: { x: 18, y: 18 } } }, setAnswer: () => undefined, disabled: false })));
+    const rows = Array.from(host.querySelectorAll<HTMLButtonElement>('.observation-list button.observation-row'));
+    expect(rows).toHaveLength(2);
+    expect(rows.map((row) => row.querySelector('i')?.textContent)).toEqual(['✓', '2']);
+    expect(rows.map((row) => row.querySelector('b')?.textContent)).toEqual(['Selected', 'Pending']);
+    expect(rows[0]!.classList.contains('selected')).toBe(true);
+    expect(rows[1]!.classList.contains('selected')).toBe(false);
+    // The first target is active until the learner moves on: its row is the pressed one.
+    expect(rows.map((row) => row.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+    expect(rows[0]!.classList.contains('active')).toBe(true);
+    expect(rows[0]!.querySelector('i')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('renders the checklist as plain rows once the step is closed', () => {
+    const step = normalizeStep({ ...steps.point, pointTargets: [{ id: 'index', label: 'Hemolysis index' }, { id: 'potassium', label: 'Potassium result' }] });
+    act(() => root.render(createElement(PointEngine, { step, answer: { points: {} }, setAnswer: () => undefined, disabled: true })));
+    expect(host.querySelectorAll('.observation-list button')).toHaveLength(0);
+    expect(host.querySelectorAll('.observation-list .observation-row')).toHaveLength(2);
   });
 });
