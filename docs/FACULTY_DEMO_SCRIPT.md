@@ -111,10 +111,25 @@ Gestes de sécurité : ne cliquez pas « Mark reviewed ». Pour la ligne 5, arr�
 ### 3.1 Variante 7 minutes : ce qu'il faut ajouter
 
 - **+30 s, étape 2** : ouvrez la carte des labos. Montrez trois disciplines jouables, le Master Lab et les labos « Coming soon ».
-- **+30 s, étape 5** : terminez Fix the Sample et montrez l'écran de résultat (« Server-calculated », « Official timer »). Dites : « Le score et le temps viennent du serveur, pas du navigateur. »
+- **+30 s, étape 5** : terminez Fix the Sample et montrez l'écran de résultat (« Server-calculated », « Official timer »). Dites : « Le score et le temps viennent du serveur, pas du navigateur. » Depuis le 15 octobre 2026, le même écran montre aussi la **progression personnelle** (meilleur précédent → maintenant), les **compétences** démontrées, un **débriefing par étape** (chaque question, ses erreurs, son explication) et la **mission recommandée** ; quand tous les fragments d'un laboratoire sont réunis, un bloc « Sortie prête » **ouvre la porte sans retaper le code** (le serveur vérifie toujours). Pendant la mission, le **journal d'enquête** (colonne de droite) nomme la compétence de chaque étape et ce qu'elle a coûté.
 - **+30 s, étape 7** : ouvrez le détail d'un étudiant, puis Content review. Expliquez : « Approved dans l'outil ne vaut pas validation scientifique. »
 - **+15 s, étape 3** : montrez le point de l'image et l'étiquette « illustrative ».
 - Total estimé : environ 6 min 45 s avec les déplacements (le rapport du round 17 donne « 6:45-7:15 », et 7:45 sur téléphone) ; le guide intégré additionne 390 s hors déplacements et affiche « environ 7 minutes ». Ces trois chiffres sont des estimations non chronométrées par un humain, volontairement du même ordre. Gardez 15 s de marge.
+
+### 3.3 Variante « Studio enseignant » (+3 minutes, ajoutée le 2026-10-21)
+
+À montrer quand le public est enseignant : c'est la réponse à « et nous, que pouvons-nous créer ? ».
+
+1. **Basculer en invité enseignant** (« Faculty guest »), puis menu **Studio enseignant**. Trois salles publiées sont déjà là, avec des résultats de classe simulés : *Immunologie : ouverture du laboratoire* (prépare un laboratoire qui n'est pas encore ouvert), *Hématologie : le frottis piégé*, *Microbiologie : examen flash* (mode examen chronométré).
+2. **Modifier « le frottis piégé »** : montrer la question « Clic sur l'image ». Les zones sont dessinées sur la photo : une zone correcte (verte) et trois zones **pièges** (rouges : hématie normale, hématies superposées, plaquette). L'**anneau en pointillés** matérialise la tolérance de clic (**5 px** de l'image d'origine, réglable au curseur).
+3. **Outil « Tester un clic »** : cliquer juste à côté du schistocyte (« Accepté : … 3 px du bord, tolérance 5 px »), puis sur l'hématie normale (« Piège : … l'étudiant lit : … »). C'est exactement la correction du serveur.
+4. **Onglet « Contrôle qualité »** : le score sur 100 et les remarques (piège sans explication, zone trop petite pour un téléphone, description d'image trop courte…). Les erreurs bloquent la publication.
+5. **Résultats** : score moyen, taux de réussite, part des réponses tombées dans un piège, puis la **carte de chaleur** : chaque clic de chaque étudiant (vert, rouge, orange). Ouvrir une ligne « Réponses » pour montrer le détail d'un étudiant. Export CSV possible.
+6. Option : filtrer les résultats par classe, exporter la salle en fichier pour un collègue.
+7. Côté étudiant (« Return to student demo ») : l'encart « De vos enseignants » du tableau de bord, puis la **carte des laboratoires** : la carte « Immunologie », encore « Bientôt disponible », affiche déjà « Une salle d'enseignant ouverte ». C'est le lien avec les laboratoires qui vont ouvrir.
+8. Phrase clé : « L'enseignant écrit, l'étudiant joue, le serveur corrige, et l'enseignant voit exactement quelle idée reçue a piégé sa classe. »
+
+Après la démo : `Reset guest session` côté enseignant restaure les trois salles de démonstration et supprime celles créées par les visiteurs.
 
 ### 3.2 Ce qu'il faut couper pour 5 minutes
 
@@ -128,7 +143,7 @@ Selon les rapports de parcours : sautez la carte des labos (étape 2), et arrêt
 4. **Et les images ?** Illustratives, jamais une référence clinique ou diagnostique. Leur provenance et leur licence ne sont pas documentées : à faire avant tout usage pédagogique.
 5. **Données personnelles ?** Mode invité, aucun compte, aucune inscription. La démo n'utilise aucune donnée d'apprenant réel : l'étudiant Alex Martin et la classe de 38 sont des données de démonstration générées. Tous les invités partagent le même étudiant de démonstration.
 6. **Remplace-t-il les travaux pratiques ?** Non. Il prépare la pratique réelle ; il ne la remplace pas, pas plus que les stages ou les enseignants.
-7. **Quelle langue ?** Interface et contenu en anglais. Il n'existe pas de version française.
+7. **Quelle langue ?** Interface et contenu en anglais et en français (bascule FR / EN en haut de chaque écran). La version française est une traduction préparée automatiquement et **non relue par un locuteur natif ni par un expert** : l'anglais reste la référence, et le serveur continue d'envoyer l'anglais.
 8. **Normes et unités locales (Tunisie, Belgique) ?** À adapter par les experts. Aujourd'hui les intervalles de référence sont génériques, les unités sont mélangées (mg/dL et mmol/L) et le vocabulaire est anglo-saxon (« BUN »). Le choix du jeu de références et des unités reste à décider.
 9. **Efficacité pédagogique ?** Non évaluée. Un pilote pré-test / post-test est proposé (petite cohorte volontaire par site, analyse descriptive). Il n'est pas réalisé et exige l'accord des instances éthiques.
 10. **Prochaines étapes ?** Cinq phases proposées, aucune faite : (A) revue par des experts, (B) validation par des enseignants, (C) petit pilote étudiant, (D) utilisabilité et engagement, (E) amélioration et transfert. Les rôles des institutions (Monastir, HEPL) sont une proposition à confirmer par elles. Si une question sort de ces documents : « à décider ».

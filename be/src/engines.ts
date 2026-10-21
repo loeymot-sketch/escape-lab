@@ -1,6 +1,6 @@
 // Answer validation for the six engines, plus the public (answer-free) views of steps.
 import { bad } from './http.ts';
-import type { LabValue, Mission, Option, Step } from './types.ts';
+import type { LabValue, Mission, Option, PointTarget, Step } from './types.ts';
 
 export interface Verdict {
   correct: boolean;
@@ -15,6 +15,41 @@ export const DEFAULT_DECISIONS: Option[] = [
 ];
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+function pointVerdict(targets: PointTarget[], response: Record<string, unknown>): Verdict {
+  const points = response.points;
+  const selections = response.selections;
+  const ids = targets.map((target) => target.id);
+  if (ids.length < 2 || new Set(ids).size !== ids.length || (!isObj(points) && !isObj(selections))) {
+    throw bad('response.points or response.selections must contain every observation exactly once');
+  }
+  const pointMap = isObj(points) ? points : {};
+  const selectionMap = isObj(selections) ? selections : {};
+  const pointIds = Object.keys(pointMap);
+  const selectionIds = Object.keys(selectionMap);
+  if (pointIds.some((id) => selectionIds.includes(id)) || new Set([...pointIds, ...selectionIds]).size !== ids.length || !ids.every((id) => pointIds.includes(id) || selectionIds.includes(id))) {
+    throw bad('response.points or response.selections must contain every observation exactly once');
+  }
+  let correct = 0;
+  for (const target of targets) {
+    if (pointIds.includes(target.id)) {
+      const point = pointMap[target.id];
+      if (!isObj(point)) throw bad('each response point must use numbers between 0 and 100');
+      const x = point.x;
+      const y = point.y;
+      if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 100 || y < 0 || y > 100) {
+        throw bad('each response point must use numbers between 0 and 100');
+      }
+      if (Math.hypot(x - target.x, y - target.y) <= target.r) correct += 1;
+      continue;
+    }
+    const selection = selectionMap[target.id];
+    if (typeof selection !== 'string') throw bad('each response selection must be a string');
+    if (target.selection === undefined) throw bad('this observation does not support a text selection');
+    if (selection === target.selection) correct += 1;
+  }
+  return { correct: correct === targets.length, progress: { correct, total: targets.length } };
+}
 
 /** A server-authored pointer for the selected distractor, never a client-derived correction. */
 export function recheckForResponse(step: Step, response: unknown): string {
@@ -41,6 +76,7 @@ export function checkResponse(step: Step, response: unknown): Verdict {
       return { correct: d === key.answer };
     }
     case 'point': {
+      if (key.targets) return pointVerdict(key.targets, response);
       const { x, y } = response;
       if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 100 || y < 0 || y > 100) {
         throw bad('response.x and response.y must be numbers between 0 and 100');
@@ -77,6 +113,8 @@ export interface PublicStep {
   of: number;
   kind: Step['kind'];
   prompt: string;
+  /** The competency this step trains (a label, never a key). */
+  competency: string;
   context?: string;
   image?: { asset: string; caption: string };
   options?: Option[];
@@ -84,6 +122,7 @@ export interface PublicStep {
   left?: { id: string; label: string }[];
   right?: { id: string; label: string }[];
   sample?: { id: string; label: string };
+  pointTargets?: { id: string; label: string }[];
   /** Values introduced by this step. */
   values: LabValue[];
   hintsAvailable: number;
@@ -92,8 +131,8 @@ export interface PublicStep {
 export function publicStep(step: Step, index: number, total: number): PublicStep {
   const d = step.data;
   return {
-    id: step.id, ordinal: index + 1, of: total, kind: step.kind, prompt: step.prompt, context: step.context,
-    image: d.image, items: d.items, left: d.left, right: d.right, sample: d.sample,
+    id: step.id, ordinal: index + 1, of: total, kind: step.kind, prompt: step.prompt, competency: step.competency, context: step.context,
+    image: d.image, items: d.items, left: d.left, right: d.right, sample: d.sample, pointTargets: d.pointTargets,
     options: step.kind === 'decision' ? (d.options ?? DEFAULT_DECISIONS) : d.options,
     values: d.values ?? [],
     hintsAvailable: step.hints.length,

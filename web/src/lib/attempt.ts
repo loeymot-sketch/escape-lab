@@ -1,4 +1,5 @@
 import { arr, bool, nonNeg, nullable, num, oneOf, optional, pct, rec, str, text } from './guard';
+import { normalizeCompetencies, type Competencies } from './competency';
 
 const L = 'attempt';
 
@@ -15,6 +16,8 @@ export type PublicStep = {
   ordinal: number;
   of: number;
   prompt: string;
+  /** The competency this step trains, as labelled by the server (absent on an older server). */
+  competency?: string;
   context?: string;
   image?: { asset: string; caption: string };
   options?: Labelled[];
@@ -22,6 +25,8 @@ export type PublicStep = {
   left?: Labelled[];
   right?: Labelled[];
   sample?: Labelled;
+  /** Public labels for a guided multi-observation point step; coordinates are never sent by the server. */
+  pointTargets?: Labelled[];
   values: LabValue[];
   hintsAvailable: number;
   wrongOnStep: number;
@@ -51,7 +56,28 @@ export type Attempt = {
   step: PublicStep | null;
   /** Cumulative values the server has revealed so far (a stepper accumulates; other engines show the current step). */
   revealed: LabValue[];
+  /** The investigation journal the server keeps for this attempt: one row per step, a competency label and two counters. Empty on an older server. */
+  journal: JournalRow[];
 };
+
+export type JournalState = 'solved' | 'current' | 'upcoming';
+export type JournalRow = { ordinal: number; stepId: string; competency: string; state: JournalState; wrong: number; hints: number };
+const JOURNAL_STATES = ['solved', 'current', 'upcoming'] as const;
+
+export function normalizeJournal(value: unknown, field = 'journal'): JournalRow[] {
+  if (value === undefined) return [];
+  return arr(value, L, field).map((item, i) => {
+    const row = rec(item, L, `${field}[${i}]`);
+    return {
+      ordinal: nonNeg(row.ordinal, L, `${field}[${i}].ordinal`),
+      stepId: str(row.stepId, L, `${field}[${i}].stepId`),
+      competency: str(row.competency, L, `${field}[${i}].competency`),
+      state: oneOf(row.state, JOURNAL_STATES, L, `${field}[${i}].state`),
+      wrong: nonNeg(row.wrong, L, `${field}[${i}].wrong`),
+      hints: nonNeg(row.hints, L, `${field}[${i}].hints`),
+    };
+  });
+}
 
 const labelled = (value: unknown, field: string): Labelled => {
   const row = rec(value, L, field);
@@ -103,6 +129,7 @@ export function normalizeStep(value: unknown): PublicStep {
     ordinal: nonNeg(row.ordinal, L, 'step.ordinal'),
     of: nonNeg(row.of, L, 'step.of'),
     prompt: str(row.prompt, L, 'step.prompt'),
+    competency: optional(row.competency, (v) => str(v, L, 'step.competency')),
     context: optional(row.context, (v) => str(v, L, 'step.context')),
     values: arr(row.values, L, 'step.values').map((v, i) => normalizeLabValue(v, `step.values[${i}]`)),
     hintsAvailable: nonNeg(row.hintsAvailable, L, 'step.hintsAvailable'),
@@ -117,6 +144,7 @@ export function normalizeStep(value: unknown): PublicStep {
     step.image = { asset: str(image.asset, L, 'step.image.asset'), caption: str(image.caption, L, 'step.image.caption') };
   }
   if (kind === 'point' && !step.image) throw new Error(`Invalid server ${L} payload: step.image.`);
+  if (kind === 'point' && row.pointTargets !== undefined) step.pointTargets = labelledList(row.pointTargets, 'step.pointTargets');
   if (kind === 'choice' || kind === 'decision') step.options = labelledList(row.options, 'step.options');
   if (kind === 'order') step.items = labelledList(row.items, 'step.items');
   if (kind === 'match') {
@@ -165,6 +193,7 @@ export function normalizeAttempt(payload: unknown): Attempt {
     penaltyXp: num(attempt.penaltyXp, L, 'penaltyXp'),
     step,
     revealed: arr(attempt.revealed, L, 'revealed').map((v, i) => normalizeLabValue(v, `revealed[${i}]`)),
+    journal: normalizeJournal(attempt.journal),
   };
 }
 
@@ -193,7 +222,32 @@ export type MissionResult = {
   lab?: { slug: string; exited: boolean };
   fragments?: (number | null)[];
   masterCode?: string | null;
+  /** The best score before this attempt (absent on results stored before 2026-10-15). */
+  previousBest?: number | null;
+  /** Debrief by step, frozen with the result (absent on older results). */
+  steps?: ResultStep[];
+  /** Competency figures and the recommendation, on GET /attempts/:id/result only. */
+  competencies?: Competencies;
+  recommended?: Recommendation | null;
+  /** The dashboard's continue target, carried by the result since 2026-10-15 so the debrief's next step never contradicts Mission control. */
+  continue?: ContinueTarget | null;
 };
+export type ContinueTarget = { kind: 'mission' | 'unlock'; missionId: string | null; labSlug: string; title: string; resume: boolean };
+
+export function normalizeContinueTarget(value: unknown, label: string, field = 'continue'): ContinueTarget {
+  const c = rec(value, label, field);
+  const kind = oneOf(c.kind, ['mission', 'unlock'] as const, label, `${field}.kind`);
+  const missionId = nullable(c.missionId, (v) => str(v, label, `${field}.missionId`));
+  if (kind === 'mission' && missionId === null) throw new Error(`Invalid server ${label} payload: ${field}.missionId.`);
+  return { kind, missionId, labSlug: str(c.labSlug, label, `${field}.labSlug`), title: str(c.title, label, `${field}.title`), resume: bool(c.resume, label, `${field}.resume`) };
+}
+export type ResultStep = { ordinal: number; id: string; prompt: string; competency: string; wrong: number; hints: number; explanation: string };
+export type Recommendation = { missionId: string; labSlug: string; title: string; reason: string };
+
+export function normalizeRecommendation(value: unknown, label: string, field = 'recommended'): Recommendation {
+  const r = rec(value, label, field);
+  return { missionId: str(r.missionId, label, `${field}.missionId`), labSlug: str(r.labSlug, label, `${field}.labSlug`), title: str(r.title, label, `${field}.title`), reason: str(r.reason, label, `${field}.reason`) };
+}
 
 const R = 'result';
 export function normalizeFragment(value: unknown, field = 'fragment'): Fragment {
@@ -240,8 +294,31 @@ function readResult(payload: unknown): MissionResult {
       const row = rec(item, R, `newBadges[${i}]`);
       return { id: str(row.id, R, `newBadges[${i}].id`), name: str(row.name, R, `newBadges[${i}].name`), description: str(row.description, R, `newBadges[${i}].description`) };
     }),
+    previousBest: root.previousBest === undefined ? undefined : nullable(root.previousBest, (v) => nonNeg(v, R, 'previousBest')),
+    steps: root.steps === undefined ? undefined : arr(root.steps, R, 'steps').map((item, i) => {
+      const row = rec(item, R, `steps[${i}]`);
+      return {
+        ordinal: nonNeg(row.ordinal, R, `steps[${i}].ordinal`), id: str(row.id, R, `steps[${i}].id`), prompt: str(row.prompt, R, `steps[${i}].prompt`),
+        competency: str(row.competency, R, `steps[${i}].competency`), wrong: nonNeg(row.wrong, R, `steps[${i}].wrong`), hints: nonNeg(row.hints, R, `steps[${i}].hints`),
+        explanation: str(row.explanation, R, `steps[${i}].explanation`),
+      };
+    }),
+    // strongest/improvement travel with the competency list; a reply that omits them is read as having none to name.
+    competencies: root.competencies === undefined ? undefined : normalizeCompetencies({ competencies: root.competencies, strongest: root.strongest ?? null, improvement: root.improvement ?? null }, R),
+    recommended: root.recommended === undefined ? undefined : nullable(root.recommended, (v) => normalizeRecommendation(v, R)),
+    continue: root.continue === undefined ? undefined : nullable(root.continue, (v) => normalizeContinueTarget(v, R)),
+    // The vault context travels with the stored result and, since 2026-10-15, with the final answer too; GET still requires it (below).
+    lab: root.lab === undefined ? undefined : readLab(root.lab),
+    fragments: root.fragments === undefined ? undefined : readFragments(root.fragments),
+    masterCode: root.masterCode === undefined ? undefined : (root.masterCode === null ? null : str(root.masterCode, R, 'masterCode')),
   };
 }
+
+function readLab(value: unknown): { slug: string; exited: boolean } {
+  const lab = rec(value, R, 'lab');
+  return { slug: str(lab.slug, R, 'lab.slug'), exited: bool(lab.exited, R, 'lab.exited') };
+}
+const readFragments = (value: unknown): (number | null)[] => arr(value, R, 'fragments').map((slot, i) => nullable(slot, (v) => nonNeg(v, R, `fragments[${i}]`)));
 
 /** The result embedded in the final answer response. */
 export function normalizeMissionResult(payload: unknown): MissionResult {
@@ -252,11 +329,10 @@ export function normalizeMissionResult(payload: unknown): MissionResult {
 export function normalizeAttemptResult(payload: unknown): MissionResult {
   const base = readResult(payload);
   const root = rec(payload, R);
-  const lab = rec(root.lab, R, 'lab');
   return {
     ...base,
-    lab: { slug: str(lab.slug, R, 'lab.slug'), exited: bool(lab.exited, R, 'lab.exited') },
-    fragments: arr(root.fragments, R, 'fragments').map((slot, i) => nullable(slot, (v) => nonNeg(v, R, `fragments[${i}]`))),
+    lab: readLab(root.lab),
+    fragments: readFragments(root.fragments),
     masterCode: root.masterCode === null ? null : str(root.masterCode, R, 'masterCode'),
   };
 }

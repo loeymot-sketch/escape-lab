@@ -2,7 +2,7 @@
 
 Escape Lab is a biomedical learning MVP with a server-authoritative Node/SQLite backend and a premium React/Vite frontend.
 
-> **Status (read first).** Local academic prototype. Technically verified **locally only** (no remote CI, no independent human review; the audit rounds were run by AI agents of the same team). **Not biomedically validated**: questions, answers, explanations, hints, values and images are unreviewed by experts, and the images are illustrative, not clinical references. **Not production ready.** Not yet fully accessible: no real screen-reader test has been done, and the Blood Smear Code mission has no non-visual alternative. Convergence of the audit loop is **not** claimed: see `docs/FINAL_VALIDATION_REPORT.md` (top section) for the current numbers and `docs/KNOWN_LIMITATIONS.md` for open items.
+> **Status (read first).** Local academic prototype. Technically verified **locally only** (no remote CI, no independent human review; the audit rounds were run by AI agents of the same team). **Not biomedically validated**: questions, answers, explanations, hints, values and images are unreviewed by experts, and the images are illustrative, not clinical references. **Not production ready.** Not yet fully accessible: no real screen-reader test has been done, and the Blood Smear Code mission has no non-visual alternative. Convergence of the audit loop is **not** claimed: see `docs/FINAL_VALIDATION_REPORT.md` (top section) for the current numbers and `docs/KNOWN_LIMITATIONS.md` for open items. The 2026-10-14 polish pass (readability repair, level bar, result celebration, WebKit engine run) is reported in `docs/PREMIUM_POLISH_REPORT_2026-10-14.md`; Safari is covered by Playwright's WebKit engine, not by a physical device.
 
 ## Putting it online
 
@@ -31,6 +31,10 @@ npm run dev
 ```
 
 The frontend uses `VITE_API_URL` when provided and otherwise targets `http://localhost:3000/api`. The demo API listens on `127.0.0.1` only (IPv4); to avoid depending on how `localhost` resolves, start the frontend with `VITE_API_URL=http://127.0.0.1:3000/api npm run dev` and open it at `http://localhost:5173` (the `CORS_ORIGIN` of `.env.example`). It opens directly in the student guest demo: no user account, registration or sign-in screen is exposed. The faculty demo is an optional in-product guest switch. Demo mode requires the backend to be seeded and started with `DEMO_MODE=1`.
+
+## Teacher Studio (2026-10-21)
+
+The faculty guest has a **Teacher Studio**: create escape rooms and exams, upload a picture or pick one from the library, write multiple-choice, true/false, short-answer, numeric, order and match questions with **trap answers** that get their own feedback, and draw **click zones on a picture with a tolerance in pixels** (5 px by default), with a live "test a click" tool. A server-side quality check scores each room before publishing; "preview as a student" grades exactly like a real attempt. Results show every attempt, per-question success and trap rates, the options students chose, and a **heatmap of every click**, with CSV export. Students find the published rooms under **Teacher rooms** (also on the dashboard and on the coming-soon laboratory cards); their best score on each room counts as XP. Report: [docs/TEACHER_STUDIO_REPORT_2026-10-21.md](docs/TEACHER_STUDIO_REPORT_2026-10-21.md).
 
 ## Product boundary
 

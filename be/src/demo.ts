@@ -12,6 +12,7 @@ import { tx } from './db.ts';
 import { DEMO_TEACHER_NAME, Game, reviewerLabel } from './game.ts';
 import { forbidden } from './http.ts';
 import type { Step } from './types.ts';
+import { seedShowcaseRooms } from './studio-demo.ts';
 
 export const DEMO_STUDENT_EMAIL = 'alex.martin@demo.escape-lab.app';
 export const DEMO_TEACHER_EMAIL = 'claire.moreau@demo.escape-lab.app';
@@ -29,7 +30,7 @@ function good(step: Step): unknown {
   switch (k.kind) {
     case 'choice': return { choice: k.answer };
     case 'decision': return { decision: k.answer };
-    case 'point': return { x: k.x, y: k.y };
+    case 'point': return k.targets ? { points: Object.fromEntries(k.targets.map((target) => [target.id, { x: target.x, y: target.y }])) } : { x: k.x, y: k.y };
     case 'order': return { order: k.order };
     case 'match': return { pairs: k.pairs };
   }
@@ -39,7 +40,9 @@ function bad(step: Step): unknown {
   switch (k.kind) {
     case 'choice': return { choice: step.data.options!.find((o) => o.id !== k.answer)!.id };
     case 'decision': return { decision: (step.data.options ?? [{ id: 'accept' }, { id: 'reject' }, { id: 'repeat' }]).map((o) => o.id).find((i) => i !== k.answer) };
-    case 'point': return { x: (k.x + 50) % 100, y: (k.y + 50) % 100 };
+    case 'point': return k.targets
+      ? { points: Object.fromEntries(k.targets.map((target, i) => [target.id, { x: i === 0 ? (target.x + 50) % 100 : target.y, y: target.y }])) }
+      : { x: (k.x + 50) % 100, y: (k.y + 50) % 100 };
     case 'order': { const o = [...k.order]; [o[0], o[1]] = [o[1]!, o[0]!]; return { order: o }; }
     case 'match': { const l = Object.keys(k.pairs); const r = l.map((x) => k.pairs[x]!); return { pairs: Object.fromEntries(l.map((x, i) => [x, r[(i + 1) % r.length]!])) }; }
   }
@@ -232,7 +235,7 @@ const insertUser = (db: DB, name: string, email: string, role: 'student' | 'teac
 async function playAlex(db: DB, uid: number, base: number) {
   const clock = { t: base };
   const g = new Game(db, { now: () => clock.t });
-  for (const t of ['attempts', 'fragments', 'lab_exits', 'code_tries', 'badges_earned', 'mission_best', 'xp_events']) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(uid);
+  for (const t of ['attempts', 'fragments', 'lab_exits', 'code_tries', 'badges_earned', 'mission_best', 'xp_events', 'room_attempts', 'room_best']) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(uid);
   // Identity is part of the prepared state too. Keep class memberships: resetting this shared demo user must not silently remove
   // the student from a real teacher's roster or change that teacher's class analytics.
   db.prepare('UPDATE users SET name = ?, program = ?, study_level = ? WHERE id = ?').run('Alex Martin', 'Biomedical Sciences', 'L3', uid);
@@ -242,7 +245,7 @@ async function playAlex(db: DB, uid: number, base: number) {
   return { earned };
 }
 
-export interface DemoSeed { teacherId: number; classId: number; l2ClassId: number; alexId: number; seed: number; metrics: ReturnType<typeof planMetrics> }
+export interface DemoSeed { teacherId: number; classId: number; l2ClassId: number; alexId: number; seed: number; metrics: ReturnType<typeof planMetrics>; showcase: { rooms: number; attempts: number } }
 
 /** Creates the demo teacher, two classes and 38 students. Idempotent: returns null if already seeded. */
 export async function seedDemo(db: DB, base: number): Promise<DemoSeed | null> {
@@ -271,7 +274,8 @@ export async function seedDemo(db: DB, base: number): Promise<DemoSeed | null> {
     db.prepare('UPDATE users SET xp_carry = ? WHERE id = ?').run(Math.max(0, extra), uid);
   }
   clock.t = base;
-  return { teacherId, classId: l3.id, l2ClassId: l2.id, alexId, seed: plan.seed, metrics: plan.metrics };
+  const showcase = seedShowcaseRooms(db, teacherId, base);
+  return { teacherId, classId: l3.id, l2ClassId: l2.id, alexId, seed: plan.seed, metrics: plan.metrics, showcase };
 }
 
 /** POST /api/demo/reset: only the demo student, only back to the prepared state. */
@@ -310,8 +314,17 @@ export function resetDemoTeacher(db: DB, game: Game, uid: number) {
     const open = db.prepare(`SELECT mission_id, status FROM content_status WHERE EXISTS ${mine}`).all(uid, uid) as Array<{ mission_id: string; status: string }>;
     for (const r of open) db.prepare('INSERT INTO content_audit (mission_id, from_status, to_status, actor_id, actor_name, at) VALUES (?,?,?,?,?,?)').run(r.mission_id, r.status, 'draft', uid, who, game.now());
     db.prepare(`UPDATE content_status SET status = 'draft', reviewed_by = NULL, updated_at = ? WHERE EXISTS ${mine}`).run(game.now(), uid, uid);
+    // Teacher Studio: the visitors' rooms and pictures go, the showcase rooms and the class's attempts on them are replayed.
+    seedShowcaseRooms(db, uid, game.now());
   });
   return { reset: true, profile: game.profile(uid) };
+}
+
+/** A database seeded before the Teacher Studio existed gets the showcase rooms once (seed:demo on an existing database). */
+export function ensureShowcaseRooms(db: DB, base: number): { rooms: number; attempts: number } | null {
+  const t = db.prepare('SELECT id FROM users WHERE email = ?').get(DEMO_TEACHER_EMAIL) as { id: number } | undefined;
+  if (!t || db.prepare('SELECT 1 FROM rooms WHERE teacher_id = ? AND showcase = 1').get(t.id)) return null;
+  return seedShowcaseRooms(db, t.id, base);
 }
 
 export { MISSIONS, missionsOf };

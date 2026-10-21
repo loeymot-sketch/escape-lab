@@ -28,7 +28,11 @@ for (const file of files) {
 }
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort().join(',');
 /** Texts that are legitimately the same in both languages (no letters, brand names, product words). */
-const SAME = /^(?:[^A-Za-zÀ-ÿ]*|Escape Lab|LabEscape|XP|OK|Master|Score)$/;
+const SAME = /^(?:[^A-Za-zÀ-ÿ]*|Escape Lab|LabEscape|XP|OK|Master|Score|Badges)$/;
+const staticPageIntroEyebrows = files.flatMap((file) => {
+  const source = readFileSync(file, 'utf8');
+  return [...source.matchAll(/<PageIntro\b[^>]*\beyebrow="([^"]+)"/g)].map((match) => ({ key: match[1]!, where: relative(root, file) }));
+});
 
 describe('French coverage', () => {
   it('has no key registered twice with different texts', () => { expect(conflicts).toEqual([]); });
@@ -43,5 +47,9 @@ describe('French coverage', () => {
   it('never leaves a French text identical to the English one when it contains words', () => {
     const same = [...frEntries()].filter(([en, fr]) => en === fr && !SAME.test(en)).map(([en]) => JSON.stringify(en));
     expect(same).toEqual([]);
+  });
+  it('translates every static PageIntro eyebrow', () => {
+    const missing = staticPageIntroEyebrows.filter(({ key }) => !frEntries().has(key) && !SAME.test(key)).map(({ key, where }) => `${where} ${JSON.stringify(key)}`);
+    expect(missing).toEqual([]);
   });
 });

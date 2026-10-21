@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { engineLabel, labName, optionLetter, plural, sentenceCase, STEP_LABELS } from './labels';
+import { engineLabel, labName, optionLetter, plural, sentenceCase, STEP_LABELS, masteryLabel } from './labels';
 
 describe('learner wording', () => {
   it('has a friendly label for every step kind and never the raw kind', () => {
@@ -31,5 +31,14 @@ describe('learner wording', () => {
     expect(plural(2, 'hint')).toBe('2 hints');
     expect(plural(1, 'mission')).toBe('1 mission');
     expect(plural(1, 'code fragment')).toBe('1 code fragment');
+  });
+});
+
+describe('masteryLabel (server-decided mastery, shown as words)', () => {
+  it('names each mastery the server can send and nothing for none', () => {
+    expect(masteryLabel('mastered')).toBe('Mastered');
+    expect(masteryLabel('completed')).toBe('Completed');
+    expect(masteryLabel('review')).toBe('To review');
+    expect(masteryLabel(null)).toBe('');
   });
 });

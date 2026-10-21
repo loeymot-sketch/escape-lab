@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { HOME_HEADING, homeHeading, json, openFaculty, openHome, outage, patched, resetDemo, serverError, slow } from './support/helpers';
+import { navigateSection, HOME_HEADING, homeHeading, json, openFaculty, openHome, outage, patched, resetDemo, serverError, slow } from './support/helpers';
 
-const nav = (page: Page, name: string) => page.getByRole('button', { name, exact: true }).click();
+const nav = navigateSection;
 const alert = (page: Page) => page.getByRole('alert');
 
 // Headings are rendered by PageIntro whatever the load state, so a heading proves nothing about recovery. Every
@@ -13,7 +13,9 @@ test.describe('every student page: failure, slowness, emptiness', () => {
   const pages: { name: string; heading: string | RegExp; data: (page: Page) => Locator; open: (page: Page) => Promise<void>; glob: string | RegExp; loading: RegExp }[] = [
     { name: 'dashboard', heading: HOME_HEADING, data: (page) => page.locator('.lab-strip .lab-card'), open: async (page) => { await page.reload(); }, glob: '**/api/dashboard', loading: /Loading investigation map/ },
     { name: 'lab map', heading: 'Laboratory map', data: (page) => page.locator('.map-grid .lab-card'), open: (page) => nav(page, 'Lab map'), glob: '**/api/labs', loading: /Loading the laboratory map/ },
-    { name: 'progress', heading: 'Progress vault', data: (page) => page.locator('.vault-card'), open: (page) => nav(page, 'Progress'), glob: '**/api/vault', loading: /Opening the vault/ },
+    { name: 'progress', heading: 'Progress vault', data: (page) => page.locator('.vault-card'), open: (page) => nav(page, 'Vault'), glob: '**/api/vault', loading: /Opening the vault/ },
+    { name: 'badges', heading: 'Milestones', data: (page) => page.locator('.badge-row'), open: (page) => nav(page, 'Badges'), glob: '**/api/badges', loading: /Loading your badges/ },
+    { name: 'leaderboard', heading: 'Leaderboard', data: (page) => page.locator('.leaderboard-row'), open: (page) => nav(page, 'Leaderboard'), glob: '**/api/leaderboard**', loading: /Loading the leaderboard/ },
     { name: 'lab results', heading: 'Lab results', data: (page) => page.locator('.result-lab .mission-row'), open: (page) => nav(page, 'Lab results'), glob: '**/api/labs', loading: /Collecting your lab results/ },
   ];
 
@@ -122,7 +124,7 @@ test.describe('every student page: failure, slowness, emptiness', () => {
     await page.route('**/api/labs', (route) => patched(route, () => ({ labs: [] })));
     await nav(page, 'Lab map');
     await expect(page.getByRole('heading', { name: 'No laboratories yet' })).toBeVisible();
-    await nav(page, 'Investigations');
+    await nav(page, 'Rooms');
     await expect(page.getByRole('heading', { name: 'No laboratory is open yet' })).toBeVisible();
     await nav(page, 'Lab results');
     await expect(page.getByRole('heading', { name: 'No escaped lab yet' })).toBeVisible();
@@ -130,25 +132,27 @@ test.describe('every student page: failure, slowness, emptiness', () => {
     await page.route('**/api/vault', (route) => route.fulfill(json(200, { vaults: [] })));
     await page.route('**/api/badges', (route) => route.fulfill(json(200, { badges: [] })));
     await page.route('**/api/leaderboard**', (route) => patched(route, (b) => ({ ...b, rows: [], me: null, total: 0 })));
-    await nav(page, 'Progress');
+    await nav(page, 'Vault');
     await expect(page.getByRole('heading', { name: 'No vault yet' })).toBeVisible();
+    await nav(page, 'Badges');
     await expect(page.getByRole('heading', { name: 'No badges defined' })).toBeVisible();
+    await nav(page, 'Leaderboard');
     // R13-C-02: the demo class exists (cohortAvailable) but nobody has XP in this payload: that is not "not set up".
     await expect(page.getByRole('heading', { name: 'Nobody is ranked yet' })).toBeVisible();
   });
 
   test('a resume failure keeps the attempt and offers Retry or continuing without it', async ({ page }) => {
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await page.getByRole('button', { name: 'Review Hematology Lab' }).click();
     await page.getByRole('button', { name: 'Replay Blood Smear Code' }).click();
-    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
+    await expect(page.locator('.player-title').getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     const down = await outage(page, /\/api\/attempts\/[^/]+$/);
     await page.reload();
     await expect(alert(page)).toContainText('Temporary outage');
     expect(await page.evaluate(() => sessionStorage.getItem('escape-demo-attempt'))).toBeTruthy();
     down.lift();
     await alert(page).getByRole('button', { name: 'Retry' }).click();
-    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
+    await expect(page.locator('.player-title').getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     await expect(page.locator('.scientific')).toBeVisible();
     await expect(alert(page)).toHaveCount(0);
   });
@@ -162,7 +166,7 @@ test.describe('every student page: failure, slowness, emptiness', () => {
 
   test('the rules failing does not block a mission (the hint price is simply not quoted)', async ({ page }) => {
     await outage(page, '**/api/rules');
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await page.getByRole('button', { name: 'Review Hematology Lab' }).click();
     await page.getByRole('button', { name: 'Replay Blood Smear Code' }).click();
     await expect(page.getByText('Each hint carries an XP penalty set by the server.')).toBeVisible();

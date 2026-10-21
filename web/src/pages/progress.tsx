@@ -1,12 +1,17 @@
-import { useId, useRef, useState, type FormEvent } from 'react';
-import { ArrowRight, Check, Clock3, Sparkles, Trophy } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { ArrowRight, Check, Clock3, LockKeyhole, Sparkles, Trophy } from 'lucide-react';
 import vaultArt from '../assets/progression-vault.webp';
+import hematologyArt from '../assets/lab-hematology-door.webp';
+import microbiologyArt from '../assets/lab-microbiology-door.webp';
+import biochemistryArt from '../assets/lab-biochemistry-door.webp';
+import masterArt from '../assets/lab-master.webp';
+import masterOpenArt from '../assets/lab-master-open.webp';
 import { ApiError, api } from '../lib/api';
 import { describeBoard, normalizeBadges, normalizeLabResult, normalizeLeaderboard, normalizeVault, type BadgeItem, type LabResult, type Leaderboard, type LeaderboardRow, type VaultItem } from '../lib/progression';
 import { normalizeLabs, normalizeUnlock, type Lab } from '../lib/student';
 import { displayName } from '../lib/faculty';
 import { normalizeProfileSettings, type ProfileSettings } from '../lib/profile';
-import { formatInt, plural, t } from '../i18n';
+import { formatDateTime, formatInt, plural, t } from '../i18n';
 import { CompetencyBars, PageIntro, Stat, useDocumentTitle, useNav } from '../ui/common';
 import { EmptyPanel, ErrorPanel, Loaded, LoadingPanel, describeError, useLoad, type Load } from '../ui/state';
 
@@ -14,8 +19,8 @@ import { EmptyPanel, ErrorPanel, Loaded, LoadingPanel, describeError, useLoad, t
 type Outcome = { kind: 'success' | 'error'; slug: string; text: () => string };
 
 async function loadProgress() {
-  const [vault, badges, board, labs] = await Promise.all([api('/vault'), api('/badges'), api('/leaderboard?scope=all&cohort=class'), api('/labs')]);
-  return { vaults: normalizeVault(vault), badges: normalizeBadges(badges), board: normalizeLeaderboard(board), labs: normalizeLabs(labs) };
+  const [vault, labs] = await Promise.all([api('/vault'), api('/labs')]);
+  return { vaults: normalizeVault(vault), labs: normalizeLabs(labs) };
 }
 type ProgressData = Awaited<ReturnType<typeof loadProgress>>;
 
@@ -24,6 +29,25 @@ export function ProgressHub() {
   const { state, reload, setData } = useLoad(loadProgress, []);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [refreshError, setRefreshError] = useState<unknown>(null);
+
+  // The vault is shared by the guest session: another tab may reset it or unlock an exit while this page stays open.
+  // Returning to this tab must re-read the server snapshot, with focus + visibility treated as one browser event.
+  const lastVisibleRefresh = useRef(-Infinity);
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const at = performance.now();
+      if (at - lastVisibleRefresh.current < 1000) return;
+      lastVisibleRefresh.current = at;
+      reload();
+    };
+    window.addEventListener('focus', onVisible);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', onVisible);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [reload]);
 
   const refresh = async (): Promise<ProgressData | null> => {
     try {
@@ -41,13 +65,12 @@ export function ProgressHub() {
     <>
       <div className="progress-screen">
         <section className="vault-hero" aria-labelledby="vault-page-title">
-          <img src={vaultArt} alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
+          <img src={vaultArt} width={1400} height={934} alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
           <div className="vault-hero-copy">
             <div className="eyebrow">{t('PROGRESSION SYSTEM')}</div>
             <h1 id="vault-page-title">{t('Progress vault')}</h1>
-            <p>{t('Every fragment and badge below comes from the server record. Nothing is awarded by the interface.')}</p>
+            <p>{t('Your discovered fragments and unlocked laboratory exits.')}</p>
           </div>
-          <div className="vault-hero-mark" aria-hidden="true"><Trophy size={28} /></div>
         </section>
         {refreshError !== null && <ErrorPanel error={refreshError} title={t('The vault could not be refreshed')} onRetry={() => void refresh()} level={2} />}
         <Loaded load={state} label={t('Opening the vault…')} onRetry={reload} level={2}>
@@ -59,7 +82,7 @@ export function ProgressHub() {
 }
 
 function ProgressView({ data, outcome, setOutcome, refresh }: { data: ProgressData; outcome: Outcome | null; setOutcome: (o: Outcome | null) => void; refresh: () => Promise<ProgressData | null> }) {
-  const names = new Map(data.labs.map((l) => [l.slug, l.name]));
+  const labs = new Map(data.labs.map((l) => [l.slug, l]));
   return (
     <>
       <div className="progress-grid">
@@ -68,33 +91,56 @@ function ProgressView({ data, outcome, setOutcome, refresh }: { data: ProgressDa
           <h2 id="vault-title">{t('Fragments discovered')}</h2>
           {data.vaults.length === 0
             ? <EmptyPanel title={t('No vault yet')}>{t('No laboratory has a code vault on the server.')}</EmptyPanel>
-            : <div className="vault-cards">{data.vaults.map((v) => <VaultCard key={v.labSlug} vault={v} name={names.get(v.labSlug) ?? v.labSlug} outcome={outcome?.slug === v.labSlug ? outcome : null} setOutcome={setOutcome} refresh={refresh} />)}</div>}
-        </section>
-        <section className="vault-panel" aria-labelledby="badge-title">
-          <div className="eyebrow">BADGES</div>
-          <h2 id="badge-title">{t('Milestones')}</h2>
-          {data.badges.length > 0 && <p className="bar-note" data-testid="badge-count">{t('{earned} of {total} earned', { earned: data.badges.filter((b) => b.earned).length, total: data.badges.length })}</p>}
-          {data.badges.length === 0
-            ? <EmptyPanel title={t('No badges defined')}>{t('The server did not list any badge.')}</EmptyPanel>
-            : <ul className="badge-list">{data.badges.map((b) => <BadgeRow badge={b} key={b.id} />)}</ul>}
+            : <div className="vault-cards">{data.vaults.map((v) => <VaultCard key={v.labSlug} vault={v} lab={labs.get(v.labSlug)} name={labs.get(v.labSlug)?.name ?? v.labSlug} outcome={outcome?.slug === v.labSlug ? outcome : null} setOutcome={setOutcome} refresh={refresh} />)}</div>}
         </section>
       </div>
-      <BoardPanel board={data.board} />
     </>
   );
 }
 
-function BadgeRow({ badge }: { badge: BadgeItem }) {
+export function BadgesPage() {
+  useDocumentTitle('Milestones');
+  const { state, reload } = useLoad(async () => normalizeBadges(await api('/badges')), []);
+  return <div className="badges-screen">
+    <PageIntro eyebrow="BADGES" title={t('Milestones')}>{t('Your achievements, awarded by the server as you investigate.')}</PageIntro>
+    <Loaded load={state} label={t('Loading your badges…')} onRetry={reload} level={2}>
+      {(badges) => <section className="vault-panel" aria-label={t('Milestones')}>
+        {badges.length > 0 && <p className="bar-note" data-testid="badge-count">{t('{earned} of {total} earned', { earned: badges.filter((b) => b.earned).length, total: badges.length })}</p>}
+        {badges.length === 0 ? <EmptyPanel title={t('No badges defined')}>{t('The server did not list any badge.')}</EmptyPanel> : <ul className="badge-list">{badges.map((badge) => <BadgeRow key={badge.id} badge={badge} />)}</ul>}
+      </section>}
+    </Loaded>
+  </div>;
+}
+
+export function LeaderboardPage() {
+  useDocumentTitle('Leaderboard');
+  const { state, reload } = useLoad(async () => normalizeLeaderboard(await api('/leaderboard?scope=all&cohort=class')), []);
+  return <div className="leaderboard-screen">
+    <PageIntro eyebrow={t('COHORT SIGNAL')} title={t('Leaderboard')}>{t('Compare the recorded XP and laboratory progress in your class.')}</PageIntro>
+    <Loaded load={state} label={t('Loading the leaderboard…')} onRetry={reload} level={2}>
+      {(board) => <BoardPanel board={board} />}
+    </Loaded>
+  </div>;
+}
+
+/** One milestone as the server awarded it: the earned date is the server's timestamp, never a date the interface invented. */
+export function BadgeRow({ badge }: { badge: BadgeItem }) {
+  const earnedOn = badge.earned && badge.earnedAt !== null ? new Date(badge.earnedAt) : null;
+  const dated = earnedOn !== null && !Number.isNaN(earnedOn.getTime());
   return (
     <li className={`badge-row ${badge.earned ? 'earned' : ''}`}>
-      <span className="badge-icon" aria-hidden="true"><Trophy size={15} /></span>
-      <div><b>{t(badge.name)}</b><small>{t(badge.description)}</small></div>
+      <span className="badge-icon" aria-hidden="true">{badge.earned ? <Trophy size={15} /> : <LockKeyhole size={15} />}</span>
+      <div>
+        <b>{t(badge.name)}</b>
+        <small>{t(badge.description)}</small>
+        {dated && <time dateTime={earnedOn.toISOString()}>{t('Earned on {date}', { date: formatDateTime(earnedOn) })}</time>}
+      </div>
       <span className="badge-state">{badge.earned ? t('EARNED') : t('LOCKED')}</span>
     </li>
   );
 }
 
-function VaultCard({ vault, name, outcome, setOutcome, refresh }: { vault: VaultItem; name: string; outcome: Outcome | null; setOutcome: (o: Outcome | null) => void; refresh: () => Promise<ProgressData | null> }) {
+function VaultCard({ vault, lab, name, outcome, setOutcome, refresh }: { vault: VaultItem; lab?: Lab; name: string; outcome: Outcome | null; setOutcome: (o: Outcome | null) => void; refresh: () => Promise<ProgressData | null> }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
@@ -104,7 +150,12 @@ function VaultCard({ vault, name, outcome, setOutcome, refresh }: { vault: Vault
   const inputRef = useRef<HTMLInputElement>(null);
   const found = vault.slots.filter((s) => s !== null).length;
   const labName = t(name);
+  // In the vault, the open Master door means its exit was earned, not merely that the room is accessible.
+  const art = lab?.discipline === 'hematology' ? hematologyArt : lab?.discipline === 'microbiology' ? microbiologyArt : lab?.discipline === 'biochemistry' ? biochemistryArt : lab?.discipline === 'master' ? vault.exited ? masterOpenArt : masterArt : null;
   const ready = new RegExp(`^[0-9]{${vault.codeLength}}$`).test(code);
+  const blockHeldEnter = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' && event.repeat) event.preventDefault();
+  };
 
   const unlock = async (event: FormEvent) => {
     event.preventDefault();
@@ -150,7 +201,8 @@ function VaultCard({ vault, name, outcome, setOutcome, refresh }: { vault: Vault
 
   return (
     <div className="vault-card" ref={cardRef} tabIndex={-1}>
-      <div className="vault-card-head"><b>{labName}</b><span>{vault.exited ? t('ESCAPED') : vault.complete ? t('READY') : found === 0 ? t('NOT STARTED') : t('IN PROGRESS')}</span></div>
+      {art && <img className="vault-door" src={art} alt="" aria-hidden="true" loading="lazy" decoding="async" />}
+      <div className="vault-card-head"><b>{labName}</b><span className={vault.complete && !vault.exited ? 'ready' : undefined}>{vault.exited ? t('ESCAPED') : vault.complete ? t('READY') : found === 0 ? t('NOT STARTED') : t('IN PROGRESS')}</span></div>
       <div className="code-slots" role="list" aria-label={t('{lab} code fragments', { lab: labName })}>
         {vault.slots.map((digit, i) => (
           <span role="listitem" className={digit === null ? 'empty' : ''} key={i}>
@@ -169,13 +221,17 @@ function VaultCard({ vault, name, outcome, setOutcome, refresh }: { vault: Vault
             inputMode="numeric"
             pattern="[0-9]*"
             autoComplete="off"
-            maxLength={vault.codeLength}
+            // Allow separators while pasting a discovered code (for example "7 4 2").
+            // The normalized value is capped after non-digits are removed; a native
+            // maxLength equal to codeLength would truncate the paste before cleanup.
+            maxLength={vault.codeLength * 3}
             placeholder={t('{n} digits', { n: vault.codeLength })}
             value={code}
             aria-invalid={outcome?.kind === 'error'}
-            onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))}
+            onKeyDown={blockHeldEnter}
+            onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, vault.codeLength))}
           />
-          <button type="submit" className="primary" disabled={busy || !ready}>{busy ? t('Checking…') : t('Unlock')}</button>
+          <button type="submit" className="primary" disabled={busy || !ready} onKeyDown={blockHeldEnter}>{busy ? t('Checking…') : t('Unlock')}</button>
         </form>
       )}
       {outcome && (outcome.kind === 'error'
@@ -200,7 +256,7 @@ function BoardRow({ row, unranked = false }: { row: LeaderboardRow; unranked?: b
   // A viewer without XP is not ranked: the server gives them total + 1 only so that no count can overshoot, so that figure is never shown as a rank.
   if (unranked) return <li className="leaderboard-row you unranked"><b>{t('You: not ranked yet ({xp} XP)', { xp: formatInt(row.xp) })}</b></li>;
   return (
-    <li className={`leaderboard-row ${row.you ? 'you' : ''}`}>
+    <li className={`leaderboard-row ${row.you ? 'you' : ''}${row.rank >= 1 && row.rank <= 3 ? ` rank-${row.rank}` : ''}`}>
       <span>#{row.rank}</span>
       <b>{row.you ? t('You') : <bdi>{displayName(row.name)}</bdi>}</b>
       <span>{formatInt(row.xp)} XP</span>
@@ -212,9 +268,8 @@ function BoardRow({ row, unranked = false }: { row: LeaderboardRow; unranked?: b
 function BoardPanel({ board }: { board: Leaderboard }) {
   const view = describeBoard(board);
   return (
-    <section className="leaderboard-panel" aria-labelledby="board-title">
+    <section className="leaderboard-panel" aria-label={t('Leaderboard')}>
       <div className="section-head">
-        <div><div className="eyebrow">{t('COHORT SIGNAL')}</div><h2 id="board-title">{t('Leaderboard')}</h2></div>
         <span className="tag">{t('All-time · Class')}</span>
       </div>
       {view.kind === 'unavailable'
@@ -306,7 +361,7 @@ function ResultCard({ result: r }: { result: LabResult }) {
       {r.ledger.length > 0 && (
         <ul className="ledger" aria-label={t('{lab} score ledger', { lab: labName })}>
           {r.ledger.map((row) => (
-            <li key={row.id} className={row.kind}><span>{t(row.label)}<small>{t(row.reason)}</small></span><b>{row.points > 0 ? `+${row.points}` : row.points}</b></li>
+            <li key={row.id} className={row.kind}><span>{row.kind === 'unearned' ? t('Not earned: {label}', { label: t(row.label) }) : t(row.label)}<small>{t(row.reason)}</small></span><b>{row.points > 0 ? `+${row.points}` : row.points}</b></li>
           ))}
         </ul>
       )}

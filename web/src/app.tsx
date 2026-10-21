@@ -1,4 +1,4 @@
-import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { StrictMode, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ApiError, api, apiConfigError, demoSession, onUnauthorized } from './lib/api';
 import { normalizeAttempt, normalizeStart, type Attempt } from './lib/attempt';
@@ -6,7 +6,7 @@ import { normalizeDemoLogin, normalizeDemoReset, normalizeMe, type Me } from './
 import { About } from './pages/about';
 import { Mission } from './pages/mission';
 import { ContentReview, StudentDetail, Teacher } from './pages/faculty';
-import { LabResults, Profile, ProgressHub, loadSettings } from './pages/progress';
+import { BadgesPage, LeaderboardPage, LabResults, Profile, ProgressHub, loadSettings } from './pages/progress';
 import { GuestGate, Shell, requestShellFocus, type GuestBusy } from './pages/shell';
 import { Dashboard, LabLobbyPage, LabMap } from './pages/student';
 import { getLang, loadFrench, t, useLang } from './i18n';
@@ -28,6 +28,11 @@ import './game-world.css';
 
 type Role = 'student' | 'teacher';
 
+// Loaded on demand: the Teacher Studio only for the faculty guest, the teacher rooms only when a student opens them.
+const StudioPage = lazy(() => import('./pages/studio'));
+const RoomsPage = lazy(() => import('./pages/rooms'));
+const Lazy = ({ children }: { children: ReactNode }) => <Suspense fallback={<LoadingPanel label={t('Opening…')} />}>{children}</Suspense>;
+
 function App() {
   // Subscribing here re-renders every screen below when the display language is switched (state is kept: nothing is remounted).
   useLang();
@@ -36,6 +41,7 @@ function App() {
   const [view, setView] = useState<View>('home');
   const [labSlug, setLabSlug] = useState<string | null>(null);
   const [student, setStudent] = useState<{ classId: number; studentId: number } | null>(null);
+  const [facultyClassId, setFacultyClassId] = useState<number | null>(null);
   const [notice, setNotice] = useState('');
   const entering = useRef(false);
   // The role of the current guest session, so recovery after an expired session reopens the SAME kind of guest (faculty stays faculty).
@@ -93,6 +99,7 @@ function App() {
       setView(role === 'teacher' ? 'teacher' : 'home');
       setLabSlug(null);
       setStudent(null);
+      setFacultyClassId(null);
       if (noticeRole.current !== role) setNotice('');
       missed401.current = false;
       setToken(login.token);
@@ -138,6 +145,8 @@ function App() {
       setLabSlug={setLabSlug}
       student={student}
       setStudent={setStudent}
+      facultyClassId={facultyClassId}
+      setFacultyClassId={setFacultyClassId}
       notice={notice}
       setNotice={setNotice}
       enterGuest={enterGuest}
@@ -153,6 +162,8 @@ type AuthProps = {
   setLabSlug: (s: string | null) => void;
   student: { classId: number; studentId: number } | null;
   setStudent: (s: { classId: number; studentId: number } | null) => void;
+  facultyClassId: number | null;
+  setFacultyClassId: (id: number | null) => void;
   notice: string;
   setNotice: (n: string) => void;
   enterGuest: (role: Role) => Promise<unknown>;
@@ -167,7 +178,7 @@ function Authenticated(props: AuthProps) {
   return <Ready me={me.state.data} {...props} />;
 }
 
-function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student, setStudent, notice, setNotice, enterGuest }: AuthProps & { me: Me }) {
+function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student, setStudent, facultyClassId, setFacultyClassId, notice, setNotice, enterGuest }: AuthProps & { me: Me }) {
   const teacher = me.role === 'teacher';
   // A role only ever sees its own screens, whatever view was requested before a reload or a guest switch.
   const view: View = resolveView(requestedView, teacher);
@@ -226,24 +237,28 @@ function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student,
 
   // Bumped whenever the learner navigates: a mission start that was already in flight must not take over the new screen when it finally answers.
   const navEpoch = useRef(0);
-  const startMission = useCallback(async (missionId: string) => {
-    if (starting.current) return;
+  /** Resolves with the failure (null on success), so a screen without the shell (the result debrief) can report it itself. */
+  const startMission = useCallback(async (missionId: string): Promise<unknown> => {
+    if (starting.current) return null;
     starting.current = true;
     setStartingId(missionId);
     setFailure(null);
     const epoch = navEpoch.current;
+    let failure: unknown = null;
     try {
       const started = normalizeStart(await api(`/missions/${missionId}/start`, { method: 'POST' }));
       // The attempt exists on the server (the dashboard offers it as "Resume"); only the surprise screen change is dropped.
-      if (navEpoch.current !== epoch) return;
+      if (navEpoch.current !== epoch) return null;
       demoSession.setAttemptId(started.attempt.attemptId);
       setPlay(started.attempt);
     } catch (e) {
+      failure = e;
       if (navEpoch.current === epoch) setFailure({ cause: e });
     } finally {
       starting.current = false;
       setStartingId(null);
     }
+    return failure;
   }, []);
 
   const exitMission = (toHome = false) => {
@@ -316,10 +331,12 @@ function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student,
     startMission: (id) => void startMission(id),
     openStudent: (classId, studentId) => { navEpoch.current += 1; setStudent({ classId, studentId }); setView('student'); },
     student,
+    facultyClassId,
+    setFacultyClassId,
     labSlug,
     starting: startingId,
     busy: startingId !== null || guestBusy !== null,
-  }), [setView, setLabSlug, setStudent, startMission, student, labSlug, startingId, guestBusy]);
+  }), [setView, setLabSlug, setStudent, setFacultyClassId, startMission, student, facultyClassId, labSlug, startingId, guestBusy]);
 
   if (restore.phase === 'checking') return <main className="boot"><LoadingPanel label={t('Restoring your investigation…')} detail={t('Asking the server for your unfinished attempt.')} /></main>;
   if (restore.phase === 'error') {
@@ -331,18 +348,22 @@ function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student,
       </main>
     );
   }
-  if (play) return <ErrorBoundary><Mission key={play.attemptId} initial={play} onExit={() => exitMission()} onDone={() => exitMission(true)} onReturnToLab={returnToLab} /></ErrorBoundary>;
+  if (play) return <ErrorBoundary><Mission key={play.attemptId} initial={play} onExit={() => exitMission()} onDone={() => exitMission(true)} onReturnToLab={returnToLab} onStartMission={startMission} /></ErrorBoundary>;
 
   const page = (() => {
     switch (view) {
       case 'labs': return <LabMap />;
       case 'lab': return <LabLobbyPage />;
       case 'progress': return <ProgressHub />;
+      case 'badges': return <BadgesPage />;
+      case 'leaderboard': return <LeaderboardPage />;
       case 'results': return <LabResults />;
       case 'profile': return <Profile store={{ load: settings.state, reload: settings.reload, setData: settings.setData }} />;
       case 'teacher': return <Teacher />;
       case 'student': return <StudentDetail />;
       case 'content': return <ContentReview />;
+      case 'studio': return <Lazy><StudioPage /></Lazy>;
+      case 'rooms': return <Lazy><RoomsPage /></Lazy>;
       case 'about': return <About role={teacher ? 'teacher' : 'student'} />;
       default: return <Dashboard />;
     }

@@ -2,10 +2,10 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { plural, t, useLang } from '../i18n';
 import type { Competencies } from '../lib/competency';
 
-export type View = 'home' | 'labs' | 'lab' | 'progress' | 'results' | 'profile' | 'teacher' | 'student' | 'content' | 'about';
+export type View = 'home' | 'labs' | 'lab' | 'progress' | 'badges' | 'leaderboard' | 'results' | 'profile' | 'teacher' | 'student' | 'content' | 'studio' | 'rooms' | 'about';
 
 /** The screens only a Faculty guest sees. 'about' (the About & demo guide) belongs to both roles. */
-export const FACULTY_VIEWS: View[] = ['teacher', 'student', 'content'];
+export const FACULTY_VIEWS: View[] = ['teacher', 'student', 'content', 'studio'];
 
 /** A role only ever sees its own screens, whatever view was requested before a reload or a guest switch; the About page is shared. */
 export function resolveView(requested: View, teacher: boolean): View {
@@ -20,6 +20,9 @@ export type Nav = {
   openStudent: (classId: number, studentId: number) => void;
   /** Where a student detail request was pointed (set by the faculty roster). */
   student: { classId: number; studentId: number } | null;
+  /** The last class selected in the faculty views, kept while navigating between those views. */
+  facultyClassId: number | null;
+  setFacultyClassId: (id: number | null) => void;
   labSlug: string | null;
   /** Id of the mission whose start request is in flight (null when none). */
   starting: string | null;
@@ -90,6 +93,9 @@ export function initialOf(name: string): string {
 
 export const FLAG_WORDS: Record<string, string> = { L: 'Low', H: 'High', LL: 'Critically low', HH: 'Critically high' };
 
+/** Urgency tone of the countdown from the server's remaining seconds: warning at 60 s and below, critical at 20 s and below. Presentation only. */
+export const timerTone = (left: number | null): '' | 'warning' | 'critical' => (left === null ? '' : left <= 20 ? 'critical' : left <= 60 ? 'warning' : '');
+
 export function formatSeconds(total: number): string {
   const s = Math.max(0, Math.floor(total));
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -117,6 +123,9 @@ export function Bar({ pct, alert = false }: { pct: number; alert?: boolean }) {
 /** Competency percentages as simple bars, plus the server's strongest area and improvement advice. */
 export function CompetencyBars({ data, title }: { data: Competencies; title: string }) {
   if (data.items.length === 0) return <p className="bar-note">{t('No competency data yet.')}</p>;
+  const maxPct = Math.max(...data.items.map((item) => item.pct));
+  const strongestItems = data.items.filter((item) => item.pct === maxPct && item.pct > 0);
+  const strongestLabel = strongestItems.length > 1 ? 'Strongest areas:' : 'Strongest area:';
   return (
     <>
       <ul className="bar-list" aria-label={t(title)}>
@@ -128,7 +137,8 @@ export function CompetencyBars({ data, title }: { data: Competencies; title: str
           </li>
         ))}
       </ul>
-      {data.strongest && <p className="insight"><b>{t('Strongest area:')}</b> {t(data.strongest)}.</p>}
+      {/* A single zero-percent competency is a baseline, not a meaningful "strongest" area. */}
+      {data.items.length > 1 && strongestItems.length > 0 && data.strongest && <p className="insight"><b>{t(strongestLabel)}</b> {strongestItems.map((item) => t(item.name)).join(', ')}.</p>}
       {data.improvement && <p className="insight"><b>{t('To improve:')}</b> {t(data.improvement.advice)}</p>}
     </>
   );

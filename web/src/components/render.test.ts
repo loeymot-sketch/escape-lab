@@ -2,9 +2,12 @@ import { act, createElement, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { GameEngine, initialAnswer, type EngineAnswer } from './engines';
+import { PointEngine } from './point-engine';
 import { normalizeStep } from '../lib/attempt';
 import { steps } from '../lib/fixtures';
 import { CompetencyBars } from '../ui/common';
+import { JournalCard, ResultScreen } from '../pages/mission';
+import { RouteStrip } from '../pages/student';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -34,9 +37,9 @@ describe('option chips', () => {
 });
 
 describe('illustrative image frame', () => {
-  it('keeps the label outside the clickable button and draws the marker without text', () => {
+  it('keeps the label outside the clickable button and draws the marker without text', async () => {
     const step = normalizeStep(steps.point);
-    act(() => root.render(createElement(GameEngine, { step, answer: { x: 40, y: 60 }, setAnswer: () => undefined, disabled: false })));
+    act(() => root.render(createElement(PointEngine, { step, answer: { x: 40, y: 60 }, setAnswer: () => undefined, disabled: false })));
     const button = host.querySelector('button.scientific')!;
     const label = host.querySelector('.image-watermark')!;
     expect(label.textContent).toBe('Illustrative training image');
@@ -46,6 +49,52 @@ describe('illustrative image frame', () => {
     expect(marker.textContent).toBe('');
     expect(marker.style.left).toBe('40%');
     expect(marker.style.top).toBe('60%');
+    expect(host.querySelector('#point-help')?.getAttribute('role')).toBe('status');
+    expect(host.querySelector('#point-help')?.textContent).toContain('Marker at 40% across, 60% down.');
+  });
+
+  it('announces the active point position after keyboard movement', () => {
+    const step = normalizeStep(steps.point);
+    function Harness() {
+      const [answer, setAnswer] = useState<EngineAnswer>({});
+      return createElement(PointEngine, { step, answer, setAnswer, disabled: false });
+    }
+    act(() => root.render(createElement(Harness)));
+    const image = host.querySelector<HTMLButtonElement>('button.scientific')!;
+    act(() => { image.focus(); image.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); });
+    expect(host.querySelector('#point-help')?.textContent).toContain('Marker at 55% across, 50% down.');
+  });
+
+  it('renders a revisable checklist and every confirmed marker for a guided image', () => {
+    const step = normalizeStep({ ...steps.point, pointTargets: [{ id: 'index', label: 'Hemolysis index' }, { id: 'potassium', label: 'Potassium result' }] });
+    act(() => root.render(createElement(PointEngine, { step, answer: { points: { index: { x: 18, y: 18 }, potassium: { x: 55, y: 44 } } }, setAnswer: () => undefined, disabled: false })));
+    expect(host.querySelectorAll('.image-frame .marker')).toHaveLength(2);
+    expect(host.querySelectorAll('.observation-list .observation-row')).toHaveLength(2);
+    expect(host.textContent).toContain('Hemolysis index');
+    expect(host.textContent).toContain('Potassium result');
+    expect(host.querySelectorAll('.observation-row b')[0]?.textContent).toBe('Selected');
+  });
+
+  it('does not revisit a semantic observation when advancing through a third visual zone', () => {
+    const step = normalizeStep({ ...steps.point, image: { asset: 'panel-hemolysis-01', caption: 'A chemistry panel' }, pointTargets: [
+      { id: 'index', label: 'Hemolysis index' },
+      { id: 'potassium-result', label: 'Potassium result' },
+      { id: 'third', label: 'Third observation' },
+    ] });
+    function Harness() {
+      const [answer, setAnswer] = useState<EngineAnswer>({ points: { index: { x: 18, y: 18 } } });
+      return createElement(PointEngine, { step, answer, setAnswer, disabled: false });
+    }
+    act(() => root.render(createElement(Harness)));
+    const rows = () => Array.from(host.querySelectorAll<HTMLButtonElement>('button.observation-row'));
+    act(() => { rows()[1]!.click(); });
+    act(() => { (host.querySelector('summary') as HTMLElement).click(); });
+    act(() => { host.querySelector<HTMLButtonElement>('[aria-label="Select Potassium result"]')!.click(); });
+    expect(rows()[2]!.getAttribute('aria-current')).toBe('step');
+    expect(host.querySelector('.point-text summary')?.textContent).toBe('Text version of this image');
+    expect(host.querySelector('.point-text table caption')?.textContent).toBe('Chemistry panel table');
+    act(() => { (host.querySelector('button.scientific') as HTMLButtonElement).click(); });
+    expect(rows()[2]!.getAttribute('aria-current')).toBe('step');
   });
 });
 
@@ -64,6 +113,18 @@ describe('competency bars', () => {
     expect(host.textContent).toBe('No competency data yet.');
     act(() => root.render(createElement(CompetencyBars, { title: 'x', data: { items: [{ name: 'A', pct: 140, steps: 1 }], strongest: null, improvement: null } })));
     expect((host.querySelector('.bar i') as HTMLElement).style.width).toBe('100%');
+  });
+  it('does not call a lone zero-percent competency the strongest area', () => {
+    act(() => root.render(createElement(CompetencyBars, { title: 'x', data: { items: [{ name: 'Clinical biochemistry', pct: 0, steps: 1 }], strongest: 'Clinical biochemistry', improvement: null } })));
+    expect(host.textContent).not.toContain('Strongest area:');
+  });
+  it('names every tied top competency instead of inventing one winner', () => {
+    act(() => root.render(createElement(CompetencyBars, { title: 'x', data: {
+      items: [{ name: 'Hematology interpretation', pct: 100, steps: 2 }, { name: 'Clinical biochemistry', pct: 100, steps: 2 }, { name: 'Microbiology', pct: 88, steps: 2 }],
+      strongest: 'Hematology interpretation', improvement: null,
+    } })));
+    expect(host.textContent).toContain('Strongest areas: Hematology interpretation, Clinical biochemistry.');
+    expect(host.textContent).not.toContain('Strongest area: Hematology interpretation.');
   });
 });
 
@@ -148,5 +209,125 @@ describe('mission result XP note (R9-B-13)', () => {
     expect(resultXpNote({ newBest: true, xpAwarded: 168 })).toBe('New personal best: +168 XP added to your total.');
     expect(resultXpNote({ newBest: true, xpAwarded: 0 })).toBe('No XP was added to your total.');
     expect(resultXpNote({ newBest: false, xpAwarded: 0 })).toBe('This replay did not beat your best score, so your total XP is unchanged.');
+  });
+});
+
+describe('observation checklist (guided multi-zone point step)', () => {
+  it('numbers pending observations, ticks selected ones and exposes the active target', () => {
+    const step = normalizeStep({ ...steps.point, pointTargets: [{ id: 'index', label: 'Hemolysis index' }, { id: 'potassium', label: 'Potassium result' }] });
+    act(() => root.render(createElement(PointEngine, { step, answer: { points: { index: { x: 18, y: 18 } } }, setAnswer: () => undefined, disabled: false })));
+    const rows = Array.from(host.querySelectorAll<HTMLButtonElement>('.observation-list button.observation-row'));
+    expect(rows).toHaveLength(2);
+    expect(rows.map((row) => row.querySelector('i')?.textContent)).toEqual(['✓', '2']);
+    expect(rows.map((row) => row.querySelector('b')?.textContent)).toEqual(['Selected', 'Pending']);
+    expect(rows[0]!.classList.contains('selected')).toBe(true);
+    expect(rows[1]!.classList.contains('selected')).toBe(false);
+    // The first target is active until the learner moves on: its row is the pressed one.
+    expect(rows.map((row) => row.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+    expect(rows[0]!.classList.contains('active')).toBe(true);
+    expect(rows[0]!.querySelector('i')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('renders the checklist as plain rows once the step is closed', () => {
+    const step = normalizeStep({ ...steps.point, pointTargets: [{ id: 'index', label: 'Hemolysis index' }, { id: 'potassium', label: 'Potassium result' }] });
+    act(() => root.render(createElement(PointEngine, { step, answer: { points: {} }, setAnswer: () => undefined, disabled: true })));
+    expect(host.querySelectorAll('.observation-list button')).toHaveLength(0);
+    expect(host.querySelectorAll('.observation-list .observation-row')).toHaveLength(2);
+  });
+});
+
+describe('investigation journal (server rows, display only)', () => {
+  const rows = [
+    { ordinal: 1, stepId: 's1', competency: 'Pre-analytical quality', state: 'solved' as const, wrong: 1, hints: 0 },
+    { ordinal: 2, stepId: 's2', competency: 'Hematology interpretation', state: 'current' as const, wrong: 0, hints: 1 },
+    { ordinal: 3, stepId: 's3', competency: 'Clinical reasoning', state: 'upcoming' as const, wrong: 0, hints: 0 },
+  ];
+  it('lists every step with its competency, marks the current one and counts only what happened', () => {
+    act(() => root.render(createElement(JournalCard, { journal: rows })));
+    const items = Array.from(host.querySelectorAll('.journal-row'));
+    expect(items).toHaveLength(3);
+    expect(items.map((li) => li.getAttribute('data-state'))).toEqual(['solved', 'current', 'upcoming']);
+    expect(items[1]!.getAttribute('aria-current')).toBe('step');
+    expect(items[0]!.textContent).toContain('Pre-analytical quality');
+    expect(items[0]!.textContent).toContain('1 wrong');
+    expect(items[1]!.textContent).toContain('1 hint');
+    expect(items[2]!.textContent).not.toMatch(/wrong|hint/);
+    expect(host.textContent).toContain('1 of 3 steps proven');
+  });
+  it('renders nothing for an older server without a journal', () => {
+    act(() => root.render(createElement(JournalCard, { journal: [] })));
+    expect(host.querySelector('.journal-card')).toBeNull();
+  });
+  it('drops the current marker and says Closed once the attempt is closed (time up, reset elsewhere)', () => {
+    act(() => root.render(createElement(JournalCard, { journal: rows, closed: true })));
+    const items = Array.from(host.querySelectorAll('.journal-row'));
+    expect(items[1]!.getAttribute('aria-current')).toBeNull();
+    expect(items[1]!.textContent).toContain('Closed');
+    expect(items[1]!.textContent).not.toContain('In progress');
+  });
+});
+
+describe('laboratory route (lobby missions, fragments and exit from the server)', () => {
+  const missions = [
+    { id: 'hem-01', ordinal: 1, title: 'Blood Smear Code', state: 'completed' as const, mastery: 'mastered' as const },
+    { id: 'hem-02', ordinal: 2, title: 'Fix the Sample', state: 'completed' as const, mastery: 'review' as const },
+    { id: 'hem-03', ordinal: 3, title: 'Anemia Detective', state: 'current' as const, mastery: null },
+  ];
+  it('draws one stop per mission with its mastery, the fragment slots and the exit state', () => {
+    act(() => root.render(createElement(RouteStrip, { missions, vault: { labSlug: 'hematology', codeLength: 3, slots: [7, 4, null], complete: false, exited: false } })));
+    const stops = Array.from(host.querySelectorAll('.route-stop'));
+    expect(stops).toHaveLength(3);
+    expect(stops.map((s) => s.getAttribute('data-mastery'))).toEqual(['mastered', 'review', null]);
+    expect(stops[2]!.getAttribute('data-state')).toBe('current');
+    expect(host.querySelectorAll('.route-fragment')).toHaveLength(3);
+    expect(host.querySelectorAll('.route-fragment.found')).toHaveLength(2);
+    expect(host.querySelector('.route-exit')?.getAttribute('data-exit')).toBe('sealed');
+    expect(host.querySelector('.route-exit')?.textContent).toContain('Exit');
+  });
+  it('shows the exit as ready when the code is complete and as open once escaped', () => {
+    act(() => root.render(createElement(RouteStrip, { missions, vault: { labSlug: 'hematology', codeLength: 3, slots: [7, 4, 2], complete: true, exited: false } })));
+    expect(host.querySelector('.route-exit')?.getAttribute('data-exit')).toBe('ready');
+    act(() => root.render(createElement(RouteStrip, { missions, vault: { labSlug: 'hematology', codeLength: 3, slots: [7, 4, 2], complete: true, exited: true } })));
+    expect(host.querySelector('.route-exit')?.getAttribute('data-exit')).toBe('open');
+  });
+  it('shows a completed mission with an active replay state as in progress throughout the route', () => {
+    const replay = missions.map((mission, index) => index === 0 ? { ...mission, inProgress: true } : mission);
+    act(() => root.render(createElement(RouteStrip, { missions: replay, vault: null })));
+    const first = host.querySelector('.route-stop')!;
+    expect(first.getAttribute('data-state')).toBe('current');
+    expect(first.getAttribute('data-mastery')).toBeNull();
+    expect(first.querySelector('.route-label')?.textContent).toContain('In progress');
+    expect(first.querySelector('.route-dot svg')).toBeNull();
+  });
+});
+
+describe('result screen sections follow the server fields (older results have none)', () => {
+  // jsdom has no layout: the debrief's scroll-to-top is a no-op here.
+  beforeEach(() => { window.scrollTo = () => undefined; });
+  const base = {
+    attemptId: 'a1', mission: { id: 'hem-01', title: 'Blood Smear Code', labSlug: 'hematology' }, finalExplanation: 'Schistocytes are fragments.',
+    score: 150, maxScore: 180, xpAwarded: 0, totalXp: 8240, newBest: false,
+    ledger: [{ id: 'base', label: 'Base mission', reason: 'Mission completed', points: 100, kind: 'earned' as const }],
+    stats: { accuracyPct: 100, elapsed: '00:30', elapsedSec: 30, hintsUsed: 0, wrongAnswers: 0, firstTrySteps: 1, steps: 1 }, newBadges: [],
+  };
+  it('renders no progress, competencies, debrief, exit or next block for a result stored before these fields existed', () => {
+    act(() => root.render(createElement(ResultScreen, { result: base, newFragments: [], onExit: () => undefined })));
+    for (const selector of ['.result-progress', '.result-competencies', '.result-debrief', '.result-exit', '.result-next']) expect(host.querySelector(selector), selector).toBeNull();
+    expect(host.querySelectorAll('.result-actions button')).toHaveLength(1);
+  });
+  it('puts the laboratory\'s next mission first and the recommendation second, and offers the exit only with a complete vault', () => {
+    const full = {
+      ...base, previousBest: 120, steps: [{ ordinal: 1, id: 'hem-01-s1', prompt: 'Click the schistocyte.', competency: 'Hematology interpretation', wrong: 0, hints: 0, explanation: 'Fragments.' }],
+      competencies: { items: [{ name: 'Hematology interpretation', pct: 100, steps: 1 }], strongest: 'Hematology interpretation', improvement: null },
+      continue: { kind: 'mission' as const, missionId: 'hem-02', labSlug: 'hematology', title: 'Fix the Sample', resume: false },
+      recommended: { missionId: 'mic-01', labSlug: 'microbiology', title: 'Microbe Detective', reason: 'Next mission in an open lab.' },
+      lab: { slug: 'hematology', exited: false }, fragments: [7, null, null], masterCode: null,
+    };
+    act(() => root.render(createElement(ResultScreen, { result: full, newFragments: [], onExit: () => undefined, onStartMission: async () => null })));
+    expect(host.querySelector('.result-progress')?.textContent).toContain('Previous best 120 XP');
+    expect(host.querySelector('.result-debrief')).not.toBeNull();
+    expect(host.querySelector('.result-next h2')?.textContent).toBe('Fix the Sample');
+    expect(host.querySelector('.result-next .result-next-secondary')?.textContent).toContain('Microbe Detective');
+    expect(host.querySelector('.result-exit')).toBeNull();
   });
 });

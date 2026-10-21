@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { ArrowRight, Beaker, BookOpen, ClipboardCheck, ClipboardList, FlaskConical, Loader2, Menu, Settings as SettingsIcon, Sparkles, Trophy, Users, X } from 'lucide-react';
+import { ArrowRight, Beaker, BookOpen, Briefcase, ClipboardCheck, ClipboardList, DoorOpen, FlaskConical, KeyRound, Loader2, Menu, PenTool, Settings as SettingsIcon, Sparkles, Trophy, Users, X } from 'lucide-react';
 import labescapeInvestigationHero from '../assets/labescape-investigation-hero.webp';
 import { ApiError } from '../lib/api';
 import { LanguageSwitch, t } from '../i18n';
@@ -49,7 +49,8 @@ export function GuestGate({ loading, error, retry }: { loading: boolean; error: 
 /** English page names; shown with t(CRUMBS[view]). */
 const CRUMBS: Record<View, string> = {
   home: 'Mission control', labs: 'Lab map', lab: 'Laboratory', progress: 'Progress vault', results: 'Lab results',
-  profile: 'Learning settings', teacher: 'Faculty analytics', student: 'Student detail', content: 'Content review', about: 'About & demo guide',
+  badges: 'Milestones', leaderboard: 'Leaderboard',
+  profile: 'Learning settings', teacher: 'Faculty analytics', student: 'Student detail', content: 'Content review', studio: 'Teacher Studio', rooms: 'Teacher rooms', about: 'About & demo guide',
 };
 
 /** What the guest is waiting for, if anything. */
@@ -83,7 +84,7 @@ export const requestShellFocus = () => { focusOnMount = true; };
 function focusHeadingWhenReady(root: HTMLElement, done: () => void): () => void {
   const focusFree = () => {
     const active = document.activeElement;
-    return !active || active === document.body || active.closest('aside') !== null;
+    return !active || active === document.body || active.closest('aside, nav') !== null;
   };
   const claim = () => {
     const heading = root.querySelector('h1');
@@ -100,14 +101,16 @@ function focusHeadingWhenReady(root: HTMLElement, done: () => void): () => void 
 }
 
 export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpen, setMenuOpen, error, clearError, notice, clearNotice, banner, guestBusy, starting, children }: ShellProps) {
-  const navItem = (target: View, label: string, icon: ReactNode, activeFor: View[] = [target], mobileLabel = label) => (
-    <button type="button" className={activeFor.includes(view) ? 'active' : ''} aria-label={label} aria-current={activeFor.includes(view) ? 'page' : undefined} onClick={() => { setView(target); setMenuOpen(false); }}>
+  const navItem = (target: View, label: string, icon: ReactNode, activeFor: View[] = [target], mobileLabel = label, current: 'page' | 'true' = 'page') => (
+    <button type="button" className={activeFor.includes(view) ? 'active' : ''} aria-label={label} aria-current={activeFor.includes(view) ? current : undefined} onClick={() => { if (target === view) { window.scrollTo({ top: 0 }); focusPage(); } setView(target); setMenuOpen(false); }}>
       {icon}<span className="nav-label-full">{label}</span><span className="nav-label-compact" aria-hidden="true">{mobileLabel}</span>
     </button>
   );
   const mainRef = useRef<HTMLElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [menuHeight, setMenuHeight] = useState<number>();
   const shownView = useRef(view);
   const busy = guestBusy !== null || starting !== null;
   const busyNote = guestBusy === 'switch' ? t('Switching guest session…') : guestBusy === 'reset' ? t('Resetting guest session…') : starting !== null ? t('Starting mission…') : '';
@@ -138,6 +141,13 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
     const heading = root?.querySelector('h1');
     if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({ preventScroll: true }); } else root?.focus({ preventScroll: true });
   };
+  // A failed mission start disables its button while waiting. Move focus to the actionable
+  // error as soon as it appears, so keyboard and screen-reader users hear the failure and
+  // can reach Retry/Dismiss without searching the page.
+  useEffect(() => {
+    if (!error || !errorRef.current) return;
+    errorRef.current.focus({ preventScroll: true });
+  }, [error]);
   // Same when the Retry of the banner succeeds and the banner disappears under the focused button.
   const retryPressed = useRef(false);
   useEffect(() => {
@@ -157,6 +167,19 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
   }, [guestBusy]);
 
   // Escape closes the phone menu and gives focus back to the button that opened it.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const measure = () => {
+      const anchor = menuButtonRef.current?.getBoundingClientRect();
+      const footer = document.querySelector('.game-primary-nav')?.getBoundingClientRect();
+      if (anchor) setMenuHeight(Math.max(44, (footer?.height ? footer.top : window.innerHeight - 12) - anchor.bottom - 20));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, { passive: true });
+    return () => { window.removeEventListener('resize', measure); window.removeEventListener('scroll', measure); };
+  }, [menuOpen, teacher]);
+
   useEffect(() => {
     if (!menuOpen) return undefined;
     const onKey = (event: KeyboardEvent) => {
@@ -199,9 +222,21 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return undefined;
     const phone = window.matchMedia('(max-width: 600px)');
-    const onChange = () => { setMenuOpen(false); setConfirmReset(false); };
+    // CSS can hide the focused control before the media-query callback runs.
+    // In that case activeElement is already body, so retain the actual last focus target.
+    let lastFocused = document.activeElement;
+    const rememberFocus = (event: FocusEvent) => {
+      if (event.target instanceof HTMLElement && event.target !== document.body) lastFocused = event.target;
+    };
+    const onChange = () => {
+      const active = document.activeElement;
+      const lostHiddenFocus = (!active || active === document.body) && lastFocused?.isConnected && lastFocused.getClientRects().length === 0;
+      if (lostHiddenFocus || (active && (popoverRef.current?.contains(active) || active.getClientRects().length === 0))) focusPage();
+      setMenuOpen(false); setConfirmReset(false);
+    };
+    document.addEventListener('focusin', rememberFocus);
     phone.addEventListener('change', onChange);
-    return () => phone.removeEventListener('change', onChange);
+    return () => { document.removeEventListener('focusin', rememberFocus); phone.removeEventListener('change', onChange); };
   }, [setMenuOpen]);
   const askReset = () => { focusAfterConfirm.current = 'cancel'; setConfirmReset(true); };
   const cancelReset = () => { focusAfterConfirm.current = 'trigger'; setConfirmReset(false); };
@@ -231,8 +266,22 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
     </>
   );
 
+  const primaryStudentNav = (compact = false) => <>
+    {navItem('home', t('Rooms'), <DoorOpen size={21} aria-hidden="true" />, compact ? ['home', 'labs', 'lab'] : ['home'], t('Rooms'), compact && view !== 'home' ? 'true' : 'page')}
+    {navItem('progress', t('Vault'), <Briefcase size={21} aria-hidden="true" />)}
+    {navItem('badges', t('Badges'), <Trophy size={21} aria-hidden="true" />)}
+  </>;
+  const secondaryStudentNav = <>
+    {navItem('labs', t('Lab map'), <Beaker size={17} aria-hidden="true" />, ['labs', 'lab'], t('Labs'))}
+    {navItem('rooms', t('Teacher rooms'), <KeyRound size={17} aria-hidden="true" />, ['rooms'], t('Teacher rooms'))}
+    {navItem('leaderboard', t('Leaderboard'), <Trophy size={17} aria-hidden="true" />)}
+    {navItem('results', t('Lab results'), <ClipboardList size={17} aria-hidden="true" />, ['results'], t('Results'))}
+    {navItem('profile', t('Learning settings'), <SettingsIcon size={17} aria-hidden="true" />, ['profile'], t('Settings'))}
+    {navItem('about', t('About & demo guide'), <BookOpen size={17} aria-hidden="true" />, ['about'], t('Guide'))}
+  </>;
+
   return (
-    <div className="app">
+    <div className={`app ${teacher ? 'faculty-app' : 'student-app'}`}>
       <a className="skip-link" href="#main-content" onClick={(event) => { event.preventDefault(); mainRef.current?.focus(); }}>{t('Skip to main content')}</a>
       <aside aria-label={t('Primary')}>
         <div className="brand"><span className="brand-mark"><FlaskConical size={19} aria-hidden="true" /></span><span>ESCAPE<span>LAB</span></span></div>
@@ -243,6 +292,7 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
             ? (
               <>
                 {navItem('teacher', t('Faculty'), <Sparkles size={17} aria-hidden="true" />, ['teacher'], t('Faculty'))}
+                {navItem('studio', t('Teacher Studio'), <PenTool size={17} aria-hidden="true" />, ['studio'], t('Studio'))}
                 {navItem('student', t('Student detail'), <Users size={17} aria-hidden="true" />, ['student'], t('Learners'))}
                 {navItem('content', t('Content review'), <ClipboardCheck size={17} aria-hidden="true" />, ['content'], t('Review'))}
                 {navItem('about', t('About & demo guide'), <BookOpen size={17} aria-hidden="true" />, ['about'], t('Guide'))}
@@ -250,12 +300,8 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
             )
             : (
               <>
-                {navItem('home', t('Investigations'), <Sparkles size={17} aria-hidden="true" />, ['home'], t('Cases'))}
-                {navItem('labs', t('Lab map'), <Beaker size={17} aria-hidden="true" />, ['labs', 'lab'], t('Labs'))}
-                {navItem('progress', t('Progress'), <Trophy size={17} aria-hidden="true" />)}
-                {navItem('results', t('Lab results'), <ClipboardList size={17} aria-hidden="true" />, ['results'], t('Results'))}
-                {navItem('profile', t('Learning settings'), <SettingsIcon size={17} aria-hidden="true" />, ['profile'], t('Settings'))}
-                {navItem('about', t('About & demo guide'), <BookOpen size={17} aria-hidden="true" />, ['about'], t('Guide'))}
+                {primaryStudentNav()}
+                {secondaryStudentNav}
               </>
             )}
         </nav>
@@ -268,7 +314,8 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
               <Menu size={18} aria-hidden="true" /><b>{t('Menu')}</b>
             </button>
             {menuOpen && (
-              <div className="guest-popover" id="guest-menu" role="group" aria-label={t('Guest options')} ref={popoverRef}>
+              <div className="guest-popover" id="guest-menu" role="group" aria-label={t('Guest options')} ref={popoverRef} style={{ maxHeight: menuHeight }}>
+                {!teacher && <nav className="game-secondary-nav" aria-label={t('More sections')}>{secondaryStudentNav}</nav>}
                 {guestActions}
                 <button type="button" className="popover-close" onClick={() => { setMenuOpen(false); menuButtonRef.current?.focus(); }}>{t('Close')}</button>
               </div>
@@ -287,9 +334,10 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
               <button type="button" aria-disabled={banner.retrying || undefined} aria-busy={banner.retrying} onClick={() => { retryPressed.current = true; banner.retry(); }}>{banner.retrying ? t('Retrying…') : t('Retry')}</button>
             </div>
           )}
-          {error && <div role="alert" className="error"><X size={16} aria-hidden="true" />{error}<button type="button" onClick={() => { focusPage(); clearError(); }}>{t('Dismiss')}</button></div>}
+          {error && <div ref={errorRef} role="alert" tabIndex={-1} className="error"><X size={16} aria-hidden="true" />{error}<button type="button" onClick={() => { focusPage(); clearError(); }}>{t('Dismiss')}</button></div>}
           {children}
         </main>
+        {!teacher && <nav className="game-primary-nav" aria-label={t('Game navigation')}>{primaryStudentNav(true)}</nav>}
       </div>
     </div>
   );

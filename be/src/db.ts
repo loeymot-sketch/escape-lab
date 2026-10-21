@@ -248,6 +248,96 @@ const MIGRATIONS: string[] = [
     WHERE lower(email) LIKE '%@demo.escape-lab.app'
       AND password_hash = (SELECT password_hash FROM users WHERE lower(email) = 'claire.moreau@demo.escape-lab.app');
   `,
+  // Teacher Studio: rooms written by teachers, their uploaded pictures, and the attempts on them (docs/superpowers/specs/2026-10-21-teacher-studio-design.md).
+  // An attempt keeps the room document it started with (doc_json), so editing a published room never changes a running attempt or a past result.
+  `
+  CREATE TABLE media (
+    id TEXT PRIMARY KEY,
+    owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    mime TEXT NOT NULL CHECK (mime IN ('image/png','image/jpeg','image/webp','image/gif')),
+    width INTEGER NOT NULL CHECK (width > 0),
+    height INTEGER NOT NULL CHECK (height > 0),
+    size INTEGER NOT NULL CHECK (size > 0),
+    name TEXT NOT NULL DEFAULT '',
+    bytes BLOB NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX idx_media_owner ON media(owner_id, created_at);
+  CREATE TABLE rooms (
+    id TEXT PRIMARY KEY,
+    teacher_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published','archived')),
+    version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
+    doc_json TEXT NOT NULL,
+    showcase INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    published_at INTEGER
+  );
+  CREATE INDEX idx_rooms_teacher ON rooms(teacher_id, updated_at);
+  CREATE TABLE room_classes (
+    room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    PRIMARY KEY (room_id, class_id)
+  );
+  CREATE INDEX idx_room_classes_class ON room_classes(class_id);
+  CREATE TABLE room_attempts (
+    id TEXT PRIMARY KEY,
+    room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    room_version INTEGER NOT NULL,
+    doc_json TEXT NOT NULL,
+    salt TEXT NOT NULL,
+    order_json TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('in_progress','vault','completed','timeout')),
+    current INTEGER NOT NULL DEFAULT 0 CHECK (current >= 0),
+    started_at INTEGER NOT NULL,
+    completed_at INTEGER,
+    score INTEGER NOT NULL DEFAULT 0 CHECK (score >= 0),
+    max_score INTEGER NOT NULL CHECK (max_score >= 0),
+    correct INTEGER NOT NULL DEFAULT 0,
+    wrong_total INTEGER NOT NULL DEFAULT 0 CHECK (wrong_total >= 0),
+    hints_total INTEGER NOT NULL DEFAULT 0 CHECK (hints_total >= 0),
+    traps_total INTEGER NOT NULL DEFAULT 0 CHECK (traps_total >= 0),
+    vault_tries INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX idx_room_attempts_room ON room_attempts(room_id, status);
+  CREATE INDEX idx_room_attempts_user ON room_attempts(user_id, room_id);
+  CREATE UNIQUE INDEX uq_room_attempt_active ON room_attempts(user_id, room_id) WHERE status IN ('in_progress','vault');
+  CREATE TABLE room_answers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    attempt_id TEXT NOT NULL REFERENCES room_attempts(id) ON DELETE CASCADE,
+    question_id TEXT NOT NULL,
+    correct INTEGER NOT NULL CHECK (correct IN (0,1)),
+    trap INTEGER NOT NULL CHECK (trap IN (0,1)),
+    fraction REAL NOT NULL,
+    response_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX idx_room_answers_attempt ON room_answers(attempt_id, question_id);
+  CREATE TABLE room_hints (
+    attempt_id TEXT NOT NULL REFERENCES room_attempts(id) ON DELETE CASCADE,
+    question_id TEXT NOT NULL,
+    level INTEGER NOT NULL CHECK (level >= 1),
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (attempt_id, question_id, level)
+  );
+  `,
+  // Teacher rooms earn XP (owner decision, 2026-10-21): the best score per room counts like the best score per mission, and every improvement
+  // is an xp_events row (mission_id 'room:<id>') for the weekly leaderboard. No foreign key to rooms: XP a student earned outlives a deleted room.
+  `
+  CREATE TABLE room_best (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    room_id TEXT NOT NULL,
+    best_score INTEGER NOT NULL CHECK (best_score >= 0),
+    best_attempt_id TEXT NOT NULL,
+    completions INTEGER NOT NULL,
+    first_completed_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, room_id)
+  );
+  ALTER TABLE room_attempts ADD COLUMN xp_awarded INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 export type DB = DatabaseSync;

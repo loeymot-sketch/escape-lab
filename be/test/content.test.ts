@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LABS, MISSIONS, STANDARD_LAB_SLUGS, exitCode, fragmentSlots, missionsOf } from '../src/content.ts';
-import { checkResponse } from '../src/engines.ts';
+import { checkResponse, publicStep } from '../src/engines.ts';
 import { correct } from './helpers.ts';
 
 test('content catalogue matches the MVP spec', () => {
@@ -64,6 +64,29 @@ test('malformed answers are rejected with a validation error, never treated as w
   assert.throws(() => checkResponse(mt, { pairs: { 'pink-mac': 'ecoli', 'beta-hemo': 'ecoli', swarm: 'proteus', green: 'pseudo' } }), /once/);
 });
 
+test('guided point observations require every zone and keep coordinates server-side', () => {
+  const step = {
+    id: 'multi-point-fixture', kind: 'point' as const, competency: 'BIO', prompt: 'Observe both markers',
+    data: { pointTargets: [{ id: 'index', label: 'Specimen index' }, { id: 'result', label: 'Affected result' }] },
+    key: { kind: 'point' as const, x: 20, y: 20, r: 5, targets: [
+      { id: 'index', x: 20, y: 20, r: 5, selection: 'Specimen index' }, { id: 'result', x: 70, y: 70, r: 5, selection: 'Affected result' },
+    ] }, explanation: 'A sufficiently long explanation for the multi-observation fixture.', recheck: 'Recheck both observations carefully.', hints: ['Start with the specimen index.'],
+  };
+  assert.deepEqual(checkResponse(step, { points: { index: { x: 20, y: 20 }, result: { x: 70, y: 70 } } }), { correct: true, progress: { correct: 2, total: 2 } });
+  assert.deepEqual(checkResponse(step, { points: { index: { x: 20, y: 20 }, result: { x: 0, y: 0 } } }), { correct: false, progress: { correct: 1, total: 2 } });
+  assert.deepEqual(checkResponse(step, { points: { index: { x: 20, y: 20 } }, selections: { result: 'Affected result' } }), { correct: true, progress: { correct: 2, total: 2 } });
+  assert.deepEqual(checkResponse(step, { points: { index: { x: 20, y: 20 } }, selections: { result: 'Wrong result' } }), { correct: false, progress: { correct: 1, total: 2 } });
+  for (const response of [{ points: { index: { x: 20, y: 20 } } }, { points: { index: { x: 20, y: 20 }, result: { x: 101, y: 0 } } }, { points: { index: { x: 20, y: 20 }, result: { x: 70, y: 70 }, extra: { x: 1, y: 1 } } }]) {
+    assert.throws(() => checkResponse(step, response), /points|point/);
+  }
+  assert.throws(() => checkResponse(step, { points: { index: { x: 20, y: 20 } }, selections: { index: 'Specimen index', result: 'Affected result' } }), /exactly once/);
+  const publicView = publicStep(step, 0, 1);
+  assert.deepEqual(publicView.pointTargets, step.data.pointTargets);
+  assert.equal(JSON.stringify(publicView).includes('selection'), false);
+  assert.equal(JSON.stringify(publicView).includes('20'), false);
+  assert.equal(JSON.stringify(publicView).includes('70'), false);
+});
+
 test('image hotspots sit on the visible feature of the shipped artwork (percent of the natural image)', () => {
   // Landmarks measured on the artwork files in web/src/assets, in artwork pixels.
   const artwork: Record<string, { w: number; h: number; feature: { x: number; y: number }; what: string }> = {
@@ -82,4 +105,32 @@ test('image hotspots sit on the visible feature of the shipped artwork (percent 
     assert.ok(k.r >= 4 && k.r <= 8, `${s.id} hotspot radius is a fair target`);
   }
   assert.notEqual(points[0]!.data.image!.asset, points[1]!.data.image!.asset, 'each point mission has its own artwork');
+});
+
+test('every guided visual step keeps public labels and private targets in exact one-to-one parity', () => {
+  const visualSteps = MISSIONS.flatMap((mission) => mission.steps).filter((step) => step.key.kind === 'point');
+  for (const step of visualSteps) {
+    assert.ok(step.data.image?.asset, `${step.id} needs an image asset`);
+    // Point keys are the only ones with targets; the single-point assertion below still checks that no other key carries them.
+    const key = step.key as { kind: string; targets?: { id: string; x: number; y: number; r: number; selection?: string }[] };
+    const labels = step.data.pointTargets;
+    if (labels) {
+      assert.ok(key.targets, `${step.id} public zones require private targets`);
+      assert.equal(labels.length, key.targets!.length, `${step.id} public/private zone count`);
+      assert.equal(new Set(labels.map((target) => target.id)).size, labels.length, `${step.id} public zone ids are unique`);
+      assert.deepEqual(labels.map((target) => target.id).sort(), key.targets!.map((target) => target.id).sort(), `${step.id} public/private zone ids match`);
+      for (const target of key.targets!) {
+        assert.ok(Number.isFinite(target.x) && Number.isFinite(target.y) && Number.isFinite(target.r), `${step.id}/${target.id} has finite geometry`);
+        assert.ok(target.r > 0 && target.r <= 10, `${step.id}/${target.id} has a bounded radius`);
+        assert.ok(target.x - target.r >= 0 && target.x + target.r <= 100 && target.y - target.r >= 0 && target.y + target.r <= 100, `${step.id}/${target.id} stays inside the artwork`);
+      }
+    } else {
+      assert.equal(key.targets, undefined, `${step.id} single-point content must not have hidden multi-zone targets`);
+    }
+    const publicView = publicStep(step, 0, 1);
+    const serialized = JSON.stringify(publicView);
+    assert.equal(serialized.includes('selection'), false, `${step.id} does not publish semantic corrections`);
+    assert.equal(serialized.includes('"x"'), false, `${step.id} does not publish x coordinates`);
+    assert.equal(serialized.includes('"y"'), false, `${step.id} does not publish y coordinates`);
+  }
 });

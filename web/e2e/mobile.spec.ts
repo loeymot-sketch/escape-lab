@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { ARTWORK, DECISION, apiCall, freshStudent, openAs, caseStatus, clickArtwork, completeLabViaApi, completeMissionViaApi, homeHeading, moveContent, openAttemptAt, openFaculty, openHome, prepareContentStatus, resetDemo, sessionToken, startMissionViaUi, statusPill, submit } from './support/helpers';
+import { navigateSection, ARTWORK, DECISION, apiCall, freshStudent, openAs, caseStatus, clickArtwork, completeLabViaApi, completeMissionViaApi, homeHeading, moveContent, openAttemptAt, openFaculty, openHome, prepareContentStatus, resetDemo, sessionToken, startMissionViaUi, statusPill, submit } from './support/helpers';
 import { auditPage } from './support/audit';
 
 // Runs only in the "mobile-iphone13" project: the iPhone 13 descriptor (390x844, DPR 3, touch, mobile UA).
@@ -9,7 +9,7 @@ const noOverflow = async (page: Page, label: string) => {
   expect(metrics.scroll, `${label} overflows horizontally`).toBeLessThanOrEqual(metrics.client);
 };
 const menuButton = (page: Page) => page.getByRole('button', { name: 'Guest options' });
-const tapNav = async (page: Page, name: string) => { await page.getByRole('button', { name, exact: true }).tap(); };
+const tapNav = (page: Page, name: string) => navigateSection(page, name, true);
 
 test.describe('iPhone 13 profile', () => {
   test('the device really is a touch phone', async ({ page, isMobile, hasTouch }) => {
@@ -24,7 +24,7 @@ test.describe('iPhone 13 profile', () => {
   test('every student page fits the screen and passes axe', async ({ page }) => {
     await resetDemo(page);
     await noOverflow(page, 'dashboard');
-    for (const [name, heading] of [['Lab map', 'Laboratory map'], ['Progress', 'Progress vault'], ['Lab results', 'Lab results'], ['Learning settings', 'Learning settings']] as const) {
+    for (const [name, heading] of [['Lab map', 'Laboratory map'], ['Vault', 'Progress vault'], ['Badges', 'Milestones'], ['Leaderboard', 'Leaderboard'], ['Lab results', 'Lab results'], ['Learning settings', 'Learning settings']] as const) {
       await tapNav(page, name);
       await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
       await expect(page.getByRole('status')).toHaveCount(0);
@@ -113,7 +113,7 @@ test.describe('iPhone 13 profile', () => {
     await tapNav(page, 'Lab map');
     await page.getByRole('button', { name: 'Review Hematology Lab' }).tap();
     await page.getByRole('button', { name: 'Replay Blood Smear Code' }).tap();
-    await expect(page.getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
+    await expect(page.locator('.player-title').getByText('CASE FILE · Hematology', { exact: true })).toBeVisible();
     await noOverflow(page, 'mission');
     await expect(page.locator('.mission-disclaimer')).toHaveText('Educational scenario — not clinical guidance');
     const box = (await page.locator('.scientific-image').boundingBox())!;
@@ -144,16 +144,16 @@ test.describe('iPhone 13 profile', () => {
   test('loading, error and result states fit the screen', async ({ page }) => {
     await openHome(page);
     await page.route('**/api/vault', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: { code: 'internal_error', message: 'Temporary outage' } }) }));
-    await tapNav(page, 'Progress');
+    await tapNav(page, 'Vault');
     await expect(page.getByRole('alert')).toContainText('Temporary outage');
     await noOverflow(page, 'error panel');
   });
 });
 
 test.describe('phone polish', () => {
-  test('the section navigation wraps: every section is visible inside the screen, in keyboard order', async ({ page }) => {
+  test('three game sections share one bottom row; secondary sections remain reachable in keyboard order', async ({ page }) => {
     await resetDemo(page);
-    const names = ['Investigations', 'Lab map', 'Progress', 'Lab results', 'Learning settings', 'About & demo guide'];
+    const names = ['Rooms', 'Vault', 'Badges'];
     const width = await page.evaluate(() => window.innerWidth);
     const tops = new Set<number>();
     for (const name of names) {
@@ -164,10 +164,17 @@ test.describe('phone polish', () => {
       expect(box.height, name).toBeGreaterThanOrEqual(44);
       tops.add(Math.round(box.y));
     }
-    expect(tops.size, 'the items wrap onto more than one row instead of scrolling sideways').toBeGreaterThan(1);
-    expect(await page.locator('nav').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    expect(tops.size, 'the three game items occupy one row').toBe(1);
+    expect(await page.locator('.game-primary-nav').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     await page.getByRole('button', { name: names[0]!, exact: true }).focus();
     for (const name of names.slice(1)) {
+      await page.keyboard.press('Tab');
+      await expect(page.getByRole('button', { name, exact: true })).toBeFocused();
+    }
+    await menuButton(page).tap();
+    const secondary = ['Lab map', 'Teacher rooms', 'Leaderboard', 'Lab results', 'Learning settings', 'About & demo guide'];
+    await page.getByRole('button', { name: secondary[0]!, exact: true }).focus();
+    for (const name of secondary.slice(1)) {
       await page.keyboard.press('Tab');
       await expect(page.getByRole('button', { name, exact: true })).toBeFocused();
     }
@@ -321,7 +328,7 @@ test.describe('phone audit: tap targets and type size', () => {
   test('student pages', async ({ page }) => {
     await resetDemo(page);
     await expectClean(page, 'dashboard');
-    for (const [name, heading] of [['Lab map', 'Laboratory map'], ['Progress', 'Progress vault'], ['Lab results', 'Lab results'], ['Learning settings', 'Learning settings']] as const) {
+    for (const [name, heading] of [['Lab map', 'Laboratory map'], ['Vault', 'Progress vault'], ['Badges', 'Milestones'], ['Leaderboard', 'Leaderboard'], ['Lab results', 'Lab results'], ['Learning settings', 'Learning settings']] as const) {
       await tapNav(page, name);
       await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
       await page.waitForLoadState('networkidle');
@@ -354,11 +361,14 @@ test.describe('phone audit: tap targets and type size', () => {
     const token = await freshStudent();
     await completeLabViaApi(token, 'hematology', false);
     await openAs(page, token);
-    await tapNav(page, 'Progress');
+    await tapNav(page, 'Vault');
     await expect(page.getByRole('button', { name: 'Unlock' })).toBeVisible();
     await page.waitForLoadState('networkidle');
     await expectClean(page, 'vault with unlock form');
     expect((await page.getByRole('button', { name: 'Unlock' }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await tapNav(page, 'Badges');
+    await expect(page.locator('.badge-list')).toBeVisible();
+    await expectClean(page, 'badge list');
   });
 
   test('faculty pages', async ({ page }) => {
@@ -421,6 +431,7 @@ test.describe('About & demo guide on the phone', () => {
   test('the student phone menu reaches it; it fits the screen, passes axe and every control is a 44px target', async ({ page }) => {
     await resetDemo(page);
     const width = await page.evaluate(() => window.innerWidth);
+    await menuButton(page).tap();
     const box = (await page.getByRole('button', { name: 'About & demo guide', exact: true }).boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(width);
@@ -428,7 +439,10 @@ test.describe('About & demo guide on the phone', () => {
     await tapNav(page, 'About & demo guide');
     await expect(aboutHeading(page)).toBeVisible();
     await expect(aboutHeading(page)).toBeFocused();
+    await expect(menuButton(page)).toHaveAttribute('aria-expanded', 'false');
+    await menuButton(page).tap();
     await expect(page.getByRole('button', { name: 'About & demo guide', exact: true })).toHaveAttribute('aria-current', 'page');
+    await page.getByRole('button', { name: 'Close', exact: true }).tap();
     await expect(page).toHaveTitle('About & demo guide · Escape Lab');
     await noOverflow(page, 'about');
     expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);

@@ -3,6 +3,7 @@ export default {
   "Peripheral blood smear, 100x oil. Hemolytic anemia work-up, post-mechanical valve.": "Frottis sanguin périphérique, 100x à l'huile à immersion. Bilan d'une anémie hémolytique, après pose d'une valve mécanique.",
   "Click the schistocyte (fragmented red cell).": "Cliquez sur le schistocyte (hématie fragmentée).",
   "Stylised blood smear (illustrative)": "Frottis sanguin stylisé (illustratif)",
+  "Illustrative peripheral blood smear with several red-cell forms on a pale field. Inspect the field and select the finding requested in the question; the artwork is not a validated specimen.": "Frottis sanguin périphérique illustratif présentant plusieurs formes d'hématies sur un champ clair. Observez le champ et sélectionnez l'élément demandé dans la question ; cette image n'est pas un prélèvement validé.",
   "Schistocytes are irregular red cell fragments with sharp edges and no central pallor. They point to mechanical fragmentation of red cells.": "Les schistocytes sont des fragments irréguliers d'hématies, aux bords tranchants et sans pâleur centrale. Ils orientent vers une fragmentation mécanique des hématies.",
   "Look for fragments, not whole cells: sharp angles and no central pallor.": "Cherchez des fragments, et non des cellules entières : angles vifs et absence de pâleur centrale.",
   "Ignore the round cells with central pallor.": "Ignorez les cellules rondes avec pâleur centrale.",

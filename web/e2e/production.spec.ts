@@ -37,7 +37,7 @@ test.describe('production bundle', () => {
     const domContentLoaded = await page.evaluate(() => (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming).domContentLoadedEventEnd);
     expect(domContentLoaded).toBeLessThan(3_000);
 
-    expect([...apiOrigins]).toEqual(['http://localhost:3000']);
+    expect([...apiOrigins]).toEqual([`http://localhost:${process.env.E2E_API_PORT ?? '3000'}`]);
     expect(problems).toEqual([]);
   });
 
@@ -70,7 +70,7 @@ test.describe('production bundle', () => {
 
   test('a bundle built without VITE_API_URL refuses to start with a clear alert and calls no API', async ({ page }) => {
     const calls: string[] = [];
-    page.on('request', (request) => { if (request.url().includes('/api/') || request.url().includes('localhost:3000')) calls.push(request.url()); });
+    page.on('request', (request) => { if (request.url().includes('/api/') || request.url().includes(`localhost:${process.env.E2E_API_PORT ?? '3000'}`)) calls.push(request.url()); });
     const unconfiguredPort = Number(process.env.E2E_UNCONFIGURED_PORT) || 4174;
     await page.goto(`http://127.0.0.1:${unconfiguredPort}/`);
     const alert = page.getByRole('alert');

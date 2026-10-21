@@ -1,17 +1,49 @@
-import { ArrowRight, Beaker, Check, ChevronRight, Clock3, Hourglass, LockKeyhole, Sparkles, Trophy } from 'lucide-react';
+import { ArrowRight, Beaker, Check, ChevronRight, Clock3, DoorOpen, Droplet, FlaskConical, Hourglass, LockKeyhole, Microscope, Sparkles, Trophy } from 'lucide-react';
 import { createElement } from 'react';
-import hematologyArt from '../assets/lab-hematology.webp';
-import microbiologyArt from '../assets/lab-microbiology.webp';
-import biochemistryArt from '../assets/lab-biochemistry.webp';
-import vaultArt from '../assets/progression-vault.webp';
+import hematologyArt from '../assets/lab-hematology-door.webp';
+import microbiologyArt from '../assets/lab-microbiology-door.webp';
+import biochemistryArt from '../assets/lab-biochemistry-door.webp';
+import masterArt from '../assets/lab-master.webp';
+import masterOpenArt from '../assets/lab-master-open.webp';
 import { api } from '../lib/api';
 import { formatInt, plural, t } from '../i18n';
-import { engineLabel, outOf } from '../lib/labels';
+import { engineLabel, masteryLabel, outOf } from '../lib/labels';
 import { allInvestigationsDone, dashboardFigures, normalizeDashboard, normalizeLabLobby, normalizeLabs, type Dashboard as DashboardData, type Lab, type LabLobby, type LobbyMission } from '../lib/student';
 import { PageIntro, Stat, tone, useDocumentTitle, useNav } from '../ui/common';
 import { EmptyPanel, Loaded, useLoad } from '../ui/state';
 
 const loadLabs = async () => normalizeLabs(await api('/labs'));
+
+/** Teacher rooms by discipline, for the dashboard and the lab map. Never blocks those pages: a failure just hides the teaser. */
+type RoomTeaser = { total: number; open: number; byDiscipline: Record<string, number> };
+async function loadRoomTeaser(): Promise<RoomTeaser> {
+  try {
+    const raw = await api('/rooms') as { rooms?: Array<{ discipline?: unknown; best?: unknown; activeAttemptId?: unknown }> };
+    const rooms = Array.isArray(raw?.rooms) ? raw.rooms : [];
+    const byDiscipline: Record<string, number> = {};
+    for (const r of rooms) if (typeof r.discipline === 'string') byDiscipline[r.discipline] = (byDiscipline[r.discipline] ?? 0) + 1;
+    return { total: rooms.length, open: rooms.filter((r) => r.best === null || r.activeAttemptId).length, byDiscipline };
+  } catch {
+    return { total: 0, open: 0, byDiscipline: {} };
+  }
+}
+
+function TeacherRoomsTeaser() {
+  const nav = useNav();
+  const { state } = useLoad(loadRoomTeaser, []);
+  if (state.phase !== 'ready' || state.data.total === 0) return null;
+  const { total, open } = state.data;
+  return (
+    <section className="teacher-rooms-teaser" aria-labelledby="teacher-rooms-title">
+      <div>
+        <div className="eyebrow">{t('FROM YOUR TEACHERS')}</div>
+        <h2 id="teacher-rooms-title">{open === 1 ? t('One teacher room is waiting for you') : open > 1 ? t('{n} teacher rooms waiting for you', { n: open }) : t('Every teacher room is played')}</h2>
+        <p>{t('Escape rooms and exams written by your teachers ({n} published for your classes).', { n: total })}</p>
+      </div>
+      <button type="button" className="ghost" onClick={() => nav.go('rooms')}>{t('Open the teacher rooms')} <ArrowRight size={16} aria-hidden="true" /></button>
+    </section>
+  );
+}
 
 export function Dashboard() {
   useDocumentTitle('Mission control');
@@ -60,6 +92,18 @@ function DashboardView({ dashboard, labs }: { dashboard: DashboardData; labs: La
         <div><div className="eyebrow">{t('YOUR NEXT STEP')}</div><h2>{t(cta.headline)}</h2></div>
         <button type="button" className="primary" disabled={nav.busy} aria-busy={nav.starting !== null} onClick={cta.run}>{nav.starting !== null && target?.kind !== 'unlock' ? t('Starting…') : <>{t(cta.label)} <ArrowRight size={17} aria-hidden="true" /></>}</button>
       </section>
+      <LevelStrip level={dashboard.user.level} xp={dashboard.user.xp} progress={dashboard.user.levelProgress} />
+      {dashboard.recommended && dashboard.recommended.missionId !== target?.missionId && (
+        <section className="dashboard-recommended" aria-labelledby="recommended-title">
+          <div>
+            <div className="eyebrow">{t('RECOMMENDED FOR YOU')}</div>
+            <h2 id="recommended-title">{t(dashboard.recommended.title)}</h2>
+            <p>{t(dashboard.recommended.reason)} {t('Laboratory: {lab}.', { lab: t(labs.find((l) => l.slug === dashboard.recommended!.labSlug)?.name ?? dashboard.recommended.labSlug) })}</p>
+          </div>
+          <button type="button" className="ghost" disabled={nav.busy} aria-busy={nav.starting === dashboard.recommended.missionId} onClick={() => nav.startMission(dashboard.recommended!.missionId)}>{nav.starting === dashboard.recommended.missionId ? t('Starting…') : <>{t('Start {title}', { title: t(dashboard.recommended.title) })} <ArrowRight size={16} aria-hidden="true" /></>}</button>
+        </section>
+      )}
+      <TeacherRoomsTeaser />
       <div className="stats dashboard-stats">
         <Stat icon={<Beaker />} label={t('Missions completed')} value={figures.missions.value} detail={figures.missions.detail} />
         <Stat icon={<Sparkles />} label={t('Labs cleared')} value={figures.labs.value} detail={figures.labs.detail} />
@@ -81,13 +125,29 @@ function DashboardView({ dashboard, labs }: { dashboard: DashboardData; labs: La
   );
 }
 
-export function LabCard({ lab, level }: { lab: Lab; level: 2 | 3 }) {
+/** The learner's level and the XP still needed for the next one, exactly as the server computed them (presentation only). */
+export function LevelStrip({ level, xp, progress }: { level: number; xp: number; progress: { into: number; size: number } }) {
+  const left = progress.size - progress.into;
+  const pct = progress.size > 0 ? (100 * progress.into) / progress.size : 0;
+  return (
+    <section className="level-strip">
+      <div className="level-badge"><span>{t('LEVEL')}</span><b>{formatInt(level)}</b></div>
+      <div className="level-body">
+        <div className="level-head"><b>{formatInt(xp)} XP</b><span>{t('{left} XP to level {next}', { left: formatInt(left), next: formatInt(level + 1) })}</span></div>
+        <div className="level-bar" role="progressbar" aria-label={t('Level progress')} aria-valuemin={0} aria-valuemax={progress.size} aria-valuenow={progress.into} aria-valuetext={t('{into} of {size} XP into level {level}', { into: formatInt(progress.into), size: formatInt(progress.size), level: formatInt(level) })}><i style={{ width: `${pct}%` }} /></div>
+      </div>
+    </section>
+  );
+}
+
+export function LabCard({ lab, level, teacherRooms = 0 }: { lab: Lab; level: 2 | 3; teacherRooms?: number }) {
   const nav = useNav();
   const soon = lab.state === 'coming_soon';
   const locked = lab.state === 'locked' || soon;
   const stateLabel = lab.state === 'completed' ? t('CLEARED') : lab.state === 'locked' ? t('LOCKED') : t('ACTIVE');
-  const art = lab.discipline === 'hematology' ? hematologyArt : lab.discipline === 'microbiology' ? microbiologyArt : lab.discipline === 'biochemistry' ? biochemistryArt : lab.discipline === 'master' ? vaultArt : null;
+  const art = lab.discipline === 'hematology' ? hematologyArt : lab.discipline === 'microbiology' ? microbiologyArt : lab.discipline === 'biochemistry' ? biochemistryArt : lab.discipline === 'master' ? locked ? masterArt : masterOpenArt : null;
   const slotCount = Math.min(4, lab.fragments.total);
+  const Emblem = lab.discipline === 'hematology' ? Droplet : lab.discipline === 'microbiology' ? Microscope : lab.discipline === 'biochemistry' ? FlaskConical : Beaker;
   return (
     <article className={`lab-card ${tone(lab.discipline)} ${locked ? 'locked' : ''}`}>
       <div className="lab-card-scene" aria-hidden="true">
@@ -96,7 +156,8 @@ export function LabCard({ lab, level }: { lab: Lab; level: 2 | 3 }) {
           <span className="lab-index">{String(lab.ordinal).padStart(2, '0')}</span>
           {soon ? null : locked ? <LockKeyhole size={16} /> : <span className="lab-state">{stateLabel}</span>}
         </div>
-        <div className="lab-emblem">{soon ? <Hourglass size={22} /> : <Beaker size={24} />}</div>
+        <div className="lab-emblem">{soon ? <Hourglass size={22} /> : <Emblem size={24} />}</div>
+        {art && lab.discipline !== 'master' && <span className="lab-door-nameplate">{t(lab.name.replace(' Lab', ''))}</span>}
       </div>
       <div className="lab-card-content">
         {createElement(`h${level}`, null, t(lab.name.replace(' Lab', '')))}
@@ -110,7 +171,10 @@ export function LabCard({ lab, level }: { lab: Lab; level: 2 | 3 }) {
         {lab.lockedReason && <p className="lab-meta">{t(lab.lockedReason)}</p>}
         <div className="lab-card-foot">
           {lab.state === 'coming_soon'
-            ? <span className="soon">{t('Coming soon')}</span>
+            ? <>
+              <span className="soon">{t('Coming soon')}</span>
+              {teacherRooms > 0 && <button type="button" onClick={() => nav.go('rooms')} aria-label={teacherRooms === 1 ? t('One teacher room already open for {name}', { name: t(lab.name) }) : t('{n} teacher rooms already open for {name}', { n: teacherRooms, name: t(lab.name) })}>{teacherRooms === 1 ? t('One teacher room open') : t('{n} teacher rooms open', { n: teacherRooms })} <ArrowRight size={16} aria-hidden="true" /></button>}
+            </>
             : lab.state === 'locked'
               ? <span><LockKeyhole size={15} aria-hidden="true" /> {t('Locked')}</span>
               : <button type="button" disabled={nav.busy} onClick={() => nav.openLab(lab.slug)} aria-label={lab.state === 'completed' ? t('Review {name}', { name: t(lab.name) }) : t('Enter {name}', { name: t(lab.name) })}>{lab.state === 'completed' ? t('Review lab') : t('Enter lab')} <ArrowRight size={16} aria-hidden="true" /></button>}
@@ -123,6 +187,8 @@ export function LabCard({ lab, level }: { lab: Lab; level: 2 | 3 }) {
 export function LabMap() {
   useDocumentTitle('Lab map');
   const { state, reload } = useLoad(loadLabs, []);
+  const teaser = useLoad(loadRoomTeaser, []);
+  const roomsFor = (discipline: string) => (teaser.state.phase === 'ready' ? teaser.state.data.byDiscipline[discipline] ?? 0 : 0);
   return (
     <>
       <PageIntro eyebrow={t('THE ESCAPE ROUTE')} title={t('Laboratory map')}>
@@ -133,12 +199,47 @@ export function LabMap() {
           ? <EmptyPanel title={t('No laboratories yet')}>{t('The server returned an empty laboratory map.')}</EmptyPanel>
           : (
             <>
-              <div className="map-grid">{labs.map((lab) => <LabCard lab={lab} level={2} key={lab.slug} />)}</div>
+              <div className="map-grid">{labs.map((lab) => <LabCard lab={lab} level={2} key={lab.slug} teacherRooms={lab.state === 'coming_soon' ? roomsFor(lab.discipline) : 0} />)}</div>
               <div className="map-note"><LockKeyhole size={16} aria-hidden="true" /><span><b>{t('More disciplines are in development.')}</b> {t('New labs join after scientific review.')}</span></div>
             </>
           )}
       </Loaded>
     </>
+  );
+}
+
+/** The laboratory as a route: one stop per mission (state and server mastery), the code fragments, the exit. Server data only. */
+type RouteMission = Pick<LobbyMission, 'id' | 'ordinal' | 'title' | 'state' | 'mastery'> & Partial<Pick<LobbyMission, 'inProgress'>>;
+
+export function RouteStrip({ missions, vault }: { missions: RouteMission[]; vault: LabLobby['vault'] }) {
+  const exit = vault === null ? null : vault.exited ? 'open' : vault.complete ? 'ready' : 'sealed';
+  const stopWord = (m: Pick<LobbyMission, 'state' | 'mastery'> & Partial<Pick<LobbyMission, 'inProgress'>>) => (m.inProgress ? t('In progress') : m.state === 'completed' ? (t(masteryLabel(m.mastery)) || t('Completed')) : m.state === 'locked' ? t('Locked') : m.state === 'current' ? t('In progress') : t('Ready'));
+  return (
+    <section className="route-strip" aria-label={t('Laboratory route')}>
+      <ol className="route-missions">
+        {missions.map((m) => (
+          <li key={m.id} className="route-stop" data-state={m.inProgress ? 'current' : m.state} data-mastery={m.inProgress ? undefined : m.mastery ?? undefined}>
+            <span className="route-dot" aria-hidden="true">{m.inProgress ? String(m.ordinal).padStart(2, '0') : m.state === 'completed' ? <Check size={12} /> : String(m.ordinal).padStart(2, '0')}</span>
+            <span className="route-label"><span>{t(m.title)}</span><small>{stopWord(m)}</small></span>
+          </li>
+        ))}
+      </ol>
+      {vault && (
+        <>
+          <span className="route-link" aria-hidden="true" />
+          <div className="route-fragments" role="list" aria-label={t('Code fragments')}>
+            {vault.slots.map((digit, i) => (
+              <span role="listitem" key={i} className={`route-fragment${digit === null ? '' : ' found'}`}>
+                <span className="sr-only">{digit === null ? t('Fragment {n}: not found yet', { n: i + 1 }) : `${t('Fragment {n}:', { n: i + 1 })} `}</span>
+                <span aria-hidden={digit === null ? true : undefined}>{digit === null ? '·' : digit}</span>
+              </span>
+            ))}
+          </div>
+          <span className="route-link" aria-hidden="true" />
+          <div className="route-exit" data-exit={exit}><DoorOpen size={16} aria-hidden="true" /><span>{exit === 'open' ? t('Exit open') : exit === 'ready' ? t('Exit ready') : t('Exit sealed')}</span></div>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -174,6 +275,7 @@ function LobbyView({ lobby }: { lobby: LabLobby }) {
       {lobby.state === 'locked' && <EmptyPanel title={t('This laboratory is locked')}>{lobby.lockedReason === undefined ? undefined : t(lobby.lockedReason)}</EmptyPanel>}
       {lobby.missions.length > 0 && (
         <>
+          <RouteStrip missions={lobby.missions} vault={lobby.vault} />
           <div className="stats lobby-stats">
             <Stat icon={<Beaker />} label={t('Missions')} value={outOf(done, lobby.missions.length)} detail={t('Completed in this laboratory')} />
             {lobby.vault && <Stat icon={<Trophy />} label={t('Code fragments')} value={outOf(lobby.vault.slots.filter((s) => s !== null).length, lobby.vault.codeLength)} detail={lobby.vault.exited ? t('Exit unlocked') : lobby.vault.complete ? t('Ready: open the Code Vault') : t('Found by completing missions')} />}
@@ -191,7 +293,7 @@ function LobbyView({ lobby }: { lobby: LabLobby }) {
                       <h3>{t(m.title)}</h3>
                       <p>{t('{engine} · Difficulty: {difficulty} · about {minutes} min', { engine: engineLabel(m.engine), difficulty: t(m.difficulty), minutes: m.estMinutes })}</p>
                       <p>
-                        {m.state === 'completed' ? t('Completed') : m.state === 'locked' ? (m.unlocksWith === undefined ? undefined : t(m.unlocksWith)) : m.inProgress ? t('In progress') : t('Ready')}
+                        {m.inProgress ? t('In progress') : m.state === 'completed' ? <>{t('Completed')}{m.mastery !== null && m.mastery !== 'completed' && <span className={`mastery-chip ${m.mastery}`}>{t(masteryLabel(m.mastery))}</span>}</> : m.state === 'locked' ? (m.unlocksWith === undefined ? undefined : t(m.unlocksWith)) : t('Ready')}
                         {m.bestScore !== null && <> · {t('best score {score} of {max} XP', { score: m.bestScore, max: m.maxScore })}</>}
                       </p>
                     </div>

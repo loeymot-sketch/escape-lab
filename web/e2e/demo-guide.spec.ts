@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { ATTEMPT_KEY, homeHeading, openFaculty, resetDemo, watchProblems } from './support/helpers';
+import { navigateSection, ATTEMPT_KEY, homeHeading, openFaculty, resetDemo, watchProblems } from './support/helpers';
 import { auditPage } from './support/audit';
 
 // The About & demo guide: a static page for both roles, reachable from the section navigation, presentation-ready in 5 to 7 minutes.
@@ -12,7 +12,7 @@ const mainText = (page: Page) => page.locator('main').innerText();
 const VIEWPORTS = [[320, 700], [375, 812], [768, 1024], [1440, 900]] as const;
 
 async function openAbout(page: Page) {
-  await navAbout(page).click();
+  await navigateSection(page, ABOUT);
   await expect(aboutHeading(page)).toBeVisible();
 }
 async function openAboutAsFaculty(page: Page) {
@@ -35,13 +35,13 @@ test.describe('About & demo guide: reach it', () => {
     await expect(navAbout(page)).toBeVisible();
     await openAbout(page);
     await expect(navAbout(page)).toHaveAttribute('aria-current', 'page');
-    await expect(page.locator('nav [aria-current="page"]')).toHaveCount(1);
+    await expect(page.locator('nav [aria-current="page"]:visible')).toHaveCount(1);
     await expect(page).toHaveTitle('About & demo guide · Escape Lab');
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
     await expect(aboutHeading(page)).toBeFocused();
     await expect(page.locator('header .crumb')).toHaveText('About & demo guide');
     // Leaving moves the current-page mark away again.
-    await page.getByRole('button', { name: 'Lab map', exact: true }).click();
+    await navigateSection(page, 'Lab map');
     await expect(navAbout(page)).not.toHaveAttribute('aria-current', 'page');
   });
 
@@ -72,6 +72,7 @@ test.describe('About & demo guide: content', () => {
     expect(text).toContain('qualified biomedical experts or educators');
     expect(text).toContain('All validation so far is local');
     expect(text).toContain('no independent human security or accessibility review');
+    expect(text).toContain('no expert-authored non-visual assessment path');
     expect(text).toContain('Planned, not done');
     expect(text).toContain('Images in this prototype are presented as illustrative training material, not as clinical or diagnostic reference. Their provenance and licensing still have to be documented and reviewed before any teaching use. This is a teaching prototype, not a medical device or diagnostic tool.');
     expect(text).not.toMatch(/production[- ]ready/i);
@@ -82,6 +83,18 @@ test.describe('About & demo guide: content', () => {
     expect(levels[0]).toBe(1);
     levels.reduce((previous, level) => { expect(level - previous, `heading jump ${previous} -> ${level}`).toBeLessThanOrEqual(1); return level; }, 1);
     await expect(page.getByRole('heading', { level: 2 })).toHaveText(['What it is, and what it is not', 'A guided demonstration', 'How quality is assured', 'Scientific validation roadmap']);
+  });
+
+  test('print view keeps the guide content and removes navigation and guest controls', async ({ page }) => {
+    await resetDemo(page);
+    await openAbout(page);
+    await page.emulateMedia({ media: 'print' });
+    await expect(page.locator('.about')).toBeVisible();
+    await expect(page.locator('.app > aside')).toBeHidden();
+    await expect(page.locator('.app-main > header')).toBeHidden();
+    await expect(page.locator('.game-primary-nav')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Reset guest session' })).toBeHidden();
+    await expect(aboutHeading(page)).toBeVisible();
   });
 
   test('lists the eight demonstration steps and five roadmap phases, all of them PLANNED', async ({ page }) => {
@@ -179,7 +192,7 @@ test.describe('About & demo guide: it is static', () => {
     await page.waitForTimeout(600);
     expect(seen.filter((u) => u.includes('/api/')), 'requests issued while on the About page').toEqual([]);
     // Cut the API completely, then open the page from another screen: it renders from the bundle alone.
-    await page.getByRole('button', { name: 'Lab map', exact: true }).click();
+    await navigateSection(page, 'Lab map');
     await expect(page.getByRole('heading', { level: 1, name: 'Laboratory map' })).toBeVisible();
     await page.route('**/api/**', (route) => route.abort('connectionrefused'));
     await openAbout(page);
@@ -369,7 +382,7 @@ test.describe('round 16: About & demo guide wording and layout', () => {
     for (const y of [800, 1800, height]) {
       await page.evaluate((top) => window.scrollTo(0, top), y);
       await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThan(Math.min(y, height - 900) - 5);
-      for (const name of ['Investigations', 'Lab map', 'Learning settings', ABOUT, 'Faculty guest', 'Reset guest session']) await expect(page.getByRole('button', { name, exact: true }), `${name} at scrollY ${y}`).toBeInViewport({ ratio: 1 });
+      for (const name of ['Rooms', 'Lab map', 'Learning settings', ABOUT, 'Faculty guest', 'Reset guest session']) await expect(page.getByRole('button', { name, exact: true }), `${name} at scrollY ${y}`).toBeInViewport({ ratio: 1 });
     }
     await noHorizontalScroll(page, 'sticky sidebar 1440');
     await axeClean(page, 'sticky sidebar 1440');
@@ -387,7 +400,7 @@ test.describe('round 16: About & demo guide wording and layout', () => {
     expect(box.position).toBe('sticky');
     expect(box.client).toBeLessThanOrEqual(box.view);
     await page.evaluate(() => window.scrollTo(0, 1500));
-    for (const name of ['Investigations', 'Lab map', 'Progress', 'Lab results', 'Learning settings', ABOUT]) {
+    for (const name of ['Rooms', 'Lab map', 'Vault', 'Lab results', 'Learning settings', ABOUT]) {
       const button = page.locator('.app > aside nav').getByRole('button', { name, exact: true });
       await button.scrollIntoViewIfNeeded();
       // Browser scroll offsets can land on fractional CSS pixels (e.g. 99.69% visible at DPR 1).

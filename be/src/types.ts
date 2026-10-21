@@ -25,9 +25,10 @@ export interface LabValue {
 
 export interface Option { id: string; label: string }
 export interface Item { id: string; label: string }
+export interface PointTarget { id: string; x: number; y: number; r: number; selection?: string }
 
 export type StepKey =
-  | { kind: 'point'; x: number; y: number; r: number }
+  | { kind: 'point'; x: number; y: number; r: number; targets?: PointTarget[] }
   | { kind: 'choice'; answer: string }
   | { kind: 'order'; order: string[] }
   | { kind: 'match'; pairs: Record<string, string> }
@@ -43,6 +44,8 @@ export interface StepData {
   left?: Item[];
   right?: Item[];
   sample?: { id: string; label: string };
+  /** Labels for guided multi-observation point steps; coordinates remain server-only. */
+  pointTargets?: { id: string; label: string }[];
 }
 
 export interface Step {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAttempt, normalizeAttemptResult, normalizeHint, normalizeMissionAnswer, normalizeStart, normalizeStep } from './attempt';
+import { normalizeAttempt, normalizeAttemptResult, normalizeHint, normalizeMissionAnswer, normalizeMissionResult, normalizeStart, normalizeStep } from './attempt';
 import { attemptView, clone, completedView, expiredView, finalAnswer, hintReply, resultPayload, rightAnswer, steps, wrongAnswer } from './fixtures';
 
 describe('attempt payload normalization', () => {
@@ -227,5 +227,59 @@ describe('audit hardening: a wrong answer is never silently completed with defau
     const bad = resultPayload() as { stats: { accuracyPct: number } };
     bad.stats.accuracyPct = 140;
     expect(() => normalizeAttemptResult(bad)).toThrow('accuracyPct');
+  });
+});
+
+describe('pedagogical fields (server-computed, display only)', () => {
+  const journal = [
+    { ordinal: 1, stepId: 'hem-03-s1', competency: 'Hematology interpretation', state: 'solved', wrong: 1, hints: 0 },
+    { ordinal: 2, stepId: 'hem-03-s2', competency: 'Hematology interpretation', state: 'current', wrong: 0, hints: 1 },
+    { ordinal: 3, stepId: 'hem-03-s3', competency: 'Clinical reasoning', state: 'upcoming', wrong: 0, hints: 0 },
+  ];
+  it('reads the journal and the public competency of the step', () => {
+    const view = { ...attemptView({ ...steps.choice, competency: 'Hematology interpretation' }), journal };
+    const a = normalizeAttempt(view);
+    expect(a.journal).toEqual(journal);
+    expect(a.step?.competency).toBe('Hematology interpretation');
+  });
+  it('defaults to an empty journal and no competency for an older server', () => {
+    const a = normalizeAttempt(attemptView());
+    expect(a.journal).toEqual([]);
+    expect(a.step?.competency).toBeUndefined();
+  });
+  it('refuses a journal row with an unknown state or a negative counter', () => {
+    expect(() => normalizeAttempt({ ...attemptView(), journal: [{ ...journal[0], state: 'done' }] })).toThrow(/journal/);
+    expect(() => normalizeAttempt({ ...attemptView(), journal: [{ ...journal[0], wrong: -1 }] })).toThrow(/journal/);
+  });
+  it('reads the previous best, the step debrief, the competencies and the recommendation of a result when present', () => {
+    const payload = {
+      ...resultPayload(), lab: { slug: 'hematology', exited: false }, fragments: [7, null, null], masterCode: null, previousBest: 150,
+      steps: [{ ordinal: 1, id: 'hem-01-s1', prompt: 'Click the schistocyte (fragmented red cell).', competency: 'Hematology interpretation', wrong: 1, hints: 0, explanation: 'Schistocytes are irregular red cell fragments.' }],
+      competencies: [{ name: 'Hematology interpretation', pct: 66, steps: 1 }], strongest: 'Hematology interpretation', improvement: null,
+      recommended: { missionId: 'mic-01', labSlug: 'microbiology', title: 'Microbe Detective', reason: 'Next mission in an open lab.' },
+    };
+    const r = normalizeAttemptResult(payload);
+    expect(r.previousBest).toBe(150);
+    expect(r.steps).toHaveLength(1);
+    expect(r.steps?.[0]).toMatchObject({ ordinal: 1, wrong: 1, competency: 'Hematology interpretation' });
+    expect(r.competencies?.items[0]).toMatchObject({ name: 'Hematology interpretation', pct: 66 });
+    expect(r.recommended).toEqual(payload.recommended);
+  });
+  it('treats an older stored result without these fields as having none', () => {
+    const r = normalizeAttemptResult({ ...resultPayload(), lab: { slug: 'hematology', exited: false }, fragments: [7, null, null], masterCode: null });
+    expect(r.previousBest).toBeUndefined();
+    expect(r.steps).toBeUndefined();
+    expect(r.competencies).toBeUndefined();
+    expect(r.recommended).toBeUndefined();
+  });
+  it('refuses a debrief step without its explanation', () => {
+    const payload = { ...resultPayload(), lab: { slug: 'hematology', exited: false }, fragments: [7, null, null], masterCode: null, steps: [{ ordinal: 1, id: 'x', prompt: 'p', competency: 'c', wrong: 0, hints: 0 }] };
+    expect(() => normalizeAttemptResult(payload)).toThrow(/steps/);
+    // The embedded answer result carries the same optional fields, vault context included.
+    expect(normalizeMissionResult({ ...resultPayload(), previousBest: null }).previousBest).toBeNull();
+    const embedded = normalizeMissionResult({ ...resultPayload(), lab: { slug: 'hematology', exited: false }, fragments: [7, 4, 2], masterCode: null });
+    expect(embedded.lab).toEqual({ slug: 'hematology', exited: false });
+    expect(embedded.fragments).toEqual([7, 4, 2]);
+    expect(normalizeMissionResult(resultPayload()).lab).toBeUndefined();
   });
 });

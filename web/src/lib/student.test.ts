@@ -229,3 +229,38 @@ describe('POST /demo/reset (R16-B-02)', () => {
     expect(() => normalizeDemoReset(payload)).toThrow(/Invalid server demo reset payload/);
   });
 });
+
+describe('GET /dashboard level progress (display only: the server computes the levels)', () => {
+  it('reads the progress inside the current level as the server sends it', () => {
+    const payload = dashboardPayload();
+    payload.user.levelProgress = { into: 740, size: 3000 };
+    expect(normalizeDashboard(payload).user.levelProgress).toEqual({ into: 740, size: 3000 });
+  });
+  it('refuses a progress beyond its level size, an empty level and a missing block', () => {
+    const beyond = dashboardPayload();
+    beyond.user.levelProgress = { into: 3001, size: 3000 };
+    expect(() => normalizeDashboard(beyond)).toThrow(/levelProgress/);
+    const empty = dashboardPayload();
+    empty.user.levelProgress = { into: 0, size: 0 };
+    expect(() => normalizeDashboard(empty)).toThrow(/levelProgress/);
+    const missing = dashboardPayload() as { user: { levelProgress?: unknown } };
+    delete missing.user.levelProgress;
+    expect(() => normalizeDashboard(missing)).toThrow(/levelProgress/);
+  });
+});
+
+describe('lobby mastery (server-decided)', () => {
+  it('reads the mastery label of each mission and accepts null', () => {
+    const lobby = lobbyPayload();
+    (lobby.missions[0] as Record<string, unknown>).mastery = 'mastered';
+    (lobby.missions[1] as Record<string, unknown>).mastery = null;
+    const l = normalizeLabLobby(lobby);
+    expect(l.missions[0]!.mastery).toBe('mastered');
+    expect(l.missions[1]!.mastery).toBeNull();
+  });
+  it('refuses a mastery word the server never uses', () => {
+    const lobby = lobbyPayload();
+    (lobby.missions[0] as Record<string, unknown>).mastery = 'legendary';
+    expect(() => normalizeLabLobby(lobby)).toThrow(/mastery/);
+  });
+});

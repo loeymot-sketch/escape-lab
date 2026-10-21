@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { ARTWORK, ATTEMPT_KEY, DECISION, HOME_HEADING as HOME, TOKEN_KEY, expireAttemptInDb, apiCall, caseStatus, clickArtwork, completeLabViaApi, freshStudent, homeHeading, json, openAs, outage, patched, prepareContentStatus, resetDemo, serverError, sessionToken, settle, slow, startMissionViaUi, submit, teacherToken } from './support/helpers';
+import { navigateSection, ARTWORK, ATTEMPT_KEY, DECISION, HOME_HEADING as HOME, TOKEN_KEY, expireAttemptInDb, apiCall, caseStatus, clickArtwork, completeLabViaApi, continueStep, freshStudent, homeHeading, json, openAs, outage, patched, prepareContentStatus, resetDemo, serverError, sessionToken, settle, slow, startMissionViaUi, submit, teacherToken } from './support/helpers';
 import { exitCode } from './support/content';
 
 // Regression tests for the adversarial browser audit (VA-02, VA-03, VA-04, VA-05, VA-06, skip link).
@@ -41,15 +41,18 @@ test.describe('adversarial audit fixes', () => {
     await expect(page.locator('#case-prompt')).toBeFocused();
   });
 
-  test('VA-03/VA-04: after a correct answer focus moves to the next question and the old banner names its step', async ({ page }) => {
+  test('VA-03/VA-04: a correct answer focuses its correction, then Continue focuses the next question', async ({ page }) => {
     await startMissionViaUi(page, 'Hematology Lab', 'Fix the Sample');
     await page.getByRole('button', { name: DECISION.reject }).click();
     await submit(page).click();
-    await expect(page.getByText('STEP 2 / 3')).toBeVisible();
-    await expect(page.locator('#case-prompt')).toBeFocused();
+    await expect(page.getByText('STEP 1 / 3')).toBeVisible();
+    await expect(page.locator('.step-review h2')).toBeFocused();
     const banner = page.locator('.feedback.correct');
     await expect(banner).toContainText('Step 1 correct.');
     await expect(banner.getByText('Correct.', { exact: true })).toHaveCount(0);
+    await continueStep(page);
+    await expect(page.getByText('STEP 2 / 3')).toBeVisible();
+    await expect(page.locator('#case-prompt')).toBeFocused();
   });
 
   test('VA-02: an attempt the server no longer knows gets a clear message, a disabled Submit and a way out', async ({ page }) => {
@@ -128,7 +131,7 @@ test.describe('adversarial audit fixes', () => {
     const student = await freshStudent();
     await completeLabViaApi(student, 'hematology', false);
     await openAs(page, student);
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Vault');
     const input = page.getByLabel(/Exit code for Hematology Lab/);
     await input.fill('000');
     await page.getByRole('button', { name: 'Unlock' }).click();
@@ -145,7 +148,7 @@ test.describe('adversarial audit fixes', () => {
     await completeLabViaApi(student, 'hematology');
     await completeLabViaApi(student, 'microbiology');
     await openAs(page, student);
-    await page.getByRole('button', { name: 'Lab results' }).click();
+    await navigateSection(page, 'Lab results');
     await expect(page.getByRole('heading', { name: 'Escape confirmed' })).toHaveCount(2);
     await expect(page.getByRole('region', { name: 'Hematology Lab results' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Microbiology Lab results' })).toBeVisible();
@@ -173,7 +176,7 @@ test.describe('adversarial audit fixes', () => {
       await page.goto('/');
       await expect(page.locator('.lab-card').first()).toBeVisible();
       expect(await splitWords(), `dashboard cards at ${width}px`).toEqual([]);
-      await page.getByRole('button', { name: 'Lab map' }).click();
+      await navigateSection(page, 'Lab map');
       await expect(page.locator('.map-grid .lab-card').first()).toBeVisible();
       expect(await splitWords(), `lab map cards at ${width}px`).toEqual([]);
     }
@@ -202,7 +205,7 @@ test.describe('adversarial audit fixes', () => {
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     await expect(page.getByText(/Master Lab mission is listed but never counted/)).toBeVisible();
     await prepareContentStatus('hem-02', 'draft');
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     const action = page.locator('[data-content-action="hem-02"]');
     await expect(action).toHaveText('Mark reviewed');
     const titleId = await action.getAttribute('aria-describedby');
@@ -288,7 +291,7 @@ test.describe('adversarial audit fixes', () => {
       while ((await showAll.count()) > 0) await showAll.first().click();
       const wide = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(await wide(), `analytics at ${width}px`).toBeLessThanOrEqual(0);
-      await page.getByRole('button', { name: 'Student detail' }).click();
+      await navigateSection(page, 'Student detail');
       await expect(page.locator('.picker-label select')).toHaveCount(2);
       await page.locator('.picker-label select').last().selectOption({ label: longName });
       await expect(page.locator('.profile-card h2')).toHaveText(longName);
@@ -350,10 +353,10 @@ test.describe('adversarial audit fixes', () => {
 
   test('R6-05: when the stored guest session vanishes, the next action reopens a guest session instead of looping', async ({ page }) => {
     await page.evaluate((key) => sessionStorage.removeItem(key), TOKEN_KEY);
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await expect(page.getByText(/Your guest session expired, so a new guest session was opened/)).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Choose a laboratory' })).toBeVisible();
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await expect(page.locator('.map-grid .lab-card').first()).toBeVisible();
   });
 
@@ -369,9 +372,26 @@ test.describe('adversarial audit fixes', () => {
   });
 
   test('R6-07: a laboratory with no fragment yet is "NOT STARTED" on Progress, not "IN PROGRESS"', async ({ page }) => {
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Vault');
     const master = page.locator('.vault-card').filter({ hasText: /Master/ });
     await expect(master.locator('.vault-card-head span')).toHaveText('NOT STARTED');
+  });
+
+  test('a visible vault re-reads the server after another tab resets the guest session', async ({ page }) => {
+    const token = await sessionToken(page);
+    await completeLabViaApi(token, 'biochemistry');
+    await navigateSection(page, 'Vault');
+    const biochemistry = page.locator('.vault-card').filter({ hasText: /Biochemistry/ });
+    await expect(biochemistry.locator('.vault-card-head span')).toHaveText('ESCAPED');
+
+    expect((await apiCall(token, '/demo/reset', { method: 'POST' })).status).toBe(200);
+    await expect.poll(async () => (await apiCall(token, '/vault')).body.vaults.find((v: { labSlug: string }) => v.labSlug === 'biochemistry')?.exited).toBe(false);
+    await page.bringToFront();
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('focus'));
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(biochemistry.locator('.vault-card-head span')).toHaveText('NOT STARTED');
   });
 
   test('R7-01: the sticky mission header never hides a focused control, and it is not sticky on very short screens', async ({ page }) => {
@@ -401,7 +421,7 @@ test.describe('adversarial audit fixes', () => {
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     await expect(page.getByRole('heading', { name: 'Class intelligence' })).toBeVisible();
     await page.evaluate((key) => sessionStorage.removeItem(key), TOKEN_KEY);
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     await expect(page.getByText(/Your faculty guest session expired, so a new faculty guest session was opened/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Return to student demo' })).toBeVisible();
   });
@@ -414,7 +434,7 @@ test.describe('adversarial audit fixes', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Guest options' }).click();
     await page.getByRole('button', { name: 'Faculty guest', exact: true }).click();
-    await page.getByRole('button', { name: 'Student detail' }).click();
+    await navigateSection(page, 'Student detail');
     await expect(page.locator('.picker-label select')).toHaveCount(2); // class picker + student picker
     await page.locator('.picker-label select').last().selectOption({ label: name });
     await expect(page.locator('.avatar.big')).toHaveText('\u{1F469}\u{1F3FD}\u200D\u{1F52C}');
@@ -428,7 +448,7 @@ test.describe('adversarial audit fixes', () => {
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Class intelligence' })).toBeVisible();
     await page.evaluate((key) => sessionStorage.removeItem(key), TOKEN_KEY);
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     await expect(page.getByText(/Your faculty guest session expired/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Return to student demo' })).toBeVisible();
   });
@@ -437,7 +457,7 @@ test.describe('adversarial audit fixes', () => {
     for (const width of [320, 360, 375]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
-      await page.getByRole('button', { name: 'Progress' }).click();
+      await navigateSection(page, 'Leaderboard');
       await expect(page.locator('.leaderboard-row').first()).toBeVisible();
       const problems = await page.evaluate(() => {
         const out: string[] = [];
@@ -467,7 +487,7 @@ test.describe('adversarial audit fixes', () => {
     for (const width of [320, 375, 768]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
-      await page.getByRole('button', { name: 'Lab map' }).click();
+      await navigateSection(page, 'Lab map');
       await page.getByRole('button', { name: /^(Enter|Review) Hematology Lab/ }).click();
       await expect(page.getByRole('heading', { name: word, level: 1 })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `lobby at ${width}px`).toBeLessThanOrEqual(0);
@@ -482,7 +502,7 @@ test.describe('adversarial audit fixes', () => {
     let logins = 0;
     page.on('request', (request) => { if (request.method() === 'POST' && request.url().endsWith('/auth/demo')) logins += 1; });
     await page.evaluate((key) => sessionStorage.removeItem(key), TOKEN_KEY);
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Vault');
     await expect(page.getByText(/Your guest session expired, so a new guest session was opened/)).toBeVisible();
     await expect(page.getByText('The server keeps rejecting guest sessions')).toHaveCount(0);
     expect(logins).toBe(1);
@@ -524,7 +544,7 @@ test.describe('adversarial audit fixes', () => {
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     await expect(page.getByRole('alert').filter({ hasText: 'Too many attempts.' })).toBeVisible();
     await page.evaluate((key) => sessionStorage.removeItem(key), TOKEN_KEY);
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await expect(page.getByText(/Your guest session expired, so a new guest session was opened/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Faculty guest' })).toBeVisible();
   });
@@ -714,7 +734,7 @@ test.describe('round 9: engines, long server strings, request timeout', () => {
   });
 
   test('R9-B-03: a mission start the server never answers ends in an alert and Start works again', async ({ page }) => {
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await page.getByRole('button', { name: /^(Enter|Review) Hematology Lab/ }).click();
     await page.clock.install();
     await page.route('**/api/missions/hem-01/start', () => new Promise<void>(() => undefined));
@@ -723,6 +743,7 @@ test.describe('round 9: engines, long server strings, request timeout', () => {
     await expect(page.getByRole('button', { name: /^Starting Blood Smear Code$/ })).toBeVisible();
     await page.clock.fastForward(21_000);
     await expect(page.getByRole('alert')).toContainText(/did not answer in time/);
+    await expect(page.locator('main > .error[role="alert"]')).toBeFocused();
     await expect(start).toBeEnabled();
   });
 });
@@ -733,7 +754,7 @@ test.describe('round 9: faculty and guest switching', () => {
   test('R9-C-01: after a 409 on a status change the row shows the server status and the next action works', async ({ page }) => {
     await prepareContentStatus('mic-01', 'draft');
     await page.getByRole('button', { name: 'Faculty guest' }).click();
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     const row = page.locator('.content-row').filter({ hasText: 'Microbe Detective' });
     await expect(row.locator('.status-pill')).toHaveText('Draft');
     // A second teacher tab (here: the API) moves the mission on while this page still shows "Draft".
@@ -752,7 +773,7 @@ test.describe('round 9: faculty and guest switching', () => {
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     await expect(page.getByRole('heading', { name: 'Class intelligence' })).toBeVisible();
     await page.evaluate((key) => sessionStorage.removeItem(key), TOKEN_KEY);
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     await expect(page.getByText(/Your faculty guest session expired/)).toBeVisible();
     await page.getByRole('button', { name: 'Return to student demo' }).click();
     await expect(page.getByRole('heading', { name: HOME })).toBeVisible();
@@ -765,7 +786,7 @@ test.describe('round 9: faculty and guest switching', () => {
 
   test('R9-C-02: a student recovery notice does not follow the learner to the faculty view, or survive a reset', async ({ page }) => {
     await page.evaluate((key) => sessionStorage.removeItem(key), TOKEN_KEY);
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await expect(page.getByText(/Your guest session expired, so a new guest session was opened/)).toBeVisible();
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     await expect(page.getByRole('heading', { name: 'Class intelligence' })).toBeVisible();
@@ -784,7 +805,7 @@ test.describe('round 9: resync, settings and reset', () => {
       await route.fetch(); // the server really opens the exit...
       await route.fulfill({ status: 200, contentType: 'text/html', body: 'garbled' }); // ...but the reply cannot be read
     });
-    await page.getByRole('button', { name: 'Progress' }).click();
+    await navigateSection(page, 'Vault');
     const card = page.locator('.vault-card').filter({ hasText: 'Hematology' });
     await card.getByRole('textbox').fill(exitCode('hematology'));
     await card.getByRole('button', { name: 'Unlock' }).click();
@@ -795,7 +816,7 @@ test.describe('round 9: resync, settings and reset', () => {
   });
 
   test('R9-B-04: a settings change the server stored but whose reply is unreadable is shown as saved, not rolled back', async ({ page }) => {
-    await page.getByRole('button', { name: 'Learning settings' }).click();
+    await navigateSection(page, 'Learning settings');
     const box = page.getByRole('checkbox', { name: 'Reduce motion' });
     const before = await box.isChecked();
     await page.route('**/api/profile', async (route) => {
@@ -814,7 +835,7 @@ test.describe('round 9: resync, settings and reset', () => {
   });
 
   test('R9-B-05: only settings that change something are offered', async ({ page }) => {
-    await page.getByRole('button', { name: 'Learning settings' }).click();
+    await navigateSection(page, 'Learning settings');
     await expect(page.getByRole('checkbox')).toHaveCount(1);
     await expect(page.getByRole('checkbox', { name: 'Reduce motion' })).toBeVisible();
     await expect(page.getByText(/Sound effects|Progress notifications/)).toHaveCount(0);
@@ -927,7 +948,7 @@ test.describe('round 9: faculty roster, analytics and content review', () => {
 
   test('R9-C-09: a laboratory with one mission says "1 mission"', async ({ page }) => {
     await page.route('**/api/labs', (route) => patched(route, (b) => ({ ...b, labs: b.labs.map((l: any, i: number) => (i === 0 ? { ...l, missions: { completed: 1, total: 1 }, fragments: { found: 1, total: 1 } } : l)) })));
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     const card = page.locator('.lab-card').first();
     await expect(card).toContainText('1 of 1 mission · 1 of 1 code fragment');
     await expect(card).not.toContainText('1 missions');
@@ -936,7 +957,7 @@ test.describe('round 9: faculty roster, analytics and content review', () => {
   test('R9-C-06: content review shows who moved a mission and when (verbatim from the server), and announces a save', async ({ page }) => {
     await prepareContentStatus('hem-02', 'draft');
     await page.getByRole('button', { name: 'Faculty guest' }).click();
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     const row = page.locator('.content-row').filter({ hasText: 'Fix the Sample' });
     await expect(row.locator('.review-trail')).toBeVisible();
     await row.getByRole('button', { name: 'Mark reviewed', exact: true }).click();
@@ -959,7 +980,7 @@ test.describe('round 9: mission screen and dashboard details', () => {
     await openAs(page, token);
     await expect(page.locator('.dashboard-next-step h2')).toHaveText('Every laboratory is cleared');
     await expect(page.getByText('Select a discipline to begin')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Lab results' }).click();
+    await navigateSection(page, 'Lab results');
     await expect(page.getByRole('heading', { name: 'Hematology Lab: Escape confirmed' })).toBeVisible();
   });
 
@@ -979,10 +1000,10 @@ test.describe('round 9: mission screen and dashboard details', () => {
 
   test('R9-B-15: a slow mission start does not take over the screen after the learner went elsewhere', async ({ page }) => {
     const gate = await slow(page, '**/api/missions/*/start');
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await page.getByRole('button', { name: /^(Enter|Review) Hematology Lab/ }).click();
     await page.getByRole('button', { name: /^(Start|Resume|Replay) Blood Smear Code$/ }).click();
-    await page.getByRole('button', { name: 'Progress', exact: true }).click();
+    await navigateSection(page, 'Vault');
     await expect(page.getByRole('heading', { name: 'Progress vault' })).toBeVisible();
     gate.release();
     await expect(page.getByRole('status').filter({ hasText: 'Starting mission' })).toHaveCount(0);
@@ -1104,9 +1125,9 @@ test.describe('round 10: shell, settings, rules and resync', () => {
       await expect(settingsAlert(page)).toBeVisible();
       await expect(settingsAlert(page).getByRole('button', { name: 'Retry' })).toBeVisible();
       // The Learning settings page keeps its own panel: one alert there, not two.
-      await page.getByRole('button', { name: 'Learning settings' }).click();
+      await navigateSection(page, 'Learning settings');
       await expect(page.getByRole('alert')).toHaveCount(1);
-      await page.getByRole('button', { name: 'Investigations' }).click();
+      await navigateSection(page, 'Rooms');
       await expect(settingsAlert(page)).toBeVisible();
       // The faculty guest has the same notice.
       await page.getByRole('button', { name: 'Faculty guest' }).click();
@@ -1156,7 +1177,7 @@ test.describe('round 10: shell, settings, rules and resync', () => {
     let releaseSwitch: () => void = () => undefined;
     const gateSwitch = new Promise<void>((resolve) => { releaseSwitch = resolve; });
     await page.route('**/api/auth/demo', async (route) => { await gateSwitch; await route.continue(); });
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     await expect(page.getByRole('button', { name: 'Switching…' })).toBeVisible();
     release401();
@@ -1182,7 +1203,7 @@ test.describe('round 10: shell, settings, rules and resync', () => {
     let releaseSwitch: () => void = () => undefined;
     const gateSwitch = new Promise<void>((resolve) => { releaseSwitch = resolve; });
     await page.route('**/api/auth/demo', async (route) => { await gateSwitch; await route.continue(); });
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     await page.getByRole('button', { name: 'Return to student demo' }).click();
     await expect(page.getByRole('button', { name: 'Resetting…' })).toBeVisible();
     release401();
@@ -1196,7 +1217,7 @@ test.describe('round 10: shell, settings, rules and resync', () => {
 
   test('R10-C-03: dismissing the session notice by keyboard leaves focus on the page heading, not on the document', async ({ page }) => {
     await page.evaluate((key) => sessionStorage.removeItem(key), TOKEN_KEY);
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     const notice = page.getByRole('status').filter({ hasText: /session expired/ });
     await expect(notice).toBeVisible();
     await notice.getByRole('button', { name: 'Dismiss' }).focus();
@@ -1318,7 +1339,7 @@ test.describe('round 10: shell, settings, rules and resync', () => {
     await page.route('**/api/content/missions', (route) => patched(route, (body) => ({
       ...body, missions: body.missions.map((m: any, i: number) => (i === 0 ? { ...m, reviewedBy: zalgo, updatedAt: Date.parse('2026-10-08T12:00:00Z'), status: 'reviewed' } : m)),
     })));
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     const trail = page.locator('.review-trail').first();
     await expect(trail).toContainText('Dr N');
     const clip = await trail.evaluate((el) => getComputedStyle(el).overflow);
@@ -1328,7 +1349,7 @@ test.describe('round 10: shell, settings, rules and resync', () => {
   test('R10-C-08: the "list could not be refreshed" alert has a Retry that re-reads the list', async ({ page }) => {
     await prepareContentStatus('mic-01', 'draft');
     await page.getByRole('button', { name: 'Faculty guest' }).click();
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     const row = page.locator('.content-row').filter({ hasText: 'Microbe Detective' });
     await expect(row.locator('.status-pill')).toHaveText('Draft');
     await prepareContentStatus('mic-01', 'approved');
@@ -1348,7 +1369,7 @@ test.describe('round 10: shell, settings, rules and resync', () => {
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     await expect(page.getByRole('heading', { name: 'Class intelligence' })).toBeVisible();
     await page.route(/\/api\/classes\/\d+\/students$/, (route) => patched(route, (body) => ({ ...body, students: [...body.students, { ...body.students[0], id: 9999 }] })));
-    await page.getByRole('button', { name: 'Student detail' }).click();
+    await navigateSection(page, 'Student detail');
     const heading = page.locator('.profile-card h2');
     await expect(heading.locator('.id-tag')).toBeVisible();
     const text = (await heading.textContent())!;
@@ -1362,7 +1383,7 @@ test.describe('round 11: faculty, dashboard wording, session recovery', () => {
 
   const openContent = async (page: Page) => {
     await page.getByRole('button', { name: 'Faculty guest' }).click();
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     const row = page.locator('.content-row').filter({ hasText: 'Microbe Detective' });
     await expect(row.locator('.status-pill')).toHaveText('Draft');
     return row;
@@ -1451,7 +1472,7 @@ test.describe('round 11: faculty, dashboard wording, session recovery', () => {
       ...body,
       students: [...body.students, { ...body.students[0], id: 9001, name: 'Zed  Quinn' }, { ...body.students[0], id: 9002, name: 'Zed Quinn' }, { ...body.students[0], id: 9003, name: 'zed quinn' }],
     })));
-    await page.getByRole('button', { name: 'Student detail' }).click();
+    await navigateSection(page, 'Student detail');
     const picker = page.getByLabel('Student', { exact: true });
     await expect(picker.locator('option')).not.toHaveCount(0);
     const texts = (await picker.locator('option').allTextContents()).map((t) => t.replace(/\s+/g, ' '));
@@ -1496,7 +1517,7 @@ test.describe('round 11: faculty, dashboard wording, session recovery', () => {
       if (logins === 1) { await gateSwitch; await route.fulfill(serverError('Switch refused')); return; }
       await route.continue();
     });
-    await page.getByRole('button', { name: 'Lab map' }).click();
+    await navigateSection(page, 'Lab map');
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     await expect(page.getByRole('button', { name: 'Switching…' })).toBeVisible();
     release401();
@@ -1668,7 +1689,7 @@ test.describe('round 12: faculty names, errors, focus', () => {
     const tag = page.locator('.mission-row .id-tag').filter({ hasText: '#9125' });
     await expect(tag).toBeVisible();
     expect(await laidOutLeftToRight(tag, '#9125')).toBe(true);
-    await page.getByRole('button', { name: 'Student detail' }).click();
+    await navigateSection(page, 'Student detail');
     const picker = page.getByLabel('Student', { exact: true });
     await expect(picker.locator('option')).not.toHaveCount(0);
     const options = await picker.locator('option').allTextContents();
@@ -1692,7 +1713,7 @@ test.describe('round 12: faculty names, errors, focus', () => {
       missions: body.missions.map((m: any, i: number) => (i === 0 ? { ...m, status: 'reviewed', reviewedBy: `Prof Bidi${BOB} (teacher #129)`, updatedAt: 1791453365153 } : m)),
     })));
     await page.getByRole('button', { name: 'Faculty guest' }).click();
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     const trail = page.locator('.review-trail').filter({ hasText: 'Reviewed by' });
     await expect(trail).toBeVisible();
     expect(await laidOutLeftToRight(trail, '(teacher #129)')).toBe(true);
@@ -1715,7 +1736,7 @@ test.describe('round 12: faculty names, errors, focus', () => {
       students: [...body.students, { ...body.students[0], id: 9201, name: 'Quin Voss' }, { ...body.students[0], id: 9202, name: 'Quin V\u200boss' }],
     })));
     await page.getByRole('button', { name: 'Faculty guest' }).click();
-    await page.getByRole('button', { name: 'Student detail' }).click();
+    await navigateSection(page, 'Student detail');
     const picker = page.getByLabel('Student', { exact: true });
     await expect(picker.locator('option')).not.toHaveCount(0);
     const options = await picker.locator('option').allTextContents();
@@ -1742,7 +1763,7 @@ test.describe('round 12: faculty names, errors, focus', () => {
       ['Content review', '**/api/content/missions', page.locator('.content-row').first()],
     ] as const) {
       const down = await outage(page, glob);
-      await page.getByRole('button', { name: nav }).click();
+      await navigateSection(page, nav);
       const retry = page.getByRole('button', { name: 'Retry' });
       await expect(retry).toBeVisible();
       down.lift();
@@ -1784,7 +1805,7 @@ test.describe('round 12: faculty names, errors, focus', () => {
   test('R12-C-04: an empty 413 on the content PUT reads as a sentence', async ({ page }) => {
     await prepareContentStatus('mic-01', 'draft');
     await page.getByRole('button', { name: 'Faculty guest' }).click();
-    await page.getByRole('button', { name: 'Content review' }).click();
+    await navigateSection(page, 'Content review');
     const row = page.locator('.content-row').filter({ hasText: 'Microbe Detective' });
     await page.route('**/api/content/missions/mic-01/status', (route) => route.fulfill({ status: 413, contentType: 'text/plain', body: '' }));
     await row.getByRole('button', { name: 'Mark reviewed', exact: true }).click();
@@ -1797,7 +1818,7 @@ test.describe('round 12: faculty names, errors, focus', () => {
     await prepareContentStatus('mic-01', 'draft');
     try {
       await page.getByRole('button', { name: 'Faculty guest' }).click();
-      await page.getByRole('button', { name: 'Content review' }).click();
+      await navigateSection(page, 'Content review');
       const row = page.locator('.content-row').filter({ hasText: 'Microbe Detective' });
       await expect(row.locator('.status-pill')).toHaveText('Draft');
       await page.route('**/api/content/missions/mic-01/status', async (route) => { await route.fetch(); await route.fulfill({ status: 502, contentType: 'text/plain', body: '' }); });
@@ -1826,7 +1847,7 @@ test.describe('round 12: faculty names, errors, focus', () => {
       history: [{ ...(body.history[0] ?? { missionId: 'hem-01', title: 'Blood Smear Code', labSlug: 'hematology', score: 100, accuracyPct: 100, answersSubmitted: 1, wrongAnswers: 0, hintsUsed: 0, elapsed: '01:00' }), completedAt: 1791453365153 }],
     })));
     await page.getByRole('button', { name: 'Faculty guest' }).click();
-    await page.getByRole('button', { name: 'Student detail' }).click();
+    await navigateSection(page, 'Student detail');
     const row = page.locator('.teacher-panel').filter({ hasText: 'ATTEMPT HISTORY' }).locator('li.mission-row').first();
     await expect(row.locator('time')).toHaveAttribute('datetime', new Date(1791453365153).toISOString());
     await expect(page.getByText('Showing the latest 1 of 27 attempts.')).toBeVisible();
@@ -1843,7 +1864,7 @@ test.describe('round 13: leaderboard, names, history figures', () => {
     if (!(await direct.isVisible())) await page.getByRole('button', { name: 'Guest options' }).click();
     await page.getByRole('button', { name: 'Faculty guest', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Class intelligence' })).toBeVisible();
-    await page.getByRole('button', { name: 'Student detail', exact: true }).click();
+    await navigateSection(page, 'Student detail');
   };
   const row = (rank: number) => ({ rank, name: `Stu D${rank}.`, xp: 500 - rank, labs: 1, accuracyPct: 80, you: false });
   const unranked = (extra: Record<string, unknown> = {}) => ({ rank: 24, name: 'Me', xp: 0, labs: 0, accuracyPct: null, you: true, ...extra });
@@ -1854,7 +1875,7 @@ test.describe('round 13: leaderboard, names, history figures', () => {
     test(`R13-C-01: an unranked 0-XP viewer reads "not ranked yet", has no rank number and is not counted as ranked (${width}px)`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await board(page, unrankedBoard);
-      await page.getByRole('button', { name: 'Progress', exact: true }).click();
+      await navigateSection(page, 'Leaderboard');
       const panel = page.locator('.leaderboard-panel');
       const mine = panel.locator('.leaderboard-row.you');
       await expect(mine).toHaveCount(1);
@@ -1871,7 +1892,7 @@ test.describe('round 13: leaderboard, names, history figures', () => {
 
   test('R13-C-01: a ranked viewer still gets a rank, a gap row and a count that includes them', async ({ page }) => {
     await board(page, (b) => ({ ...b, cohortAvailable: true, total: 23, rows: Array.from({ length: 20 }, (_, i) => row(i + 1)), me: unranked({ rank: 22, xp: 40 }) }));
-    await page.getByRole('button', { name: 'Progress', exact: true }).click();
+    await navigateSection(page, 'Leaderboard');
     const panel = page.locator('.leaderboard-panel');
     await expect(panel.locator('.leaderboard-row.you')).toContainText('#22');
     await expect(panel.locator('.leaderboard-gap')).toHaveCount(1);
@@ -1880,7 +1901,7 @@ test.describe('round 13: leaderboard, names, history figures', () => {
 
   test('R13-C-02: a group that exists where nobody has XP yet is not told it is "not set up"', async ({ page }) => {
     await board(page, (b) => ({ ...b, cohortAvailable: true, total: 0, rows: [], me: unranked({ rank: 1 }) }));
-    await page.getByRole('button', { name: 'Progress', exact: true }).click();
+    await navigateSection(page, 'Leaderboard');
     const panel = page.locator('.leaderboard-panel');
     await expect(panel.getByText('Nobody in your group has earned XP yet.')).toBeVisible();
     await expect(panel.getByRole('heading', { name: 'Nobody is ranked yet' })).toBeVisible();
@@ -1896,7 +1917,7 @@ test.describe('round 13: leaderboard, names, history figures', () => {
         { ...body.students[0], id: 9303, name: 'Mia Roe' }, { ...body.students[0], id: 9304, name: 'Mia Roe\u2800' }],
     })));
     await page.getByRole('button', { name: 'Faculty guest' }).click();
-    await page.getByRole('button', { name: 'Student detail' }).click();
+    await navigateSection(page, 'Student detail');
     const picker = page.getByLabel('Student', { exact: true });
     await expect(picker.locator('option')).not.toHaveCount(0);
     const options = await picker.locator('option').allTextContents();
@@ -1971,7 +1992,7 @@ test.describe('round 14 frontend fixes', () => {
   test('R14-B-01: sidebar navigation and guest actions reach 44px on a rotated touch phone (landscape widths)', async ({ browser }) => {
     const token = await freshStudent();
     for (const [width, height] of [[812, 375], [844, 390], [740, 360], [667, 375]] as const) {
-      const context = await browser.newContext({ viewport: { width, height }, hasTouch: true, isMobile: true, baseURL: 'http://127.0.0.1:5173' });
+      const context = await browser.newContext({ viewport: { width, height }, hasTouch: true, isMobile: true, baseURL: `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? '5173'}` });
       try {
         const page = await context.newPage();
         await openAs(page, token);
@@ -1995,7 +2016,7 @@ test.describe('round 14 frontend fixes', () => {
 
   test('R14-B-01: no button, select or input on the main student screens is under 44px high on a rotated touch phone', async ({ browser }) => {
     const token = await freshStudent();
-    const context = await browser.newContext({ viewport: { width: 812, height: 375 }, hasTouch: true, isMobile: true, baseURL: 'http://127.0.0.1:5173' });
+    const context = await browser.newContext({ viewport: { width: 812, height: 375 }, hasTouch: true, isMobile: true, baseURL: `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? '5173'}` });
     try {
       const page = await context.newPage();
       await openAs(page, token);
@@ -2008,7 +2029,7 @@ test.describe('round 14 frontend fixes', () => {
         for (const f of found) small.push(`${where}: ${f.t} ${f.h}px`);
       };
       await scan('home');
-      for (const name of ['Lab map', 'Progress', 'Lab results', 'Learning settings']) {
+      for (const name of ['Lab map', 'Vault', 'Lab results', 'Learning settings']) {
         await page.getByRole('button', { name, exact: true }).click();
         await page.waitForTimeout(300);
         await scan(name);
@@ -2023,7 +2044,7 @@ test.describe('round 14 frontend fixes', () => {
     test(`R14-B-02: the Lab map does not scroll sideways at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 700 });
       await openAs(page, await freshStudent());
-      await page.getByRole('button', { name: 'Lab map' }).click();
+      await navigateSection(page, 'Lab map');
       await expect(page.getByRole('heading', { name: 'Laboratory map', exact: true })).toBeVisible();
       await expect(page.locator('article.lab-card').first()).toBeVisible();
       const metrics = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
@@ -2045,7 +2066,7 @@ test.describe('round 14 frontend fixes', () => {
         rows: b.rows.map((r: any, i: number) => (i === 1 ? { ...r, name: '\u202eEve Kay', you: false } : { ...r, you: false })),
         me: { rank: b.total + 1, name: 'Me', xp: 0, labs: 0, accuracyPct: null, you: true },
       })));
-      await page.getByRole('button', { name: 'Progress', exact: true }).click();
+      await navigateSection(page, 'Leaderboard');
       const names = page.locator('.leaderboard-row:not(.you) bdi');
       await expect(names.nth(1)).toBeVisible();
       expect(await names.nth(1).evaluate((el) => el.textContent)).toBe('Eve Kay');
@@ -2058,7 +2079,7 @@ test.describe('round 14 frontend fixes', () => {
         missions: body.missions.map((m: any, i: number) => (i === 0 ? { ...m, status: 'reviewed', reviewedBy: 'Dr \u202eEve Nathan (teacher #176)', updatedAt: 1791453365153 } : m)),
       })));
       await page.getByRole('button', { name: 'Faculty guest' }).click();
-      await page.getByRole('button', { name: 'Content review' }).click();
+      await navigateSection(page, 'Content review');
       const trail = page.locator('.review-trail').filter({ hasText: 'Reviewed by' });
       await expect(trail).toBeVisible();
       expect(await trail.evaluate((el) => el.textContent)).toContain('Reviewed by Dr Eve Nathan (teacher #176)');
@@ -2067,7 +2088,7 @@ test.describe('round 14 frontend fixes', () => {
 
     test('R14-B-05: a leaderboard whose figures contradict each other is an unexpected-response alert, not a plausible board', async ({ page }) => {
       await page.route('**/api/leaderboard**', (route) => patched(route, (b) => ({ ...b, total: 0 })));
-      await page.getByRole('button', { name: 'Progress', exact: true }).click();
+      await navigateSection(page, 'Leaderboard');
       await expect(page.getByRole('alert').filter({ hasText: 'unexpected response' })).toBeVisible();
       await expect(page.getByText('Nobody is ranked yet')).toHaveCount(0);
       await expect(page.locator('.leaderboard-row')).toHaveCount(0);
@@ -2075,7 +2096,7 @@ test.describe('round 14 frontend fixes', () => {
 
     test('R14-C-07: one ranked student reads as singular', async ({ page }) => {
       await page.route('**/api/leaderboard**', (route) => patched(route, (b) => ({ ...b, total: 1, rows: [{ ...b.rows[0], rank: 1, you: false }], me: { rank: 2, name: 'Me', xp: 0, labs: 0, accuracyPct: null, you: true } })));
-      await page.getByRole('button', { name: 'Progress', exact: true }).click();
+      await navigateSection(page, 'Leaderboard');
       await expect(page.getByText('Showing 1 of 1 ranked student.', { exact: true })).toBeVisible();
     });
 
@@ -2083,7 +2104,7 @@ test.describe('round 14 frontend fixes', () => {
       await page.route(/\/api\/classes\/\d+\/students\/\d+$/, (route) => patched(route, (b) => ({ ...b, student: { ...b.student, missionsCompleted: b.student.missionsCompleted + 3 } })));
       await page.getByRole('button', { name: 'Faculty guest' }).click();
       await expect(page.getByRole('heading', { name: 'Class intelligence' })).toBeVisible();
-      await page.getByRole('button', { name: 'Student detail', exact: true }).click();
+      await navigateSection(page, 'Student detail');
       await expect(page.getByRole('alert').filter({ hasText: 'unexpected response' })).toBeVisible();
     });
 
@@ -2094,7 +2115,7 @@ test.describe('round 14 frontend fixes', () => {
       })));
       await page.getByRole('button', { name: 'Faculty guest' }).click();
       await expect(page.getByRole('heading', { name: 'Class intelligence' })).toBeVisible();
-      await page.getByRole('button', { name: 'Student detail', exact: true }).click();
+      await navigateSection(page, 'Student detail');
       const picker = page.getByLabel('Student', { exact: true });
       await expect(picker.locator('option')).not.toHaveCount(0);
       const options = await picker.locator('option').allTextContents();
@@ -2128,7 +2149,7 @@ test.describe('round 15 frontend fixes', () => {
     })));
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     await expect(page.getByRole('heading', { name: 'Class intelligence' })).toBeVisible();
-    await page.getByRole('button', { name: 'Student detail', exact: true }).click();
+    await navigateSection(page, 'Student detail');
     const picker = page.getByLabel('Student', { exact: true });
     await expect(picker.locator('option')).not.toHaveCount(0);
     const options = await picker.locator('option').allTextContents();
@@ -2157,7 +2178,7 @@ test.describe('round 16: strict replies of the guest actions', () => {
       await expect(page.getByRole('alert').filter({ hasText: 'The server sent an unexpected response.' })).toBeVisible();
       await expect(page.getByRole('alert')).toContainText('Invalid server demo reset payload');
       // The session is untouched: still signed in as the same guest, and navigation works.
-      await page.getByRole('button', { name: 'Lab map', exact: true }).click();
+      await navigateSection(page, 'Lab map');
       await expect(page.getByRole('heading', { level: 1, name: 'Laboratory map' })).toBeVisible();
     });
   }
@@ -2175,7 +2196,7 @@ test.describe('round 16: strict replies of the guest actions', () => {
 test.describe('round 17: sticky sidebar scrolling', () => {
   const openAboutPage = async (page: Page) => {
     await resetDemo(page);
-    await page.getByRole('button', { name: 'About & demo guide', exact: true }).click();
+    await navigateSection(page, 'About & demo guide');
     await expect(page.getByRole('heading', { level: 1, name: 'About Escape Lab' })).toBeVisible();
   };
   const scrollY = (page: Page) => page.evaluate(() => window.scrollY);
@@ -2337,24 +2358,24 @@ test.describe('round 17: faculty views state that the data is generated demonstr
 
   test('R17-D-01: present on Class intelligence, Student detail and Content review; survives reload and a class switch; absent from the student views', async ({ page }) => {
     await resetDemo(page);
-    for (const name of ['Lab map', 'Progress', 'Lab results', 'Learning settings']) {
+    for (const name of ['Lab map', 'Vault', 'Lab results', 'Learning settings']) {
       await page.getByRole('button', { name, exact: true }).click();
       await expect(page.getByRole('note').filter({ hasText: NOTE }), `student view ${name}`).toHaveCount(0);
     }
     await page.getByRole('button', { name: 'Faculty guest' }).click();
     for (const [nav, heading] of FACULTY_PAGES) {
-      await page.getByRole('button', { name: nav, exact: true }).click();
+      await navigateSection(page, nav);
       await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
       await check(page, nav);
       // A reload returns the Faculty guest to its first screen (the view is not stored): the note is there, and on the view reopened after it.
       await page.reload();
       await expect(page.getByRole('heading', { level: 1, name: 'Class intelligence' })).toBeVisible();
       await check(page, 'first screen after reload');
-      await page.getByRole('button', { name: nav, exact: true }).click();
+      await navigateSection(page, nav);
       await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
       await check(page, `${nav} reopened after reload`);
     }
-    await page.getByRole('button', { name: 'Faculty', exact: true }).click();
+    await navigateSection(page, 'Faculty');
     await expect(page.getByRole('heading', { level: 1, name: 'Class intelligence' })).toBeVisible();
     const picker = page.getByLabel('Class', { exact: true });
     await expect(picker).toBeVisible();
@@ -2362,11 +2383,11 @@ test.describe('round 17: faculty views state that the data is generated demonstr
     expect(options.length).toBeGreaterThan(1);
     await picker.selectOption({ index: 1 });
     await check(page, 'after a class switch');
-    await page.getByRole('button', { name: 'Student detail', exact: true }).click();
+    await navigateSection(page, 'Student detail');
     await picker.selectOption({ index: 0 });
     await check(page, 'student detail after a class switch');
     // About is shared and stays free of the faculty note; step 7 carries the statement in words.
-    await page.getByRole('button', { name: 'About & demo guide', exact: true }).click();
+    await navigateSection(page, 'About & demo guide');
     await expect(page.getByRole('note').filter({ hasText: NOTE })).toHaveCount(0);
     await expect(page.locator('.about-steps > li').nth(6)).toContainText('generated demonstration data, not real learners');
   });
@@ -2391,7 +2412,7 @@ test.describe('round 17: faculty views state that the data is generated demonstr
       await page.getByRole('button', { name: 'Faculty guest' }).click();
       await expect(page.getByRole('heading', { level: 1, name: 'Class intelligence' })).toBeVisible();
       for (const [nav, heading] of FACULTY_PAGES) {
-        await page.getByRole('button', { name: nav, exact: true }).click();
+        await navigateSection(page, nav);
         await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
         await check(page, `${nav} ${width}`);
         const size = await note(page).evaluate((el) => ({ font: parseFloat(getComputedStyle(el).fontSize), overflow: el.scrollWidth - el.clientWidth }));

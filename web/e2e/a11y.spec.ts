@@ -1,9 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { ARTWORK, apiCall, arrangeOrder, clickArtwork, expireAttemptInDb, homeHeading, json, openFaculty, openHome, resetDemo, settle, slow, startMissionViaUi, submit, DECISION } from './support/helpers';
+import { navigateSection, ARTWORK, apiCall, arrangeOrder, clickArtwork, continueStep, expireAttemptInDb, homeHeading, json, openFaculty, openHome, resetDemo, settle, slow, startMissionViaUi, submit, DECISION } from './support/helpers';
 import { MISSION_BY_ID } from './support/content';
 
-const nav = (page: Page, name: string) => page.getByRole('button', { name, exact: true }).click();
+const nav = navigateSection;
 /** Zero axe violations; failures are summarised per node so they can be fixed from the report. */
 async function clean(page: Page, label: string) {
   const results = await new AxeBuilder({ page }).analyze();
@@ -69,9 +69,15 @@ test.describe('axe: zero violations on every screen', () => {
     await page.getByRole('button', { name: 'Enter Clinical Biochemistry Lab' }).click();
     await expect(page.getByRole('heading', { name: 'Choose a mission' })).toBeVisible();
     await clean(page, 'lab lobby with locked missions');
-    await nav(page, 'Progress');
-    await expect(page.getByRole('heading', { name: 'Leaderboard' })).toBeVisible();
+    await nav(page, 'Vault');
+    await expect(page.getByRole('heading', { name: 'Progress vault' })).toBeVisible();
     await clean(page, 'progress');
+    await nav(page, 'Badges');
+    await expect(page.getByRole('heading', { name: 'Milestones' })).toBeVisible();
+    await clean(page, 'badges');
+    await nav(page, 'Leaderboard');
+    await expect(page.getByRole('heading', { name: 'Leaderboard' })).toBeVisible();
+    await clean(page, 'leaderboard');
     await nav(page, 'Lab results');
     await expect(page.getByRole('heading', { name: 'Escape confirmed' })).toBeVisible();
     await clean(page, 'lab results');
@@ -115,9 +121,11 @@ test.describe('axe: zero violations on every screen', () => {
     await clean(page, 'stepper step 1');
     await page.locator('.answer-options button').filter({ hasText: 'Microcytic' }).click();
     await submit(page).click();
+    await expect(page.locator('.feedback.correct').filter({ hasText: 'Step 1 correct.' })).toBeVisible();
+    await clean(page, 'stepper correction with saved answer and explanation');
+    await continueStep(page);
     await expect(page.getByText('STEP 2 / 3')).toBeVisible();
-    await expect(page.getByRole('status').filter({ hasText: 'Correct.' })).toBeVisible();
-    await clean(page, 'stepper step 2 with revealed values and a correct status');
+    await clean(page, 'stepper step 2 with revealed values');
     await page.getByRole('button', { name: /Exit mission/ }).click();
 
     await startMissionViaUi(page, 'Hematology Lab', 'Fix the Sample');
@@ -165,11 +173,11 @@ test.describe('axe: zero violations on every screen', () => {
 test.describe('semantics and conventions', () => {
   test('navigation marks the current page, and the tab title follows the screen', async ({ page }) => {
     await resetDemo(page);
-    const expected: [string, string][] = [['Investigations', 'Mission control'], ['Lab map', 'Lab map'], ['Progress', 'Progress vault'], ['Lab results', 'Lab results'], ['About & demo guide', 'About & demo guide'], ['Learning settings', 'Learning settings']];
+    const expected: [string, string][] = [['Rooms', 'Mission control'], ['Lab map', 'Lab map'], ['Vault', 'Progress vault'], ['Badges', 'Milestones'], ['Leaderboard', 'Leaderboard'], ['Lab results', 'Lab results'], ['About & demo guide', 'About & demo guide'], ['Learning settings', 'Learning settings']];
     for (const [name, title] of expected) {
       await nav(page, name);
       await expect(page.getByRole('button', { name, exact: true })).toHaveAttribute('aria-current', 'page');
-      await expect(page.locator('nav [aria-current="page"]')).toHaveCount(1);
+      await expect(page.locator('nav [aria-current="page"]:visible')).toHaveCount(1);
       await expect(page).toHaveTitle(`${title} · Escape Lab`);
     }
     await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
@@ -198,6 +206,19 @@ test.describe('semantics and conventions', () => {
     await submit(page).click();
     await expect(page.locator('.feedback.correct')).toHaveAttribute('role', 'status');
     await expect(page.locator('.feedback.correct')).toHaveAttribute('aria-live', 'polite');
+    await expect(page.locator('.mission-announcement')).toHaveText(/Step \d+ correct\./);
+  });
+
+  test('a repeated wrong answer re-arms the alert with the new server penalty', async ({ page }) => {
+    await resetDemo(page);
+    await startMissionViaUi(page, 'Hematology Lab', 'Fix the Sample');
+    await page.getByRole('button', { name: DECISION.accept }).click();
+    await submit(page).click();
+    await expect(page.locator('.feedback.wrong')).toHaveAttribute('data-feedback-sequence', '1');
+    await submit(page).click();
+    await expect(page.locator('.feedback.wrong')).toHaveAttribute('data-feedback-sequence', '2');
+    await expect(page.locator('.feedback.wrong')).toHaveAttribute('role', 'alert');
+    await expect(page.locator('.mission-announcement')).toHaveText('Wrong answer recorded.');
   });
 
   test('the mission side panel uses h2, not a skipped heading level, with no runtime DOM rewriting', async ({ page }) => {
@@ -212,7 +233,7 @@ test.describe('semantics and conventions', () => {
   test('keyboard focus is clearly visible: >= 3:1 against the cream surface, on buttons and on the image', async ({ page }) => {
     await resetDemo(page);
     await nav(page, 'Lab map');
-    const target = page.getByRole('button', { name: 'Progress', exact: true });
+    const target = page.getByRole('button', { name: 'Vault', exact: true });
     await target.focus();
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
@@ -227,7 +248,7 @@ test.describe('semantics and conventions', () => {
   test('changing screen moves focus to the new page heading (and the title follows); the first load does not steal focus', async ({ page }) => {
     await resetDemo(page);
     expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
-    for (const [name, heading, title] of [['Lab map', 'Laboratory map', 'Lab map'], ['Progress', 'Progress vault', 'Progress vault'], ['Lab results', 'Lab results', 'Lab results'], ['Learning settings', 'Learning settings', 'Learning settings']] as const) {
+    for (const [name, heading, title] of [['Lab map', 'Laboratory map', 'Lab map'], ['Vault', 'Progress vault', 'Progress vault'], ['Badges', 'Milestones', 'Milestones'], ['Leaderboard', 'Leaderboard', 'Leaderboard'], ['Lab results', 'Lab results', 'Lab results'], ['Learning settings', 'Learning settings', 'Learning settings']] as const) {
       await nav(page, name);
       const h1 = page.getByRole('heading', { level: 1, name: heading, exact: true });
       await expect(h1).toBeFocused();
@@ -238,7 +259,7 @@ test.describe('semantics and conventions', () => {
       await expect(h1).not.toBeFocused();
     }
     // A heading that only exists once the page has loaded still receives focus when it appears.
-    await nav(page, 'Investigations');
+    await nav(page, 'Rooms');
     await expect(homeHeading(page)).toBeFocused();
     await nav(page, 'Lab map');
     await page.getByRole('button', { name: 'Review Hematology Lab' }).click();
@@ -249,7 +270,7 @@ test.describe('semantics and conventions', () => {
     await resetDemo(page);
     await nav(page, 'Lab map');
     const gate = await slow(page, '**/api/dashboard');
-    await nav(page, 'Investigations');
+    await nav(page, 'Rooms');
     await expect(page.getByRole('status').filter({ hasText: /Loading investigation map/ })).toBeVisible();
     // The learner moves into the page body (here: the breadcrumb-free header has no control, so use a skip into main).
     await page.evaluate(() => { const probe = document.createElement('button'); probe.id = 'probe'; probe.textContent = 'probe'; document.querySelector('main')!.append(probe); probe.focus(); });
@@ -339,7 +360,7 @@ test.describe('motion', () => {
     await box.click();
     await expect(page.getByRole('status').filter({ hasText: 'Preferences saved' })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('data-reduce-motion', 'true');
-    await nav(page, 'Investigations');
+    await nav(page, 'Rooms');
     await expect(page.locator('.lab-strip .lab-card-scene img').first()).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
     expect(await page.locator('.lab-strip .lab-card').first().evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
@@ -371,6 +392,8 @@ test.describe('keyboard operability, engine by engine', () => {
     for (let i = 0; i < 5; i += 1) await image.press('ArrowRight');
     await expect(page.getByText('Marker at 75% across, 50% down.')).toBeVisible();
     await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Inspect image: Stylised blood smear' })).toBeFocused();
+    await page.keyboard.press('Tab');
     await expect(page.getByRole('button', { name: 'Submit answer' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
@@ -383,6 +406,9 @@ test.describe('keyboard operability, engine by engine', () => {
     await page.keyboard.press('Space');
     await expect(reject).toHaveAttribute('aria-pressed', 'true');
     await submit(page).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.step-review h2')).toBeFocused();
+    await page.getByRole('button', { name: 'Continue', exact: true }).focus();
     await page.keyboard.press('Enter');
     await expect(page.getByText('STEP 2 / 3')).toBeVisible();
     const repeat = page.getByRole('button', { name: DECISION.repeat });
@@ -422,12 +448,13 @@ test.describe('keyboard operability, engine by engine', () => {
   test('the whole dashboard is reachable by Tab in a sensible order', async ({ page }) => {
     await expect(homeHeading(page)).toBeVisible();
     const seen: string[] = [];
-    // 14 presses: the two language buttons (FR, EN) in the header add two Tab stops before the page content.
-    for (let i = 0; i < 14; i += 1) {
+    // Include every real section plus skip, guest actions, languages and the first laboratory controls.
+    const navigationStops = await page.locator('.app>aside nav button').count();
+    for (let i = 0; i < navigationStops + 8; i += 1) {
       await page.keyboard.press('Tab');
       seen.push(await page.evaluate(() => document.activeElement?.textContent?.trim().slice(0, 30) ?? ''));
     }
-    expect(seen.slice(0, 5).join('|')).toContain('Investigations');
+    expect(seen.slice(0, 5).join('|')).toContain('Rooms');
     expect(seen.join('|')).toContain('Review lab');
     expect(seen.join('|')).toContain('View full map');
   });

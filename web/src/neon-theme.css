@@ -147,6 +147,7 @@ header { border-color: rgba(35, 117, 157, .55); }
 .player-title .eyebrow { color: #8dd9ee; }
 .point-text { background: #082b45; border-color: #277da1; }
 .point-text summary, .point-text table { color: #e4f4ff; }
+.point-text summary::before { color: #8ceeff; }
 .point-text-indices, .point-text-caption, .point-text-hint { color: #d8f3ff; }
 .point-text button { background: #0a3854; border-color: #277da1; color: #e5f5ff; }
 .point-text th, .point-text td { border-color: #1b5876; }

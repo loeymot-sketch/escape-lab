@@ -193,7 +193,7 @@ export const QUALITY_POINTS = [
   { title: 'Automated tests', text: 'Automated tests cover the server and the interface, and they run locally.' },
   { title: 'Adversarial audits by AI agents', text: 'Repeated adversarial audits, carried out by AI review agents of the project team, tried to break the application. They are not an external or independent human review. They also run locally.' },
   { title: 'Local validation only', text: 'All validation so far is local: no remote continuous-integration run, and no independent human security or accessibility review.' },
-  { title: 'Accessibility testing', text: 'Not yet tested with a real screen reader; the Blood Smear Code mission has no non-visual alternative.' },
+  { title: 'Accessibility testing', text: 'Not yet tested with a real screen reader; the Blood Smear Code mission now has a neutral description and keyboard-operable point control, but it still has no expert-authored non-visual assessment path and needs a real screen-reader review.' },
 ];
 
 export const QUALITY_LOCAL = [

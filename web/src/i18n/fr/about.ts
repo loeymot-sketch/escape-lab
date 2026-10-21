@@ -87,7 +87,7 @@ export default {
   'Local validation only': "Validation uniquement locale",
   'All validation so far is local: no remote continuous-integration run, and no independent human security or accessibility review.': "Toute la validation réalisée jusqu'ici est locale\u00a0: aucune exécution d'intégration continue à distance, et aucune revue humaine indépendante de la sécurité ou de l'accessibilité.",
   'Accessibility testing': "Tests d'accessibilité",
-  'Not yet tested with a real screen reader; the {mission} mission has no non-visual alternative.': "Pas encore testé avec un véritable lecteur d'écran\u00a0; la mission «\u00a0{mission}\u00a0» n'a pas d'alternative non visuelle.",
+  'Not yet tested with a real screen reader; the {mission} mission now has a neutral description and keyboard-operable point control, but it still has no expert-authored non-visual assessment path and needs a real screen-reader review.': "Pas encore testé avec un véritable lecteur d'écran\u00a0; la mission «\u00a0{mission}\u00a0» dispose maintenant d'une description neutre et d'un contrôle de repérage utilisable au clavier, mais ne possède toujours pas de parcours d'évaluation non visuel rédigé par un expert et nécessite une vérification avec un véritable lecteur d'écran.",
   'Local only': "Local uniquement",
   'Technically verified locally': "Vérifié techniquement en local",
   'Scoring, timer, hints and unlocks are decided by the server and exercised by automated tests.': "Le score, le minuteur, les indices et les déverrouillages sont décidés par le serveur et mis à l'épreuve par des tests automatisés.",

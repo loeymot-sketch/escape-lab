@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
-import { apiCall, homeHeading, json, moveContent, openFaculty, openHome, patched, prepareContentStatus, resetDemo, sessionToken, statusPill, teacherToken } from './support/helpers';
+import { navigateSection, apiCall, homeHeading, json, moveContent, openFaculty, openHome, patched, prepareContentStatus, resetDemo, sessionToken, statusPill, teacherToken } from './support/helpers';
 
-const nav = (page: Page, name: string) => page.getByRole('button', { name, exact: true }).click();
+const nav = navigateSection;
 const alert = (page: Page) => page.getByRole('alert');
 
 test.describe('faculty roster, detail and class scope', () => {
@@ -73,7 +73,8 @@ test.describe('faculty roster, detail and class scope', () => {
     // R9-C-03: an empty class has no completion or attention figure to show.
     await expect(page.locator('.stat').filter({ hasText: /^Completion/ })).toContainText('—');
     await nav(page, 'Student detail');
-    await expect(page.getByLabel('Class', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Class', { exact: true })).toHaveValue(/2/);
+    await expect(page.getByRole('heading', { name: 'No students in this class yet' })).toBeVisible();
   });
 
   test('a single class shows no selector', async ({ page }) => {
@@ -153,6 +154,8 @@ test.describe('content review guards', () => {
     await expect(row.getByRole('button')).toHaveCount(1);
     await expect(row.getByRole('button', { name: 'Mark reviewed' })).toBeVisible();
     await expect(row.getByRole('button', { name: 'Approve' })).toHaveCount(0);
+    const visualRow = page.locator('.content-row').filter({ hasText: 'Lab Value Hacker' });
+    await expect(visualRow.getByTestId('visual-audit-bio-02')).toHaveText('Visual observations: 1 · multi-zone: 1');
     await moveContent(page, row, 'Mark reviewed', 'reviewed');
     await expect(row.getByRole('button')).toHaveCount(1);
     await expect(row.getByRole('button', { name: 'Approve' })).toBeVisible();

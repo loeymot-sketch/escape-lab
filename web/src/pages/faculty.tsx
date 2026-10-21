@@ -69,7 +69,10 @@ export function Teacher() {
 }
 
 function ClassAnalytics({ classes }: { classes: FacultyClass[] }) {
-  const [classId, setClassId] = useState(classes[0]!.id);
+  const nav = useNav();
+  const initialClass = classes.some((c) => c.id === nav.facultyClassId) ? nav.facultyClassId! : classes[0]!.id;
+  const [classId, setClassId] = useState(initialClass);
+  const selectClass = (id: number) => { setClassId(id); nav.setFacultyClassId(id); };
   const { state, reload } = useLoad(async () => {
     const [analytics, roster] = await Promise.all([api(`/classes/${classId}/analytics`), api(`/classes/${classId}/students`)]);
     return { analytics: normalizeFacultyDashboard(analytics), roster: normalizeRoster(roster) };
@@ -77,7 +80,7 @@ function ClassAnalytics({ classes }: { classes: FacultyClass[] }) {
 
   return (
     <>
-      <ClassPicker classes={classes} value={classId} onChange={setClassId} />
+      <ClassPicker classes={classes} value={classId} onChange={selectClass} />
       {state.phase === 'error'
         ? <FacultyError error={state.error} retry={reload} />
         : (
@@ -195,12 +198,13 @@ export function StudentDetail() {
 
 function StudentPicker({ classes }: { classes: FacultyClass[] }) {
   const nav = useNav();
-  const initialClass = classes.some((c) => c.id === nav.student?.classId) ? nav.student!.classId : classes[0]!.id;
+  const initialClass = classes.some((c) => c.id === nav.facultyClassId) ? nav.facultyClassId! : classes.some((c) => c.id === nav.student?.classId) ? nav.student!.classId : classes[0]!.id;
   const [classId, setClassId] = useState(initialClass);
+  const selectClass = (id: number) => { setClassId(id); nav.setFacultyClassId(id); };
   const roster = useLoad(async () => normalizeRoster(await api(`/classes/${classId}/students`)), [classId]);
   return (
     <>
-      <ClassPicker classes={classes} value={classId} onChange={setClassId} />
+      <ClassPicker classes={classes} value={classId} onChange={selectClass} />
       {roster.state.phase === 'error'
         ? <FacultyError error={roster.state.error} retry={roster.reload} />
         : (
@@ -238,7 +242,7 @@ function StudentView({ classId, students, preferred }: { classId: number; studen
                   <div>
                     <h2><bdi>{displayName(student.name)}</bdi>{tags.has(student.id) && <>{' '}<small className="id-tag">{tags.get(student.id)}</small></>}</h2>
                     <p>{t('Level {level} · {xp} XP · {missions} · {hints} (best attempts)', { level: student.level, xp: formatInt(student.xp), missions: plural(student.missionsCompleted, 'mission completed', 'missions completed'), hints: plural(student.hintsUsed, 'hint used', 'hints used') })}</p>
-                    <p className="bar-note">{t('Counts cover the standard laboratories; the Master Lab is not part of class analytics.')}</p>
+                    <p className="bar-note">{t('Standard laboratory analytics exclude the Master Lab; the XP and level above include every recorded mission.')}</p>
                     {student.needsAttention && <p className="attention">{t('Needs attention: {reason}', { reason: student.attentionReason === null ? '' : t(student.attentionReason) })}</p>}
                   </div>
                 </div>
@@ -270,7 +274,7 @@ function StudentView({ classId, students, preferred }: { classId: number; studen
                         {history.map((h, index) => (
                           <li className="mission-row" key={`${h.missionId}-${h.completedAt}-${index}`}>
                             <span>{t(h.title)}<small className="sample-size"><CompletedOn at={h.completedAt} /></small></span>
-                            <b>{h.score} XP</b>
+                            <b>{t('Mission score: {score}', { score: formatInt(h.score) })}</b>
                             <small>{plural(h.answersSubmitted, 'answer')} · {plural(h.wrongAnswers, 'wrong', 'wrong')} · {plural(h.hintsUsed, 'hint')} · {h.elapsed}</small>
                           </li>
                         ))}
@@ -444,6 +448,7 @@ export function ContentReview() {
                       <div className="content-title">
                         <b id={`content-title-${m.missionId}`}>{t(m.title)}</b>
                         <ReviewTrail mission={m} />
+                        {m.visualAudit.pointSteps > 0 && <small className="review-trail" data-testid={`visual-audit-${m.missionId}`}>{t('Visual observations: {count} · multi-zone: {multi}', { count: m.visualAudit.pointSteps, multi: m.visualAudit.multiZoneSteps })}</small>}
                       </div>
                       <span>{t(labName(m.labSlug))}</span>
                       <span className={`status-pill ${m.status}`}>{statusWord(m.status)}</span>

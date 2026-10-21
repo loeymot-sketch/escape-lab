@@ -1,7 +1,8 @@
 import { DatabaseSync } from 'node:sqlite';
 import { expect, type Locator, type Page } from '@playwright/test';
 
-export const API = 'http://localhost:3000/api';
+/** The API under test: playwright.config.ts exports the port it chose, so the helpers follow an E2E_API_PORT override. */
+export const API = `http://localhost:${process.env.E2E_API_PORT ?? '3000'}/api`;
 export const TOKEN_KEY = 'escape-demo-token';
 export const ATTEMPT_KEY = 'escape-demo-attempt';
 
@@ -16,6 +17,18 @@ export const FIRST_VISIT_HEADING = /Choose a laboratory/;
 export const CONTINUE_HEADING = /Choose a laboratory/;
 export const HOME_HEADING = /Choose a laboratory/;
 export const homeHeading = (page: Page) => page.getByRole('heading', { name: HOME_HEADING });
+
+/** Follow the visible game navigation. Secondary screens live in the phone menu, never behind a hidden click. */
+export async function navigateSection(page: Page, name: string, touch = false) {
+  const labels: Record<string, string> = { Investigations: 'Rooms', Progress: 'Vault', Enquêtes: 'Salles', Progression: 'Coffre' };
+  const target = page.getByRole('button', { name: labels[name] ?? name, exact: true });
+  const menu = page.getByRole('button', { name: /^(Guest options|Options invité)$/ });
+  if (!await target.isVisible() && await menu.isVisible()) {
+    if (await menu.getAttribute('aria-expanded') !== 'true') { if (touch) await menu.tap(); else await menu.click(); }
+  }
+  await expect(target).toBeVisible();
+  if (touch) await target.tap(); else await target.click();
+}
 
 /** The three decision options as the learner reads them (the backend's authored labels; the option ids are never shown). */
 export const DECISION = { accept: /Accept and report/, reject: /Reject and request a new sample/, repeat: /Correct the interference and re-measure/ };
@@ -55,10 +68,10 @@ export async function resetDemo(page: Page) {
 }
 
 let registrations = 0;
-/** Registers a throwaway learner (the e2e API allows 40 registrations per hour per address; the budget is guarded). */
+/** Registers a throwaway learner (the e2e API allows 40 registrations per hour per address; keep the helper aligned with that server limit). */
 export async function freshStudent(): Promise<string> {
   registrations += 1;
-  if (registrations > 30) throw new Error('E2E registration budget exhausted: reuse an existing fresh learner.');
+  if (registrations > 40) throw new Error('E2E registration budget exhausted: reuse an existing fresh learner.');
   const email = `e2e-${Date.now()}-${registrations}-${Math.random().toString(36).slice(2, 8)}@example.test`;
   const reply = await apiCall(null, '/auth/register', { method: 'POST', body: { name: 'E2E Learner', email, password: 'e2e learner password 1' } });
   expect(reply.status).toBe(201);
@@ -77,7 +90,7 @@ export async function openAs(page: Page, token: string) {
 
 /** Starts a mission through the real lab lobby UI. */
 export async function startMissionViaUi(page: Page, labName: RegExp | string, missionTitle: string) {
-  await page.getByRole('button', { name: 'Lab map' }).click();
+  await navigateSection(page, 'Lab map');
   await page.getByRole('button', { name: new RegExp(`^(Enter|Review) ${typeof labName === 'string' ? labName : labName.source}`) }).click();
   await expect(page.getByRole('heading', { name: 'Choose a mission' })).toBeVisible();
   await page.getByRole('button', { name: new RegExp(`^(Start|Resume|Replay) ${missionTitle}$`) }).click();
@@ -85,6 +98,13 @@ export async function startMissionViaUi(page: Page, labName: RegExp | string, mi
 }
 
 export const submit = (page: Page) => page.getByRole('button', { name: /Submit answer|Checking…/ });
+
+/** The learner reads the server-confirmed correction, then explicitly opens the saved next step. */
+export async function continueStep(page: Page) {
+  await expect(page.locator('.step-review')).toBeVisible();
+  await page.getByRole('button', { name: /^(Continue|Continuer)$/ }).click();
+  await expect(page.locator('.step-review')).toHaveCount(0);
+}
 
 /** Click the visible feature of an artwork, computed from the rendered image rectangle. */
 export async function clickArtwork(page: Page, art: { width: number; height: number; x: number; y: number }, offset = { x: 0, y: 0 }) {

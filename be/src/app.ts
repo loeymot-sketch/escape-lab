@@ -9,7 +9,8 @@ import { verifyToken } from './auth.ts';
 import { openDb } from './db.ts';
 import type { DB } from './db.ts';
 import { Game } from './game.ts';
-import { ApiError, EMPTY_BODY, RateLimiter, bad, compilePath, forbidden, notFound, readJson, send, unauthorized, validate } from './http.ts';
+import { Studio } from './studio.ts';
+import { ApiError, EMPTY_BODY, RateLimiter, RawBody, bad, compilePath, forbidden, notFound, readJson, send, sendRaw, unauthorized, validate } from './http.ts';
 import type { Ctx, Route } from './http.ts';
 import { buildRoutes } from './routes.ts';
 import { openApi } from './openapi.ts';
@@ -22,7 +23,7 @@ export interface Config {
   /** Enables POST /api/auth/demo and the seeded demo data. Never enable in production. */
   demo?: boolean;
   /** Per-IP limits; defaults suit production. */
-  limits?: { registerPerHour?: number; loginFailuresPerIp?: number; joinPerUser?: number; answerPerMinute?: number; hintPerMinute?: number; startPerMinute?: number; writePerMinute?: number };
+  limits?: { registerPerHour?: number; loginFailuresPerIp?: number; joinPerUser?: number; answerPerMinute?: number; hintPerMinute?: number; startPerMinute?: number; leaderboardPerMinute?: number; writePerMinute?: number; demoResetPer10Minutes?: number };
   assistant?: HintProvider;
   /** Number of trusted reverse-proxy hops in front of the API (true = 1). The client address is the Nth entry from the right of X-Forwarded-For. Only safe when the API port is reachable solely through those proxies. */
   trustProxy?: boolean | number;
@@ -48,13 +49,41 @@ export function configFromEnv(env = process.env): Config {
     trustProxy: hops > 0 ? hops : false,
     limits: {
       registerPerHour: intEnv(env.RATE_REGISTER_PER_HOUR), loginFailuresPerIp: intEnv(env.RATE_LOGIN_FAILURES_PER_IP), joinPerUser: intEnv(env.RATE_JOIN_PER_USER),
-      answerPerMinute: intEnv(env.RATE_ANSWER_PER_MINUTE), hintPerMinute: intEnv(env.RATE_HINT_PER_MINUTE), startPerMinute: intEnv(env.RATE_START_PER_MINUTE), writePerMinute: intEnv(env.RATE_WRITE_PER_MINUTE),
+      answerPerMinute: intEnv(env.RATE_ANSWER_PER_MINUTE), hintPerMinute: intEnv(env.RATE_HINT_PER_MINUTE), startPerMinute: intEnv(env.RATE_START_PER_MINUTE), leaderboardPerMinute: intEnv(env.RATE_LEADERBOARD_PER_MINUTE), writePerMinute: intEnv(env.RATE_WRITE_PER_MINUTE), demoResetPer10Minutes: intEnv(env.RATE_DEMO_RESET_PER_10_MINUTES),
     },
     assistant: env.LAB_ASSISTANT_API_KEY && env.LAB_ASSISTANT_MODEL ? new AnthropicHintProvider(env.LAB_ASSISTANT_API_KEY, env.LAB_ASSISTANT_MODEL) : new StandardOnlyProvider(),
   };
 }
 
 const HOSTNAME = /^(?=.{1,253}$)[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$/;
+
+/**
+ * Stable limiter identity for a client address. IPv4-mapped IPv6 values are
+ * folded to IPv4; native IPv6 values share one budget per /64. The latter is
+ * deliberately only a limiter key: this value is used for throttling only and
+ * is not exposed as a user-facing identity.
+ */
+export function normalizeRateLimitAddress(raw: string): string {
+  const value = raw.trim().replace(/^\[|\]$/g, '').split('%', 1)[0]!;
+  if (isIP(value) === 4) return `v4:${value}`;
+  if (isIP(value) !== 6) return 'invalid';
+
+  const [leftRaw, rightRaw] = value.split('::');
+  const hasCompression = value.includes('::');
+  const parsePart = (part: string): number[] => part ? part.split(':').flatMap((piece) => {
+    if (piece.includes('.')) {
+      const octets = piece.split('.').map(Number);
+      return [(octets[0]! << 8) | octets[1]!, (octets[2]! << 8) | octets[3]!];
+    }
+    return [Number.parseInt(piece, 16)];
+  }) : [];
+  const left = parsePart(leftRaw ?? '');
+  const right = parsePart(hasCompression ? (rightRaw ?? '') : '');
+  const words = hasCompression ? [...left, ...Array(8 - left.length - right.length).fill(0), ...right] : left;
+  if (words.length !== 8 || words.some((word) => !Number.isInteger(word) || word < 0 || word > 0xffff)) return 'invalid';
+  if (words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff) return `v4:${(words[6]! >> 8) & 0xff}.${words[6]! & 0xff}.${words[7]! >> 8}.${words[7]! & 0xff}`;
+  return `v6:${words.slice(0, 4).map((word) => word.toString(16)).join(':')}/64`;
+}
 
 /**
  * Interface the HTTP server binds to. Demo mode mints passwordless tokens, so it stays on loopback unless HOST says otherwise; without demo mode all interfaces (undefined) as before.
@@ -91,14 +120,15 @@ function isClientAbort(e: unknown): boolean {
   return code === 'ECONNRESET' || code === 'ERR_STREAM_PREMATURE_CLOSE' || (e instanceof Error && e.message === 'aborted');
 }
 
-export interface App { server: Server; db: DB; game: Game; limiter: RateLimiter; close: () => Promise<void> }
+export interface App { server: Server; db: DB; game: Game; studio: Studio; limiter: RateLimiter; close: () => Promise<void> }
 
 export function createApp(cfg: Config): App {
   const db = openDb(cfg.dbPath);
   const now = cfg.now ?? Date.now;
   const game = new Game(db, { now, assistant: cfg.assistant });
+  const studio = new Studio(db, now);
   const limiter = new RateLimiter(now);
-  const routes = buildRoutes({ db, game, limiter, secret: cfg.secret, teacherInviteCode: cfg.teacherInviteCode, now, limits: cfg.limits, demo: !!cfg.demo });
+  const routes = buildRoutes({ db, game, studio, limiter, secret: cfg.secret, teacherInviteCode: cfg.teacherInviteCode, now, limits: cfg.limits, demo: !!cfg.demo });
   const table = routes.map((r) => ({ r, ...compilePath(r.path) }));
   const spec = openApi(routes);
 
@@ -107,7 +137,7 @@ export function createApp(cfg: Config): App {
     if (cfg.corsOrigin === '*' || (origin && origin === cfg.corsOrigin)) {
       h['Access-Control-Allow-Origin'] = cfg.corsOrigin === '*' ? '*' : origin!;
       h['Access-Control-Allow-Headers'] = 'Authorization, Content-Type';
-      h['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS';
+      h['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
       // Retry-After is not CORS-safelisted: without this a browser script cannot read it from a 429.
       h['Access-Control-Expose-Headers'] = 'Retry-After';
       h['Access-Control-Max-Age'] = '600';
@@ -119,9 +149,9 @@ export function createApp(cfg: Config): App {
     const hops = cfg.trustProxy === true ? 1 : cfg.trustProxy || 0;
     if (hops > 0) {
       const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',').map((x) => x.trim()).filter(Boolean);
-      if (fwd.length >= hops) return fwd[fwd.length - hops]!;
+      if (fwd.length >= hops) return normalizeRateLimitAddress(fwd[fwd.length - hops]!);
     }
-    return req.socket.remoteAddress ?? 'unknown';
+    return normalizeRateLimitAddress(req.socket.remoteAddress ?? 'unknown');
   };
 
   const server = createServer(async (req, res) => {
@@ -180,7 +210,7 @@ export function createApp(cfg: Config): App {
       }
 
       if (req.method === 'POST' || req.method === 'PUT') {
-        ctx.body = await readJson(req);
+        ctx.body = await readJson(req, match.r.maxBody);
         if (match.r.body) {
           const errs = validate(ctx.body === undefined || (ctx.body === null && match.r.body !== EMPTY_BODY) ? {} : ctx.body, match.r.body);
           if (ctx.body === undefined && match.r.body.required?.length) errs.unshift('body is required');
@@ -191,7 +221,8 @@ export function createApp(cfg: Config): App {
 
       // HEAD is a safe method: the handler runs with every write refused (see Game.readOnlyRequest). All GET handlers are synchronous.
       const out = await (req.method === 'HEAD' ? game.readOnlyRequest(() => match!.r.handler(ctx)) : match.r.handler(ctx));
-      send(res, match.r.status ?? 200, out, cors(origin));
+      if (out instanceof RawBody) sendRaw(res, out, cors(origin));
+      else send(res, match.r.status ?? 200, out, cors(origin));
     } catch (e) {
       if (e instanceof ApiError) {
         send(res, e.status, { error: { code: e.code, message: e.message, ...(e.details !== undefined ? { details: e.details } : {}) } }, { ...cors(origin), ...(e.headers ?? {}) });
@@ -204,9 +235,16 @@ export function createApp(cfg: Config): App {
       }
     }
   });
+  // The API accepts small JSON bodies only. Keep slowloris connections from
+  // retaining their buffers for Node's five-minute default, and cap the
+  // process-level socket population; a reverse proxy should still enforce its
+  // own per-IP and edge limits before public exposure.
+  server.requestTimeout = 30_000;
+  server.headersTimeout = 15_000;
+  server.maxConnections = 512;
 
   return {
-    server, db, game, limiter,
+    server, db, game, studio, limiter,
     close: () => new Promise<void>((resolve) => { server.close(() => { db.close(); resolve(); }); server.closeAllConnections?.(); }),
   };
 }

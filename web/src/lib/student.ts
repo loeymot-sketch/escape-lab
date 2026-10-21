@@ -79,7 +79,8 @@ export function normalizeLabs(payload: unknown): Lab[] {
 
 export type ContinueTarget = { kind: 'mission' | 'unlock'; missionId: string | null; labSlug: string; title: string; resume: boolean };
 export type Dashboard = {
-  user: { level: number; xp: number };
+  /** `levelProgress` is the server's own figure: XP already inside the current level and the size of that level. */
+  user: { level: number; xp: number; levelProgress: { into: number; size: number } };
   overall: { completedMissions: number; totalMissions: number; pct: number };
   streakDays: number;
   labsCompleted: number;
@@ -105,8 +106,13 @@ export function normalizeDashboard(payload: unknown): Dashboard {
     const r = rec(v, D, 'recommended');
     return { missionId: str(r.missionId, D, 'recommended.missionId'), labSlug: str(r.labSlug, D, 'recommended.labSlug'), title: str(r.title, D, 'recommended.title'), reason: str(r.reason, D, 'recommended.reason') };
   });
+  const progress = rec(user.levelProgress, D, 'user.levelProgress');
+  const into = nonNeg(progress.into, D, 'user.levelProgress.into');
+  const size = nonNeg(progress.size, D, 'user.levelProgress.size');
+  // A level has a positive size and the progress inside it never exceeds it: anything else is a broken reply, never a >100 % bar.
+  if (size <= 0 || into > size) throw new PayloadError(`Invalid server ${D} payload: user.levelProgress.`);
   return {
-    user: { level: nonNeg(user.level, D, 'user.level'), xp: nonNeg(user.xp, D, 'user.xp') },
+    user: { level: nonNeg(user.level, D, 'user.level'), xp: nonNeg(user.xp, D, 'user.xp'), levelProgress: { into, size } },
     overall: ((): Dashboard['overall'] => {
       const completedMissions = nonNeg(overall.completedMissions, D, 'overall.completedMissions');
       const totalMissions = nonNeg(overall.totalMissions, D, 'overall.totalMissions');
@@ -133,8 +139,12 @@ export type LobbyMission = {
   unlocksWith?: string;
   bestScore: number | null;
   maxScore: number;
+  /** Server-decided reading of the best score (thresholds published by the rules route); null without a best. */
+  mastery: Mastery | null;
   inProgress: boolean;
 };
+export type Mastery = 'mastered' | 'completed' | 'review';
+const MASTERY = ['mastered', 'completed', 'review'] as const;
 export type LabLobby = {
   lab: { slug: string; name: string; discipline: string; blurb: string };
   state: LabState;
@@ -167,6 +177,7 @@ export function normalizeLabLobby(payload: unknown): LabLobby {
         unlocksWith: missionState === 'locked' ? str(m.unlocksWith, B, 'mission.unlocksWith') : optional(m.unlocksWith, (v) => str(v, B, 'mission.unlocksWith')),
         bestScore: nullable(m.bestScore, (v) => nonNeg(v, B, 'mission.bestScore')),
         maxScore: nonNeg(m.maxScore, B, 'mission.maxScore'),
+        mastery: m.mastery === undefined ? null : nullable(m.mastery, (v) => oneOf(v, MASTERY, B, 'mission.mastery')),
         inProgress: bool(m.inProgress, B, 'mission.inProgress'),
       };
     }),

@@ -127,7 +127,38 @@ export interface Route {
   query?: Array<{ name: string; schema: Schema; description?: string }>;
   /** HTTP status for success. Defaults to 200. */
   status?: number;
+  /** Largest accepted JSON body in bytes (default 64 KB): image uploads and whole room documents need more. */
+  maxBody?: number;
+  /** Not JSON: the handler returns a RawBody (an image). Documented as such in OpenAPI. */
+  raw?: string;
   handler: (ctx: Ctx) => unknown;
+}
+
+/** A non-JSON success answer (an uploaded picture). */
+export class RawBody {
+  readonly contentType: string;
+  readonly bytes: Uint8Array;
+  readonly headers: Record<string, string>;
+  constructor(contentType: string, bytes: Uint8Array, headers: Record<string, string> = {}) {
+    this.contentType = contentType;
+    this.bytes = bytes;
+    this.headers = headers;
+  }
+}
+
+export function sendRaw(res: ServerResponse, body: RawBody, extra: Record<string, string> = {}): void {
+  res.writeHead(200, {
+    'Content-Type': body.contentType,
+    'Content-Length': body.bytes.byteLength,
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+    // The bytes are an image, never a document: nothing in them may run even when opened directly.
+    'Content-Security-Policy': "default-src 'none'; sandbox",
+    'Cross-Origin-Resource-Policy': 'cross-origin',
+    ...extra,
+    ...body.headers,
+  });
+  res.end(body.bytes);
 }
 
 export function compilePath(path: string): { re: RegExp; keys: string[] } {
@@ -173,9 +204,15 @@ export class RateLimiter {
   private lastSweep = 0;
   now: () => number;
   constructor(now: () => number = Date.now) { this.now = now; }
+  /** Keep an active key's window monotone when the wall clock steps backwards. */
+  private keyNow(key: string): number {
+    const current = this.now();
+    const last = this.hits.get(key)?.at.at(-1);
+    return last === undefined ? current : Math.max(current, last);
+  }
   /** Registers one hit; throws 429 when the key exceeded `max` hits in `windowMs`. */
   hit(key: string, max: number, windowMs: number): void {
-    const t = this.now();
+    const t = this.keyNow(key);
     const arr = (this.hits.get(key)?.at ?? []).filter((x) => t - x < windowMs);
     if (arr.length >= max) {
       const retry = Math.max(1, Math.ceil((windowMs - (t - arr[0]!)) / 1000));
@@ -196,7 +233,7 @@ export class RateLimiter {
   }
   /** Throws 429 when `key` is already at its limit, without recording a hit (count failures separately with hit()). */
   peek(key: string, max: number, windowMs: number): void {
-    const t = this.now();
+    const t = this.keyNow(key);
     const arr = (this.hits.get(key)?.at ?? []).filter((x) => t - x < windowMs);
     if (arr.length >= max) {
       const retry = Math.max(1, Math.ceil((windowMs - (t - arr[0]!)) / 1000));

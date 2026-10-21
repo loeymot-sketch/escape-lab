@@ -4,6 +4,7 @@ import { forbiddenPhrases, leaksAnswer } from '../src/assistant.ts';
 import { configFromEnv } from '../src/app.ts';
 import { MISSION_BY_ID, exitCode } from '../src/content.ts';
 import { RateLimiter } from '../src/http.ts';
+import { roundPercentage } from '../src/game.ts';
 import { harness, solve } from './helpers.ts';
 import type { Harness } from './helpers.ts';
 
@@ -12,6 +13,12 @@ import type { Harness } from './helpers.ts';
 let h: Harness;
 before(async () => { h = await harness({ teacherInviteCode: 'T-INVITE' }); });
 after(async () => { await h.close(); });
+
+test('percentage rounding is stable at exact halves without promoting real fractions', () => {
+  assert.equal(roundPercentage(75.49999999999999), 76, 'accumulated binary noise must not turn an exact half down');
+  assert.equal(roundPercentage(75.5), 76);
+  assert.equal(roundPercentage(75.49), 75, 'a real value below the half remains below it');
+});
 
 test('an oversized, backtracking-shaped email is refused fast (the pattern never runs on it)', async () => {
   const email = `a@${'b.'.repeat(20_000)}@c`;
@@ -45,6 +52,16 @@ test('a successful sign-in gives back the slots it reserved', async () => {
   } finally { await p.close(); }
 });
 
+test('login concurrency is bounded per address without throttling sequential successes', async () => {
+  const p = await harness({ limits: { registerPerHour: 10_000, loginFailuresPerIp: 10_000 } });
+  try {
+    await p.signup('Concurrency User', 'concurrency@uni.edu');
+    const replies = await Promise.all(Array.from({ length: 40 }, () => p.call('POST', '/api/auth/login', { body: { email: 'concurrency@uni.edu', password: 'correct horse battery' } })));
+    assert.ok(replies.some((r) => r.status === 429), 'the concurrency guard should reject excess simultaneous work');
+    for (let i = 0; i < 5; i++) assert.equal((await p.call('POST', '/api/auth/login', { body: { email: 'concurrency@uni.edu', password: 'correct horse battery' } })).status, 200);
+  } finally { await p.close(); }
+});
+
 test('the limiter prunes each key with its own window (a 60 s key never clears a 10 min lockout)', () => {
   let t = 0;
   const l = new RateLimiter(() => t);
@@ -55,6 +72,21 @@ test('the limiter prunes each key with its own window (a 60 s key never clears a
   t += 20_000;
   l.hit('short:trigger', 100, 60_000);
   assert.throws(() => l.peek('lock', 3, 600_000), (e: any) => e.status === 429, 'the 10-minute lockout survived the sweep');
+});
+
+test('a backward wall-clock step cannot extend a rate-limit retry or make it negative', () => {
+  let t = 100_000;
+  const l = new RateLimiter(() => t);
+  l.hit('clock', 1, 60_000);
+  t -= 55_000;
+  assert.throws(() => l.hit('clock', 1, 60_000), (e: any) => {
+    assert.equal(e.status, 429);
+    assert.equal(e.details.retryAfterSeconds, 60);
+    assert.equal(e.headers['Retry-After'], '60');
+    return true;
+  });
+  t += 120_000;
+  assert.doesNotThrow(() => l.hit('clock', 1, 60_000));
 });
 
 test('only the application/json media type is accepted (not a CORS-safelisted text/plain carrying the words)', async () => {
@@ -96,6 +128,22 @@ test('the Master Lab counts the same everywhere: leaderboard labs equal the dash
   const analytics = (await h.call('GET', `/api/classes/${cls.id}/analytics`, { token: t.token })).body;
   assert.notEqual(analytics.hardestMission?.labSlug, 'master');
   assert.ok(!analytics.missions.some((m: any) => m.labSlug === 'master' && m.needsAttention));
+});
+
+test('leaderboard name lookup is restricted to the selected cohort', async () => {
+  const h = await harness();
+  try {
+    const teacher = await h.signup('Cohort Teacher', 'cohort-teacher@uni.edu', { teacherInviteCode: 'FACULTY-INVITE' });
+    const cls = (await h.call('POST', '/api/classes', { token: teacher.token, body: { name: 'Cohort class' } })).body;
+    const first = await h.signup('Cohort Student', 'cohort-student@uni.edu');
+    const outside = await h.signup('Outside Student', 'outside-student@uni.edu');
+    assert.equal((await h.call('POST', '/api/classes/join', { token: first.token, body: { joinCode: cls.joinCode } })).status, 200);
+    const result = await h.call('GET', '/api/leaderboard?scope=all&cohort=class', { token: first.token });
+    assert.equal(result.status, 200);
+    assert.equal(result.body.rows.some((row: { name: string }) => row.name.includes('Outside')), false);
+    assert.equal(result.body.me.name.includes('Cohort'), true);
+    void outside;
+  } finally { await h.close(); }
 });
 
 test('result() answers time_expired for an expired attempt whether or not something read it first', async () => {

@@ -19,7 +19,9 @@
 .image-frame{margin:20px 0 0}
 .image-frame .scientific{margin:0;border-radius:10px 10px 0 0}
 .image-frame .image-watermark{position:static;display:flex;align-items:center;justify-content:center;gap:6px;margin:0;padding:7px 12px;border:0;border-radius:0 0 10px 10px;background:#0f3031;color:#fff;font:700 11px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.08em;text-transform:uppercase;pointer-events:none}
-.marker{box-sizing:border-box;width:28px;height:28px;font-size:0;text-shadow:none;background:transparent;border:3px solid #fff;box-shadow:0 0 0 2px #a8323c,0 2px 8px rgba(23,51,68,.4);position:absolute}
+.point-viewer-scroll{display:block!important;overflow:auto;padding:12px;min-height:0;background:#041726}.point-viewer-image{position:relative;display:block;width:150%;max-width:none;margin:0 auto;padding:0;border:0;border-radius:10px;overflow:visible;background:#f4f6f4;cursor:crosshair;touch-action:manipulation}.point-viewer-image img{display:block;width:100%;height:auto;user-select:none}.point-viewer-marker{position:absolute;transform:translate(-50%,-50%);width:clamp(24px,3vw,34px);height:clamp(24px,3vw,34px);border:3px solid #fff;background:transparent;border-radius:50%;box-shadow:0 0 0 2px #a8323c,0 2px 8px rgb(0 0 0 / 40%);pointer-events:none}
+.marker{width:28px;height:28px;background:transparent;border:3px solid #fff;box-shadow:0 0 0 2px #a8323c,0 2px 8px rgba(23,51,68,.4);animation:labescape-marker-enter .24s both}
+@keyframes labescape-marker-enter{from{opacity:0}to{opacity:1}}
 @media (max-width:600px){.marker{width:24px;height:24px;border-width:2px}}
 
 /* ---------------------------------------------------------------- mission layout */
@@ -200,13 +202,43 @@
   .app>aside{position:sticky;top:0;align-self:flex-start;height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;overflow-y:auto;overscroll-behavior:auto}
 }
 @media print{
-  .app>aside{position:static;height:auto;max-height:none;overflow:visible}
+  body{background:#fff;color:#111}
+  .app{display:block;min-height:auto}
+  .app>aside,.app-main>header,.game-primary-nav,.skip-link,.mobile-brand,.guest-popover{display:none!important}
+  .app-main{width:100%;max-width:none}
+  .app-main main{max-width:none;margin:0;padding:0;color:#111}
+  .about{max-width:none;padding:0}
+  .about-step-foot button,.about-step-foot .about-action{display:none!important}
+
+  /* Mission print view: keep the investigation evidence and response readable,
+     but remove the interactive chrome that otherwise repeats over the page. */
+  .player{min-height:auto!important;background:#fff!important;color:#111!important}
+  .player>header,.mission-hero,.mission-step-track,.player-progress,.case-aside,
+  .mission-disclaimer,.case-panel>.submit,.case-panel>.review-continue,
+  .case-panel .state-actions,.case-panel .assistant-inline,.case-panel .assistant-card{display:none!important}
+  .mission-overview{padding:0!important;background:#fff!important}
+  .case-layout{display:block!important;max-width:none!important;margin:0!important}
+  .case-panel{padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important;color:#111!important}
+  .case-panel h1,.case-panel .context,.case-panel .question-section-label,.case-panel .response-heading,
+  .case-panel .status-row,.case-panel .values-block,.case-panel .feedback,.case-panel .point-text,
+  .case-panel .answer-options,.case-panel .matching-list,.case-panel .drag-list{color:#111!important}
+  .case-panel .answer-options button,.case-panel .drag-row,.case-panel .match-row,
+  .case-panel .mission-row.selectable{background:#fff!important;color:#111!important;border:2px solid #333!important;box-shadow:none!important}
+  .case-panel .answer-options button.selected{background:#eef5f3!important;background-image:none!important;color:#111!important;border:3px solid #063f3d!important;outline:3px solid #063f3d!important;outline-offset:-3px}
+  .case-panel .answer-options button .chip{background:#fff!important;color:#111!important;border-color:#333!important}
+  .case-panel .answer-options button.selected .chip{background:#063f3d!important;color:#fff!important;border-color:#063f3d!important}
+  .mission-scene,.image-frame,.values-block,.feedback,.point-text{break-inside:avoid}
+  .mission-scene{box-shadow:none!important}
+  .mission-scene img{max-height:45vh;object-fit:contain}
 }
 
 /* Text version of a table-like image (R36 B36-001): a collapsed section, a real table and 44 px choose buttons.
    The table keeps a readable width and scrolls inside its own (keyboard-focusable) region on a narrow screen: the page never scrolls sideways. */
 .point-text{margin:12px 0 0;border:1px solid #b9c9c3;border-radius:10px;background:#fff}
-.point-text summary{display:flex;align-items:center;min-height:44px;padding:0 14px;font-weight:700;color:#0f3031;cursor:pointer}
+.point-text summary{display:flex;align-items:center;min-height:44px;padding:0 14px;font-weight:700;color:#0f3031;cursor:pointer;list-style:none}
+.point-text summary::-webkit-details-marker{display:none}
+.point-text summary::before{content:'›';display:inline-block;margin-right:8px;font-size:22px;line-height:1;transform:rotate(0deg);transition:transform .16s ease}
+.point-text[open] summary::before{transform:rotate(90deg)}
 .point-text-body{padding:0 14px 14px}
 .point-text-indices{display:flex;flex-wrap:wrap;gap:4px 16px;margin:4px 0 10px;padding:0;list-style:none;font-weight:600;color:#1f3a3c}
 .point-text-scroll{overflow-x:auto}

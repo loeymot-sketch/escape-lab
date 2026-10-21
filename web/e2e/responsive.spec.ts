@@ -1,11 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
-import { openFaculty, openHome, resetDemo } from './support/helpers';
+import { navigateSection, openFaculty, openHome, resetDemo } from './support/helpers';
 
 const noOverflow = async (page: Page, label: string) => {
   const m = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(m.scroll, `${label} overflows horizontally at ${m.client}px`).toBeLessThanOrEqual(m.client);
 };
-const nav = (page: Page, name: string) => page.getByRole('button', { name, exact: true }).click();
+const nav = navigateSection;
 
 for (const width of [768, 375, 1440]) {
   test.describe(`${width}px wide`, () => {
@@ -14,7 +14,7 @@ for (const width of [768, 375, 1440]) {
     test('every student page has no horizontal overflow and keeps its controls reachable', async ({ page }) => {
       await resetDemo(page);
       await noOverflow(page, 'dashboard');
-      for (const [name, heading] of [['Lab map', 'Laboratory map'], ['Progress', 'Progress vault'], ['Lab results', 'Lab results'], ['Learning settings', 'Learning settings']] as const) {
+      for (const [name, heading] of [['Lab map', 'Laboratory map'], ['Vault', 'Progress vault'], ['Badges', 'Milestones'], ['Leaderboard', 'Leaderboard'], ['Lab results', 'Lab results'], ['Learning settings', 'Learning settings']] as const) {
         await nav(page, name);
         await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
         await expect(page.getByRole('status')).toHaveCount(0);

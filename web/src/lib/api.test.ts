@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, REQUEST_TIMEOUT_MS, api, demoSession, onUnauthorized, resolveApiBase } from './api';
+import { ApiError, REQUEST_TIMEOUT_MS, api, demoSession, devApiBase, onUnauthorized, resolveApiBase } from './api';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
@@ -101,6 +101,11 @@ describe('guest API boundary', () => {
 });
 
 describe('API address resolution', () => {
+  it('keeps the development API on the UI host, including 127.0.0.1', () => {
+    expect(devApiBase('127.0.0.1')).toBe('http://127.0.0.1:3000/api');
+    expect(devApiBase('')).toBe('http://localhost:3000/api');
+  });
+
   it('uses the configured address without a trailing slash', () => {
     expect(resolveApiBase({ PROD: true, VITE_API_URL: 'https://api.example.test/api/' })).toEqual({ base: 'https://api.example.test/api', error: null });
   });

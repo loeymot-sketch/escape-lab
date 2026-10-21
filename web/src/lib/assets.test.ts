@@ -36,22 +36,19 @@ describe('chemistry panel text alternative', () => {
     expect(alt!.rows.map(({ test, result, unit, reference, flag }) => ({ test, result, unit, reference, flag }))).toEqual(drawn);
   });
 
-  it('places each selectable row on the centre of its drawn result cell (percent of the 1600 x 900 artwork)', () => {
-    const rowYs = [...new Set(texts.filter((t) => t.y > 300).map((t) => t.y))].sort((a, b) => a - b);
-    expect(alt!.rows.length).toBe(rowYs.length);
-    alt!.rows.forEach((row, i) => {
-      // The result column is drawn at x = 880 (55%); a row is 70 px tall and its text baseline sits 11 px under the row centre.
-      expect(row.x).toBe(55);
-      expect(row.y).toBeCloseTo(((rowYs[i]! - 11) / 900) * 100, 1);
-    });
+  it('keeps hit geometry out of the browser text alternative', () => {
+    for (const row of alt!.rows) {
+      expect(row).not.toHaveProperty('x');
+      expect(row).not.toHaveProperty('y');
+    }
   });
 
   it('keeps rows far enough apart that two rows cannot be confused (7.8 percent, wider than any hit radius)', () => {
-    const ys = alt!.rows.map((r) => r.y);
-    for (let i = 1; i < ys.length; i++) expect(ys[i]! - ys[i - 1]!).toBeGreaterThan(7);
+    expect(new Set(alt!.rows.map((r) => r.test)).size).toBe(alt!.rows.length);
   });
 
-  it('is not offered for the blood smear: a cell shape cannot be given as text without giving the answer away', () => {
+  it('offers a neutral description for the blood smear without exposing its hotspot', () => {
+    expect(SCIENTIFIC_ASSETS['smear-schistocyte-01']?.description).toContain('not a validated specimen');
     expect(SCIENTIFIC_ASSETS['smear-schistocyte-01']?.textAlternative).toBeUndefined();
   });
 });
