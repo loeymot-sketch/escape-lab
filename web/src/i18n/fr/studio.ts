@@ -449,6 +449,28 @@ export default {
   '{n} clicks on the picture': '{n} clics sur l’image',
   'Click at {x}, {y} px': 'Clic à {x}, {y} px',
 
+  // dashboard and lab map
+  'FROM YOUR TEACHERS': 'DE VOS ENSEIGNANTS',
+  '{n} teacher rooms waiting for you': '{n} salles d’enseignants vous attendent',
+  'Every teacher room is played': 'Toutes les salles des enseignants sont jouées',
+  'Escape rooms and exams written by your teachers ({n} published for your classes).': 'Escape games et examens écrits par vos enseignants ({n} publiés pour vos classes).',
+  'Open the teacher rooms': 'Ouvrir les salles des enseignants',
+  '{n} teacher rooms already open for {name}': '{n} salles d’enseignants déjà ouvertes pour {name}',
+  '{n} teacher rooms open': '{n} salles d’enseignants ouvertes',
+  'One teacher room is waiting for you': 'Une salle d’enseignant vous attend',
+  'One teacher room already open for {name}': 'Une salle d’enseignant déjà ouverte pour {name}',
+  'One teacher room open': 'Une salle d’enseignant ouverte',
+  // studio extras
+  'All classes': 'Toutes les classes',
+  Export: 'Exporter',
+  'Import a room file': 'Importer un fichier de salle',
+  'Importing…': 'Import…',
+  'Imported. {n} pictures uploaded by another teacher could not be copied: choose them again.': 'Importée. {n} images envoyées par un autre enseignant n’ont pas pu être copiées : choisissez-les à nouveau.',
+  'This file is not an Escape Lab room.': 'Ce fichier n’est pas une salle Escape Lab.',
+  'Add a circle in the middle': 'Ajouter un cercle au centre',
+  'Add a rectangle in the middle': 'Ajouter un rectangle au centre',
+  'Then move it with the x and y fields: no mouse needed.': 'Placez-le ensuite avec les champs x et y : pas besoin de souris.',
+  'Class not found.': 'Classe introuvable.',
   // disciplines
   Immunology: 'Immunologie',
   Parasitology: 'Parasitologie',

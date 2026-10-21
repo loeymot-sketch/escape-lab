@@ -14,6 +14,37 @@ import { EmptyPanel, Loaded, useLoad } from '../ui/state';
 
 const loadLabs = async () => normalizeLabs(await api('/labs'));
 
+/** Teacher rooms by discipline, for the dashboard and the lab map. Never blocks those pages: a failure just hides the teaser. */
+type RoomTeaser = { total: number; open: number; byDiscipline: Record<string, number> };
+async function loadRoomTeaser(): Promise<RoomTeaser> {
+  try {
+    const raw = await api('/rooms') as { rooms?: Array<{ discipline?: unknown; best?: unknown; activeAttemptId?: unknown }> };
+    const rooms = Array.isArray(raw?.rooms) ? raw.rooms : [];
+    const byDiscipline: Record<string, number> = {};
+    for (const r of rooms) if (typeof r.discipline === 'string') byDiscipline[r.discipline] = (byDiscipline[r.discipline] ?? 0) + 1;
+    return { total: rooms.length, open: rooms.filter((r) => r.best === null || r.activeAttemptId).length, byDiscipline };
+  } catch {
+    return { total: 0, open: 0, byDiscipline: {} };
+  }
+}
+
+function TeacherRoomsTeaser() {
+  const nav = useNav();
+  const { state } = useLoad(loadRoomTeaser, []);
+  if (state.phase !== 'ready' || state.data.total === 0) return null;
+  const { total, open } = state.data;
+  return (
+    <section className="teacher-rooms-teaser" aria-labelledby="teacher-rooms-title">
+      <div>
+        <div className="eyebrow">{t('FROM YOUR TEACHERS')}</div>
+        <h2 id="teacher-rooms-title">{open === 1 ? t('One teacher room is waiting for you') : open > 1 ? t('{n} teacher rooms waiting for you', { n: open }) : t('Every teacher room is played')}</h2>
+        <p>{t('Escape rooms and exams written by your teachers ({n} published for your classes).', { n: total })}</p>
+      </div>
+      <button type="button" className="ghost" onClick={() => nav.go('rooms')}>{t('Open the teacher rooms')} <ArrowRight size={16} aria-hidden="true" /></button>
+    </section>
+  );
+}
+
 export function Dashboard() {
   useDocumentTitle('Mission control');
   const { state, reload } = useLoad(async () => {
@@ -72,6 +103,7 @@ function DashboardView({ dashboard, labs }: { dashboard: DashboardData; labs: La
           <button type="button" className="ghost" disabled={nav.busy} aria-busy={nav.starting === dashboard.recommended.missionId} onClick={() => nav.startMission(dashboard.recommended!.missionId)}>{nav.starting === dashboard.recommended.missionId ? t('Starting…') : <>{t('Start {title}', { title: t(dashboard.recommended.title) })} <ArrowRight size={16} aria-hidden="true" /></>}</button>
         </section>
       )}
+      <TeacherRoomsTeaser />
       <div className="stats dashboard-stats">
         <Stat icon={<Beaker />} label={t('Missions completed')} value={figures.missions.value} detail={figures.missions.detail} />
         <Stat icon={<Sparkles />} label={t('Labs cleared')} value={figures.labs.value} detail={figures.labs.detail} />
@@ -108,7 +140,7 @@ export function LevelStrip({ level, xp, progress }: { level: number; xp: number;
   );
 }
 
-export function LabCard({ lab, level }: { lab: Lab; level: 2 | 3 }) {
+export function LabCard({ lab, level, teacherRooms = 0 }: { lab: Lab; level: 2 | 3; teacherRooms?: number }) {
   const nav = useNav();
   const soon = lab.state === 'coming_soon';
   const locked = lab.state === 'locked' || soon;
@@ -139,7 +171,10 @@ export function LabCard({ lab, level }: { lab: Lab; level: 2 | 3 }) {
         {lab.lockedReason && <p className="lab-meta">{t(lab.lockedReason)}</p>}
         <div className="lab-card-foot">
           {lab.state === 'coming_soon'
-            ? <span className="soon">{t('Coming soon')}</span>
+            ? <>
+              <span className="soon">{t('Coming soon')}</span>
+              {teacherRooms > 0 && <button type="button" onClick={() => nav.go('rooms')} aria-label={teacherRooms === 1 ? t('One teacher room already open for {name}', { name: t(lab.name) }) : t('{n} teacher rooms already open for {name}', { n: teacherRooms, name: t(lab.name) })}>{teacherRooms === 1 ? t('One teacher room open') : t('{n} teacher rooms open', { n: teacherRooms })} <ArrowRight size={16} aria-hidden="true" /></button>}
+            </>
             : lab.state === 'locked'
               ? <span><LockKeyhole size={15} aria-hidden="true" /> {t('Locked')}</span>
               : <button type="button" disabled={nav.busy} onClick={() => nav.openLab(lab.slug)} aria-label={lab.state === 'completed' ? t('Review {name}', { name: t(lab.name) }) : t('Enter {name}', { name: t(lab.name) })}>{lab.state === 'completed' ? t('Review lab') : t('Enter lab')} <ArrowRight size={16} aria-hidden="true" /></button>}
@@ -152,6 +187,8 @@ export function LabCard({ lab, level }: { lab: Lab; level: 2 | 3 }) {
 export function LabMap() {
   useDocumentTitle('Lab map');
   const { state, reload } = useLoad(loadLabs, []);
+  const teaser = useLoad(loadRoomTeaser, []);
+  const roomsFor = (discipline: string) => (teaser.state.phase === 'ready' ? teaser.state.data.byDiscipline[discipline] ?? 0 : 0);
   return (
     <>
       <PageIntro eyebrow={t('THE ESCAPE ROUTE')} title={t('Laboratory map')}>
@@ -162,7 +199,7 @@ export function LabMap() {
           ? <EmptyPanel title={t('No laboratories yet')}>{t('The server returned an empty laboratory map.')}</EmptyPanel>
           : (
             <>
-              <div className="map-grid">{labs.map((lab) => <LabCard lab={lab} level={2} key={lab.slug} />)}</div>
+              <div className="map-grid">{labs.map((lab) => <LabCard lab={lab} level={2} key={lab.slug} teacherRooms={lab.state === 'coming_soon' ? roomsFor(lab.discipline) : 0} />)}</div>
               <div className="map-note"><LockKeyhole size={16} aria-hidden="true" /><span><b>{t('More disciplines are in development.')}</b> {t('New labs join after scientific review.')}</span></div>
             </>
           )}

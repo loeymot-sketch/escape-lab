@@ -86,7 +86,11 @@ export function studioRoutes(d: StudioDeps): Route[] {
       body: { type: 'object', required: ['questionId', 'response'], additionalProperties: false, properties: { questionId: { type: 'string', maxLength: 40 }, response: { type: 'object' } } },
       handler: (c) => { hit(`check:${uid(c)}`, 240 * perUserScale, 60_000); const b = c.body as { questionId: string; response: unknown }; return studio.previewCheck(uid(c), idParam(c.params.id!, 'id'), b.questionId, b.response); },
     },
-    { method: 'GET', path: '/api/studio/rooms/:id/results', auth: 'teacher', tag: 'Studio', summary: 'Results of a room: summary, every attempt, per-question success, trap rates, option picks, text answers and hotspot clicks (heatmap).', handler: (c) => studio.results(uid(c), idParam(c.params.id!, 'id')) },
+    {
+      method: 'GET', path: '/api/studio/rooms/:id/results', auth: 'teacher', tag: 'Studio', summary: 'Results of a room: summary, every attempt, per-question success, trap rates, option picks, text answers and hotspot clicks (heatmap).',
+      query: [{ name: 'classId', schema: { type: 'string', pattern: '^[0-9]{1,9}$' }, description: 'Only the students of this class (one of yours).' }],
+      handler: (c) => { const k = c.query.get('classId'); return studio.results(uid(c), idParam(c.params.id!, 'id'), k === null ? undefined : Number(k)); },
+    },
     { method: 'GET', path: '/api/studio/attempts/:id', auth: 'teacher', tag: 'Studio', summary: 'One student attempt on one of your rooms, answer by answer, with the expected answers.', handler: (c) => studio.attemptDetail(uid(c), idParam(c.params.id!, 'id')) },
 
     // ------------------------------------------------------------------ rooms (student)

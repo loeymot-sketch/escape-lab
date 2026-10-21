@@ -485,15 +485,19 @@ export class Studio {
   }
 
   // ------------------------------------------------------------------ results (teacher)
-  results(teacherId: number, roomId: string) {
+  /** `classId` narrows everything to the students of one of the teacher's classes (404 for a class that is not theirs). */
+  results(teacherId: number, roomId: string, classId?: number) {
     const r = this.ownRoom(teacherId, roomId);
     const doc = JSON.parse(r.doc_json) as RoomDoc;
+    if (classId !== undefined && !this.one('SELECT 1 FROM classes WHERE id = ? AND teacher_id = ?', classId, teacherId)) throw notFound('Class not found.');
     for (const open of this.all<AttemptRow>("SELECT * FROM room_attempts WHERE room_id = ? AND status IN ('in_progress','vault')", roomId)) this.refresh(open);
+    const inClass = classId === undefined ? '' : ' AND a.user_id IN (SELECT user_id FROM class_members WHERE class_id = ?)';
+    const args = classId === undefined ? [roomId] : [roomId, classId];
     const attempts = this.all<AttemptRow & { name: string }>(
-      'SELECT a.*, u.name FROM room_attempts a JOIN users u ON u.id = a.user_id WHERE a.room_id = ? ORDER BY a.started_at DESC', roomId);
+      `SELECT a.*, u.name FROM room_attempts a JOIN users u ON u.id = a.user_id WHERE a.room_id = ?${inClass} ORDER BY a.started_at DESC`, ...args);
     const finished = attempts.filter((a) => a.status === 'completed' || a.status === 'timeout');
-    const answers = this.all<AnswerRow>('SELECT ra.* FROM room_answers ra JOIN room_attempts a ON a.id = ra.attempt_id WHERE a.room_id = ? ORDER BY ra.id', roomId);
-    const hints = this.all<{ question_id: string; n: number }>('SELECT h.question_id, COUNT(*) AS n FROM room_hints h JOIN room_attempts a ON a.id = h.attempt_id WHERE a.room_id = ? GROUP BY h.question_id', roomId);
+    const answers = this.all<AnswerRow>(`SELECT ra.* FROM room_answers ra JOIN room_attempts a ON a.id = ra.attempt_id WHERE a.room_id = ?${inClass} ORDER BY ra.id`, ...args);
+    const hints = this.all<{ question_id: string; n: number }>(`SELECT h.question_id, COUNT(*) AS n FROM room_hints h JOIN room_attempts a ON a.id = h.attempt_id WHERE a.room_id = ?${inClass} GROUP BY h.question_id`, ...args);
     const byQuestion = new Map<string, AnswerRow[]>();
     for (const x of answers) { const l = byQuestion.get(x.question_id) ?? []; l.push(x); byQuestion.set(x.question_id, l); }
 
@@ -550,6 +554,8 @@ export class Studio {
 
     return {
       room: { id: r.id, title: doc.title, status: r.status, version: r.version, mode: doc.mode, passPct: doc.passPct, maxScore: maxPoints(doc), questions: doc.questions.length },
+      classes: this.all<{ id: number; name: string }>('SELECT c.id, c.name FROM room_classes rc JOIN classes c ON c.id = rc.class_id WHERE rc.room_id = ? ORDER BY c.id', roomId),
+      classId: classId ?? null,
       summary: {
         attempts: attempts.length, students: new Set(attempts.map((a) => a.user_id)).size, finished: finished.length,
         inProgress: attempts.filter((a) => a.status === 'in_progress' || a.status === 'vault').length,

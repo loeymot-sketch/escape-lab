@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertTriangle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, CheckCircle2, ChevronRight, Clock3, Copy, Eye, FileDown, FlaskConical, Gauge, Import, KeyRound,
+  AlertTriangle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, CheckCircle2, ChevronRight, Clock3, Copy, Eye, FileDown, FileUp, FlaskConical, Gauge, Import, KeyRound,
   Lightbulb, PenLine, Plus, Rocket, Save, Settings2, Trash2, Users, XCircle,
 } from 'lucide-react';
 import { ApiError, api } from '../lib/api';
 import { normalizeClasses, type FacultyClass } from '../lib/faculty';
 import { normalizeContentMissions, type ContentMission } from '../lib/content';
 import {
-  DISCIPLINES, DISCIPLINE_LABELS, TYPE_HELP, TYPE_LABELS, blankQuestion, disciplineTone, expectRecord, formatDuration, imageSrc, move, splitProblem, toCsv,
+  DISCIPLINES, DISCIPLINE_LABELS, TYPE_HELP, TYPE_LABELS, blankQuestion, disciplineTone, expectRecord, formatDuration, imageSrc, move, readRoomFile, roomFile, splitProblem, toCsv,
   type AttemptRowView, type PublicQuestion, type Question, type QuestionType, type Results, type ResultQuestion, type Review, type Room, type RoomDoc, type RoomSummary,
 } from '../lib/rooms';
 import { RoomPicture, RoomQuestion, type Mark } from '../components/room-play';
@@ -18,6 +18,16 @@ import { FacultyDemoNote, PageIntro, useDocumentTitle } from '../ui/common';
 import { EmptyPanel, ErrorPanel, Loaded, describeError, useLoad } from '../ui/state';
 import './studio.css';
 import './rooms.css';
+
+/** Saves a text as a file the teacher downloads (nothing leaves the browser). */
+function download(text: string, name: string, type: string) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 type Screen = { kind: 'list' } | { kind: 'edit'; id: string } | { kind: 'results'; id: string } | { kind: 'attempt'; id: string; roomId: string } | { kind: 'preview'; id: string };
 
@@ -57,6 +67,18 @@ function StudioList({ go }: { go: (s: Screen) => void }) {
       go({ kind: 'edit', id: room.id });
     } catch (e) { setError(e); } finally { setBusy(null); }
   };
+  const [imported, setImported] = useState('');
+  const importFile = async (file: File) => {
+    if (busy) return;
+    setBusy('file'); setError(null); setImported('');
+    try {
+      const own = new Set(expectRecord<{ media: { id: string }[] }>(await api('/studio/media'), 'media').media.map((m) => m.id));
+      const { doc, dropped } = readRoomFile(await file.text(), own);
+      const room = expectRecord<Room>(await api('/studio/rooms', { method: 'POST', body: JSON.stringify({ doc }) }), 'id');
+      if (dropped > 0) setImported(t('Imported. {n} pictures uploaded by another teacher could not be copied: choose them again.', { n: dropped }));
+      go({ kind: 'edit', id: room.id });
+    } catch (e) { setError(e); } finally { setBusy(null); }
+  };
   const act = async (key: string, run: () => Promise<unknown>) => {
     if (busy) return;
     setBusy(key); setError(null);
@@ -73,6 +95,8 @@ function StudioList({ go }: { go: (s: Screen) => void }) {
         <button type="button" className="primary" disabled={busy !== null} onClick={() => void create({ doc: { title: t('New room'), questions: [] } }, 'new')}>
           <Plus size={15} aria-hidden="true" /> {busy === 'new' ? t('Creating…') : t('New room')}
         </button>
+        <label className="ghost studio-file" htmlFor="studio-import-file"><FileUp size={15} aria-hidden="true" /> {busy === 'file' ? t('Importing…') : t('Import a room file')}</label>
+        <input id="studio-import-file" type="file" accept="application/json,.json" className="sr-only" disabled={busy !== null} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void importFile(f); }} />
         {list.state.phase === 'ready' && (
           <div className="studio-import">
             <label htmlFor="studio-import">{t('Start from a built-in mission')}</label>
@@ -87,6 +111,7 @@ function StudioList({ go }: { go: (s: Screen) => void }) {
         )}
       </div>
       {error !== null && <div role="alert" className="room-alert"><AlertTriangle size={16} aria-hidden="true" /> {describeError(error)}</div>}
+      {imported && <p role="status" className="studio-help warn">{imported}</p>}
       <Loaded load={list.state} label={t('Loading your rooms…')} onRetry={list.reload} level={2}>
         {({ rooms }) => rooms.length === 0
           ? <EmptyPanel title={t('No room yet')}>{t('Create your first room, or copy a built-in mission to adapt it.')}</EmptyPanel>
@@ -252,6 +277,7 @@ function Editor({ initial, classes, go }: { initial: Room; classes: FacultyClass
         <div className="studio-editor-actions">
           <button type="button" className="ghost" onClick={() => navigate({ kind: 'preview', id: room.id })}><Eye size={15} aria-hidden="true" /> {t('Preview')}</button>
           <button type="button" className="ghost" onClick={() => navigate({ kind: 'results', id: room.id })}><BarChart3 size={15} aria-hidden="true" /> {t('Results')}</button>
+          <button type="button" className="ghost" onClick={() => download(roomFile(doc), `${(doc.title || 'room').replace(/[^\p{L}\p{N}]+/gu, '-').slice(0, 60)}.escape-room.json`, 'application/json')}><FileDown size={15} aria-hidden="true" /> {t('Export')}</button>
           <button type="button" className="ghost" disabled={!dirty || busy !== null} onClick={() => void save()}><Save size={15} aria-hidden="true" /> {busy === 'save' ? t('Saving…') : t('Save')}</button>
           {room.status === 'published'
             ? <button type="button" className="ghost" disabled={busy !== null} onClick={() => void setStatus('draft')}>{t('Unpublish')}</button>
@@ -505,12 +531,26 @@ function PreviewView({ id, go }: { id: string; go: (s: Screen) => void }) {
 // ------------------------------------------------------------------ results
 function ResultsView({ id, go }: { id: string; go: (s: Screen) => void }) {
   useDocumentTitle(t('Room results'));
-  const results = useLoad(async () => expectRecord<Results>(await api(`/studio/rooms/${id}/results`), 'summary'), [id]);
+  const [classId, setClassId] = useState<number | null>(null);
+  const results = useLoad(async () => expectRecord<Results>(classId === null ? await api(`/studio/rooms/${id}/results`) : await api(`/studio/rooms/${id}/results?classId=${classId}`), 'summary'), [id, classId]);
+  const [classes, setClasses] = useState<Results['classes']>([]);
+  useEffect(() => { if (results.state.phase === 'ready') setClasses(results.state.data.classes); }, [results.state]);
   return (
     <div className="studio-results">
       <div className="studio-editor-top">
         <button type="button" className="back-button" onClick={() => go({ kind: 'list' })}><ArrowLeft size={15} aria-hidden="true" /> {t('All rooms')}</button>
-        <button type="button" className="ghost" onClick={() => go({ kind: 'edit', id })}><PenLine size={15} aria-hidden="true" /> {t('Edit the room')}</button>
+        <div className="studio-inline">
+          {classes.length > 1 && (
+            <>
+              <label htmlFor="results-class">{t('Class')}</label>
+              <select id="results-class" className="studio-select" value={classId ?? ''} onChange={(e) => setClassId(e.target.value ? Number(e.target.value) : null)}>
+                <option value="">{t('All classes')}</option>
+                {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </>
+          )}
+          <button type="button" className="ghost" onClick={() => go({ kind: 'edit', id })}><PenLine size={15} aria-hidden="true" /> {t('Edit the room')}</button>
+        </div>
       </div>
       {results.state.phase === 'error'
         ? <ErrorPanel error={results.state.error} title={t('The results could not be loaded')} onRetry={results.reload} />
@@ -540,12 +580,7 @@ function ResultsBody({ r, go }: { r: Results; go: (s: Screen) => void }) {
   const exportCsv = () => {
     const header = [t('Student'), t('Status'), t('Started'), t('Duration (s)'), t('Score'), t('Max'), t('%'), t('Passed'), t('Solved'), t('Wrong answers'), t('Hints'), t('Traps'), t('Version')];
     const csv = toCsv([header, ...r.attempts.map((a) => [a.student.name, a.status, new Date(a.startedAt).toISOString(), a.durationSec, a.score, a.maxScore, a.pct, a.passed === null ? '' : a.passed ? 'yes' : 'no', a.correct, a.wrong, a.hints, a.traps, a.version])]);
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${r.room.title.replace(/[^\p{L}\p{N}]+/gu, '-').slice(0, 60) || 'room'}-results.csv`;
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    download(csv, `${r.room.title.replace(/[^\p{L}\p{N}]+/gu, '-').slice(0, 60) || 'room'}-results.csv`, 'text/csv;charset=utf-8');
   };
   const maxBin = Math.max(1, ...s.distribution);
 

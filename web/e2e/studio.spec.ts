@@ -132,4 +132,46 @@ test.describe('Teacher Studio', () => {
     // The answers are never in what the page received: no option is marked correct in the DOM.
     expect(await page.locator('[data-correct], .correct').count()).toBe(0);
   });
+
+  test('the student finds the teacher rooms from the dashboard and on the coming-soon Immunology laboratory', async ({ page }) => {
+    await resetDemo(page);
+    const teaser = page.locator('.teacher-rooms-teaser');
+    await expect(teaser).toContainText('3 teacher rooms waiting for you');
+    await navigateSection(page, 'Lab map');
+    const immunology = page.locator('.lab-card', { hasText: 'Immunology' });
+    await immunology.getByRole('button', { name: /One teacher room already open for Immunology/ }).click();
+    await expect(page.getByRole('heading', { name: 'Rooms from your teachers' })).toBeVisible();
+  });
+
+  test('keyboard path, class filter and room file: a zone without a mouse, results of one class, export then import', async ({ page }) => {
+    await openHome(page);
+    await openFaculty(page);
+    await page.getByRole('button', { name: 'Teacher Studio' }).click();
+    await page.locator('.studio-card', { hasText: 'frottis' }).getByRole('button', { name: 'Results' }).click();
+    await expect(page.locator('.results-kpis')).toBeVisible();
+    await page.getByLabel('Class').selectOption({ label: 'L2 Biomedical Sciences' });
+    await expect(page.getByRole('heading', { name: 'No attempt yet' })).toBeVisible();
+    await page.getByLabel('Class').selectOption({ label: 'All classes' });
+    await expect(page.locator('.results-kpis')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Edit the room' }).click();
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export' }).click();
+    const file = await (await download).path();
+    await page.getByRole('button', { name: 'Add a question' }).click();
+    await page.locator('.add-question-menu').getByRole('button', { name: 'Click on the picture', exact: true }).click();
+    await page.getByRole('button', { name: 'Choose the picture students will click on' }).click();
+    await page.getByRole('tab', { name: 'Library' }).click();
+    await page.locator('.image-grid button', { hasText: 'Stylised blood smear' }).click();
+    await page.getByRole('button', { name: 'Add a circle in the middle' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.zone-list li')).toHaveCount(1);
+    await expect(page.locator('.zone-list li').first().getByLabel('x', { exact: true })).toHaveValue('836');
+
+    await page.getByRole('button', { name: 'All rooms' }).click();
+    await page.getByRole('button', { name: 'Leave without saving' }).click();
+    await page.locator('#studio-import-file').setInputFiles(file!);
+    await expect(page.locator('.studio-editor-title h1')).toHaveText('Hématologie : le frottis piégé');
+    await expect(page.locator('.question-rail li')).toHaveCount(4);
+  });
 });

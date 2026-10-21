@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blankQuestion, move, splitProblem, toCsv, toNatural, zoneDistance, QUESTION_TYPES } from './rooms';
+import { blankQuestion, blankRoom, move, readRoomFile, roomFile, splitProblem, toCsv, toNatural, zoneDistance, QUESTION_TYPES } from './rooms';
 
 describe('teacher rooms helpers', () => {
   it('maps a pointer on a scaled picture to natural pixels, clamped to the picture', () => {
@@ -37,5 +37,18 @@ describe('teacher rooms helpers', () => {
     expect(move(list, 0, 2)).toEqual([2, 3, 1]);
     expect(list).toEqual([1, 2, 3]);
     expect(move(list, 0, -1)).toBe(list);
+  });
+
+  it('round-trips a room file and drops pictures uploaded by someone else (with the zones drawn on them)', () => {
+    const hotspot = { ...blankQuestion('hotspot'), image: { media: 'theirs', width: 10, height: 10, alt: 'x' }, zones: [{ id: 'z', label: 'Z', shape: 'circle' as const, x: 5, y: 5, r: 2 }] };
+    const library = { ...blankQuestion('choice'), image: { asset: 'smear-schistocyte-01', width: 1672, height: 941, alt: 'Smear' } };
+    const doc = { ...blankRoom(), title: 'Shared', cover: { media: 'mine', width: 1, height: 1, alt: 'c' }, questions: [hotspot, library] };
+    const { doc: back, dropped } = readRoomFile(roomFile(doc), new Set(['mine']));
+    expect(dropped).toBe(1);
+    expect(back.cover?.media).toBe('mine');
+    expect(back.questions[0]!.image).toBeUndefined();
+    expect(back.questions[0]!.type === 'hotspot' && back.questions[0]!.zones).toEqual([]);
+    expect(back.questions[1]!.image?.asset).toBe('smear-schistocyte-01');
+    expect(() => readRoomFile('{"kind":"other"}', new Set())).toThrow(/not an Escape Lab room/);
   });
 });

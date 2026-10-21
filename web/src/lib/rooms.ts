@@ -123,6 +123,8 @@ export interface AttemptRowView {
 }
 export interface Results {
   room: { id: string; title: string; status: RoomStatus; version: number; mode: 'escape' | 'exam'; passPct: number; maxScore: number; questions: number };
+  classes: { id: number; name: string }[];
+  classId: number | null;
   summary: { attempts: number; students: number; finished: number; inProgress: number; avgPct: number | null; medianPct: number | null; passRate: number | null; medianDurationSec: number | null; trapRate: number | null; distribution: number[] };
   attempts: AttemptRowView[]; questions: ResultQuestion[];
 }
@@ -198,6 +200,26 @@ export function move<T>(list: T[], from: number, to: number): T[] {
   const [x] = out.splice(from, 1);
   out.splice(to, 0, x!);
   return out;
+}
+
+// ------------------------------------------------------------------ sharing
+/** A room exported as a file another teacher can import (pictures uploaded by someone else cannot travel: they are dropped on import). */
+export const ROOM_FILE_KIND = 'escape-lab-room';
+export function roomFile(doc: RoomDoc): string {
+  return JSON.stringify({ kind: ROOM_FILE_KIND, version: 1, doc }, null, 2);
+}
+/** Reads an exported room; pictures that are not in `ownMedia` are removed (with the zones that depended on them). */
+export function readRoomFile(text: string, ownMedia: Set<string>): { doc: RoomDoc; dropped: number } {
+  const parsed = JSON.parse(text) as { kind?: unknown; doc?: unknown };
+  if (!isRec(parsed) || parsed.kind !== ROOM_FILE_KIND || !isRec(parsed.doc)) throw new TypeError('This file is not an Escape Lab room.');
+  const doc = parsed.doc as unknown as RoomDoc;
+  let dropped = 0;
+  const keep = (img: RoomImage | undefined) => (img && img.media && !ownMedia.has(img.media) ? (dropped += 1, undefined) : img);
+  const questions = (Array.isArray(doc.questions) ? doc.questions : []).map((q) => {
+    const image = keep(q.image);
+    return q.type === 'hotspot' && !image ? { ...q, image, zones: [] } : { ...q, image };
+  }) as Question[];
+  return { doc: { ...doc, cover: keep(doc.cover), questions }, dropped };
 }
 
 // ------------------------------------------------------------------ export

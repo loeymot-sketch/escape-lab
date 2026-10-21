@@ -314,6 +314,10 @@ test('escape mode end to end: trap, retry penalty, hint, fragments, vault, revie
     assert.equal(res.body.attempts[0].student.name, 'Sam Student');
     const detail = await h.call('GET', `/api/studio/attempts/${a.attemptId}`, { token: teacher.token });
     assert.equal(detail.body.questions[2].responses[0].r.text, 'Dendritc cell');
+    // Narrowed to a class: the student's class has the attempt, an empty class of the teacher has none.
+    const empty = await h.call('POST', '/api/classes', { token: teacher.token, body: { name: 'Empty group' } });
+    assert.equal((await h.call('GET', `/api/studio/rooms/${room.id}/results?classId=${empty.body.id}`, { token: teacher.token })).body.summary.attempts, 0);
+    assert.equal((await h.call('GET', `/api/studio/rooms/${room.id}/results?classId=${res.body.classes[0].id}`, { token: teacher.token })).body.summary.attempts, 1);
     // Another teacher sees none of it.
     const other = await h.signup('Dr Other', 'other2@uni.edu', { teacherInviteCode: 'FACULTY-INVITE' });
     assert.equal((await h.call('GET', `/api/studio/rooms/${room.id}/results`, { token: other.token })).status, 404);

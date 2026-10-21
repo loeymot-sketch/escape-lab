@@ -235,6 +235,17 @@ export function HotspotEditor({ q, onChange }: { q: Question & { type: 'hotspot'
     setSelected(id);
     setTool('select');
   };
+  /** Keyboard path: a zone in the middle of the picture, then placed with the numeric fields. */
+  const addCentred = (shape: 'circle' | 'rect') => {
+    const id = newId('z');
+    const size = Math.round(Math.min(img.width, img.height) * 0.08);
+    const zone: Zone = shape === 'circle'
+      ? { id, label: '', shape, x: Math.round(img.width / 2), y: Math.round(img.height / 2), r: size }
+      : { id, label: '', shape, x: Math.round(img.width / 2 - size), y: Math.round(img.height / 2 - size), w: 2 * size, h: 2 * size };
+    setZones([...q.zones, zone]);
+    setSelected(id);
+    setTool('select');
+  };
   const sel = q.zones.find((z) => z.id === selected) ?? null;
   const screenTol = Math.round(q.tolerance * scale * 10) / 10;
   const rightCount = q.zones.filter((z) => !z.trap).length;
@@ -245,6 +256,11 @@ export function HotspotEditor({ q, onChange }: { q: Question & { type: 'hotspot'
         {([['circle', <Circle size={15} key="c" />, t('Draw a circle')], ['rect', <Square size={15} key="r" />, t('Draw a rectangle')], ['select', <MousePointer2 size={15} key="s" />, t('Select and move')], ['test', <Crosshair size={15} key="t" />, t('Test a click')]] as const).map(([k, icon, label]) => (
           <button type="button" key={k} className={tool === k ? 'active' : ''} aria-pressed={tool === k} onClick={() => { setTool(k); setTest(null); }}>{icon} {label}</button>
         ))}
+      </div>
+      <div className="studio-inline">
+        <button type="button" className="text-button" onClick={() => addCentred('circle')}><Plus size={14} aria-hidden="true" /> {t('Add a circle in the middle')}</button>
+        <button type="button" className="text-button" onClick={() => addCentred('rect')}><Plus size={14} aria-hidden="true" /> {t('Add a rectangle in the middle')}</button>
+        <span className="studio-help">{t('Then move it with the x and y fields: no mouse needed.')}</span>
       </div>
       <p className="studio-help">
         {tool === 'circle' ? t('Press on the centre and drag to the edge. A simple click makes a small circle.')

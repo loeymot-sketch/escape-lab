@@ -724,11 +724,11 @@ html[data-reduce-motion="true"] .timer.critical { animation: none; }
 .mastery-chip { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .04em; }
 .mastery-chip.mastered { border: 1px solid #e3b33e; color: #ffd15b; background: rgb(85 58 14 / 45%); }
 .mastery-chip.review { border: 1px solid #ff6571; color: #ffb1b8; background: rgb(101 26 42 / 45%); }
-.dashboard-recommended { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px 18px; align-items: center; margin: 14px 0 0; padding: 14px 16px; border: 1px solid #2fcfff; border-radius: 16px; background: linear-gradient(135deg, rgb(9 42 68 / 94%), rgb(4 23 41 / 96%)); }
-.dashboard-recommended h2 { margin: 4px 0 4px; color: #f1f9ff; font-size: 18px; }
-.dashboard-recommended p { margin: 0; color: #a9c4d8; font-size: 13px; line-height: 1.5; }
-.dashboard-recommended .ghost { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding-inline: 18px; border-radius: 12px; white-space: nowrap; }
-@media (max-width: 600px) { .dashboard-recommended { grid-template-columns: minmax(0,1fr); } .dashboard-recommended .ghost { width: 100%; justify-content: center; } .route-strip { padding: 12px; } }
+.dashboard-recommended, .teacher-rooms-teaser { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px 18px; align-items: center; margin: 14px 0 0; padding: 14px 16px; border: 1px solid #2fcfff; border-radius: 16px; background: linear-gradient(135deg, rgb(9 42 68 / 94%), rgb(4 23 41 / 96%)); }
+.dashboard-recommended h2, .teacher-rooms-teaser h2 { margin: 4px 0 4px; color: #f1f9ff; font-size: 18px; }
+.dashboard-recommended p, .teacher-rooms-teaser p { margin: 0; color: #a9c4d8; font-size: 13px; line-height: 1.5; }
+.dashboard-recommended .ghost, .teacher-rooms-teaser .ghost { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding-inline: 18px; border-radius: 12px; white-space: nowrap; }
+@media (max-width: 600px) { .dashboard-recommended, .teacher-rooms-teaser { grid-template-columns: minmax(0,1fr); } .dashboard-recommended .ghost, .teacher-rooms-teaser .ghost { width: 100%; justify-content: center; } .route-strip { padding: 12px; } }
 /* Focus: persistent glow reserved for the action and the reward; information cards stay flat (report §1). */
 .case-panel { box-shadow: 0 16px 38px rgb(0 0 0 / 20%); }
 .case-aside .aside-card, .values .value, .values-block { box-shadow: none; }
@@ -749,3 +749,7 @@ html[data-reduce-motion="true"] .timer.critical { animation: none; }
   object-fit: cover;
   object-position: center center;
 }
+
+/* Teacher rooms on the dashboard (violet: written by a teacher, not part of the escape route) and on a coming-soon lab card. */
+.teacher-rooms-teaser { border-color: var(--violet); }
+.lab-card-foot .soon + button { margin-top: 6px; }

@@ -125,7 +125,9 @@ Gestes de sécurité : ne cliquez pas « Mark reviewed ». Pour la ligne 5, arr�
 3. **Outil « Tester un clic »** : cliquer juste à côté du schistocyte (« Accepté : … 3 px du bord, tolérance 5 px »), puis sur l'hématie normale (« Piège : … l'étudiant lit : … »). C'est exactement la correction du serveur.
 4. **Onglet « Contrôle qualité »** : le score sur 100 et les remarques (piège sans explication, zone trop petite pour un téléphone, description d'image trop courte…). Les erreurs bloquent la publication.
 5. **Résultats** : score moyen, taux de réussite, part des réponses tombées dans un piège, puis la **carte de chaleur** : chaque clic de chaque étudiant (vert, rouge, orange). Ouvrir une ligne « Réponses » pour montrer le détail d'un étudiant. Export CSV possible.
-6. Phrase clé : « L'enseignant écrit, l'étudiant joue, le serveur corrige, et l'enseignant voit exactement quelle idée reçue a piégé sa classe. »
+6. Option : filtrer les résultats par classe, exporter la salle en fichier pour un collègue.
+7. Côté étudiant (« Return to student demo ») : l'encart « De vos enseignants » du tableau de bord, puis la **carte des laboratoires** : la carte « Immunologie », encore « Bientôt disponible », affiche déjà « Une salle d'enseignant ouverte ». C'est le lien avec les laboratoires qui vont ouvrir.
+8. Phrase clé : « L'enseignant écrit, l'étudiant joue, le serveur corrige, et l'enseignant voit exactement quelle idée reçue a piégé sa classe. »
 
 Après la démo : `Reset guest session` côté enseignant restaure les trois salles de démonstration et supprime celles créées par les visiteurs.
 

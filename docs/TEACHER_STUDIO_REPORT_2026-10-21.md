@@ -32,6 +32,12 @@ Les dix missions intégrées forment un catalogue verrouillé et très testé (f
 - Un lecteur : minuteur, progression, **fragments du coffre**, indices (−10 % sur la question), retours **« Piège ! »** avec l'explication écrite par l'enseignant, explication après la bonne réponse, saisie du code final, puis un **bilan** (réponses, réponse attendue si l'enseignant l'autorise, explication, clics sur l'image).
 - **Alternative textuelle** pour chaque question « clic sur l'image » (libellés des zones mêlés à des leurres) et bouton **« Agrandir l'image »** pour viser précisément sur téléphone.
 
+### Deuxième passe (même jour)
+- **Laboratoires à venir** : la carte des laboratoires indique sur une carte « Bientôt disponible » (ex. Immunologie) les salles d'enseignants déjà ouvertes dans cette discipline, avec un lien direct ; le tableau de bord affiche un encart « De vos enseignants ».
+- **Résultats par classe** : filtre de classe sur les résultats (`GET /api/studio/rooms/:id/results?classId=`), limité aux classes de l'enseignant.
+- **Partage entre enseignants** : export d'une salle en fichier JSON et import depuis la liste ; les images envoyées par un autre enseignant ne voyagent pas et sont signalées.
+- **Création de zone au clavier** : « Ajouter un cercle / un rectangle au centre », puis placement par les champs x / y / rayon, sans souris.
+
 ### Garanties techniques
 - Les identifiants montrés à l'étudiant (options, éléments, zones, colonne de droite) sont des **jetons opaques par tentative** (dérivés d'un sel secret) : ils ne trahissent ni la bonne réponse ni les leurres.
 - Chaque tentative garde **une copie de la salle au démarrage** : modifier une salle publiée ne change ni une tentative en cours ni un résultat passé. Les enregistrements concurrents sont refusés (`409 version_conflict`), jamais écrasés.
@@ -65,11 +71,11 @@ Node 22.23.2, macOS. Commandes : `cd be && npm test && npm run typecheck && npm 
 
 | Contrôle | Résultat |
 |---|---|
-| Tests backend | **313/313** (dont 22 pour le Studio et 1 pour la démonstration) |
+| Tests backend | **313/313** (dont 22 pour le Studio, filtre de classe inclus, et 1 pour la démonstration) |
 | Typecheck backend | propre |
-| Tests unitaires web (Vitest, couverture française, contrat d'API, frontières client) | **404/404** |
-| Build de production et budget | entrée 419 604 / 440 000 o (plafond inchangé), JS différé élève 39 968 / 160 000, dictionnaire français 146 507 / 180 000, Studio 68 095 / 120 000, CSS d'entrée 135 876 / 140 000, CSS différé 36 055 / 60 000 |
-| Playwright `e2e/studio.spec.ts` | 3/3, dont **zéro violation axe** sur la liste, l'éditeur, les résultats, la liste élève et le lecteur |
-| Playwright complet (Chromium, iPhone 13 émulé, bundle de production, moteur WebKit) | **603/603** (10,5 min), dernière exécution après tous les correctifs. Une exécution antérieure avait eu une erreur SQLite ponctuelle « unable to open database file » lors d'une réinitialisation de démo (fichier de base dans un dossier temporaire) ; elle ne s'est pas reproduite. |
+| Tests unitaires web (Vitest, couverture française, contrat d'API, frontières client) | **405/405** |
+| Build de production et budget | entrée 421 258 / 440 000 o (plafond inchangé), JS différé élève 40 492 / 160 000, dictionnaire français 148 055 / 180 000, Studio 71 087 / 120 000, CSS d'entrée 136 119 / 140 000, CSS différé 36 252 / 60 000 |
+| Playwright `e2e/studio.spec.ts` | 5/5, dont **zéro violation axe** sur la liste, l'éditeur, les résultats, la liste élève et le lecteur ; tableau de bord, carte, zone au clavier, filtre de classe, export puis import |
+| Playwright complet (Chromium, iPhone 13 émulé, bundle de production, moteur WebKit) | **605/605** (10,0 min), dernière exécution après la deuxième passe. Une exécution antérieure avait eu une erreur SQLite ponctuelle « unable to open database file » lors d'une réinitialisation de démo (fichier de base dans un dossier temporaire) ; elle ne s'est pas reproduite. |
 
 Captures de référence mises à jour après contrôle visuel des différences (seule la barre de navigation a changé : nouvelle entrée « Teacher rooms » / « Teacher Studio ») : `game-navigation` (menus 320, 390, fr-320, faculty-menu-320, rooms/vault/badges/leaderboard 1280) et `vault-art` (en-768, fr-768, fr-1280). Tests adaptés : nombre d'entrées de navigation (élève 9, enseignant 5), ordre clavier du menu mobile, bouton « Rooms » désormais cherché en correspondance exacte.

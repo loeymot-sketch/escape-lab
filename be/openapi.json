@@ -2704,6 +2704,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "classId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,9}$"
+            },
+            "description": "Only the students of this class (one of yours)."
           }
         ],
         "security": [

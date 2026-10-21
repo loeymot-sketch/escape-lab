@@ -1,5 +1,7 @@
 /* Teacher Studio: list, editor, zone editor, results. Uses the game-world tokens; rooms.css holds the shared picture and player styles. */
 .studio-actions{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin:6px 0 22px}
+.studio-file{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.studio-select{padding:9px;border-radius:8px;border:1px solid var(--line);background:#020b14;color:inherit;font-size:14px}
 .studio-import{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .studio-import label{font-size:13px;color:var(--muted)}
 .studio-import select,.studio-inline input[type=search]{padding:10px;border-radius:8px;border:1px solid var(--line);background:#020b14;color:inherit;font-size:14px;max-width:280px}
