@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { navigateSection, ARTWORK, apiCall, chooseCorrectOption, clickArtwork, completeLabViaApi, continueStep, freshStudent, openAs, resetDemo, startMissionViaUi, submit, HOME_HEADING } from './support/helpers';
-import { exitCode } from './support/content';
+import { MISSION_BY_ID, exitCode } from './support/content';
 
 test.describe('Code Vault: fragments, unlock and results', () => {
   test('the final answer reveals the server fragment on the result screen', async ({ page }) => {
@@ -11,7 +11,7 @@ test.describe('Code Vault: fragments, unlock and results', () => {
     await submit(page).click();
     await expect(page.getByRole('heading', { name: 'Investigation complete.' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Final step explained' })).toBeVisible();
-    await expect(page.locator('.result-explanation p')).not.toBeEmpty();
+    await expect(page.locator('.result-explanation p')).toContainText(MISSION_BY_ID.get('hem-01')!.steps[0]!.explanation);
     const fragment = page.locator('.fragment-reveal');
     await expect(fragment).toBeVisible();
     await expect(fragment).toContainText('CODE FRAGMENT DISCOVERED');
@@ -110,6 +110,21 @@ test.describe('Code Vault: fragments, unlock and results', () => {
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   });
 
+  test('pasting a spaced exit code normalizes it without losing digits', async ({ page }) => {
+    const token = await freshStudent();
+    await completeLabViaApi(token, 'hematology', false);
+    await openAs(page, token);
+    await navigateSection(page, 'Vault');
+    const input = page.getByLabel(/Exit code for Hematology Lab/);
+    const unlock = page.getByRole('button', { name: 'Unlock' });
+
+    await input.fill('7 4 2');
+    await expect(input).toHaveValue('742');
+    await expect(unlock).toBeEnabled();
+    await unlock.click();
+    await expect(page.getByRole('status')).toContainText('Hematology Lab unlocked.');
+  });
+
   test('holding Enter cannot submit repeated vault guesses or exhaust the lockout budget', async ({ page }) => {
     const token = await freshStudent();
     await completeLabViaApi(token, 'hematology', false);
@@ -128,6 +143,27 @@ test.describe('Code Vault: fragments, unlock and results', () => {
     await page.locator('.unlock-row').evaluate((form) => {
       for (let i = 0; i < 8; i += 1) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     });
+    await expect(page.getByRole('alert')).toContainText('4 attempts left');
+    expect(requests).toBe(1);
+  });
+
+  test('a physically held Enter key submits a vault guess only once', async ({ page }) => {
+    const token = await freshStudent();
+    await completeLabViaApi(token, 'hematology', false);
+    await openAs(page, token);
+    await navigateSection(page, 'Vault');
+    const input = page.getByLabel(/Exit code for Hematology Lab/);
+    let requests = 0;
+    await page.route('**/api/labs/hematology/unlock', async (route) => {
+      requests += 1;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      await route.continue();
+    });
+    await input.fill('000');
+    await input.focus();
+    await page.keyboard.down('Enter');
+    await page.waitForTimeout(650);
+    await page.keyboard.up('Enter');
     await expect(page.getByRole('alert')).toContainText('4 attempts left');
     expect(requests).toBe(1);
   });

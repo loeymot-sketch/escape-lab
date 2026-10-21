@@ -42,6 +42,39 @@ test.describe('decision and choice options: lettered chips, never the raw option
   });
 });
 
+test.describe('mission print view', () => {
+  test('prints the investigation without the interactive chrome and keeps the selected answer legible', async ({ page }) => {
+    await resetDemo(page);
+    await startMissionViaUi(page, 'Hematology Lab', 'Fix the Sample');
+    await page.getByRole('button', { name: DECISION.reject }).click();
+    await page.emulateMedia({ media: 'print' });
+
+    await expect(page.locator('.player > header')).toBeHidden();
+    await expect(page.locator('.mission-hero')).toBeHidden();
+    await expect(page.locator('.case-aside')).toBeHidden();
+    await expect(page.locator('.case-panel h1')).toBeVisible();
+    await expect(page.locator('.answer-options button.selected')).toBeVisible();
+
+    const printState = await page.locator('.answer-options button.selected').evaluate((element) => {
+      const style = getComputedStyle(element);
+      const root = document.documentElement;
+      return {
+        background: style.backgroundColor,
+        backgroundImage: style.backgroundImage,
+        color: style.color,
+        border: style.borderTopColor,
+        outline: style.outlineColor,
+        overflow: root.scrollWidth > root.clientWidth,
+      };
+    });
+    expect(printState.backgroundImage).toBe('none');
+    expect(printState.background).not.toMatch(/rgb\(\s*5\s*,\s*26\s*,\s*44/);
+    expect(printState.color).toBe('rgb(17, 17, 17)');
+    expect(printState.outline).toBe('rgb(6, 63, 61)');
+    expect(printState.overflow).toBe(false);
+  });
+});
+
 test.describe('friendly wording instead of step-type jargon', () => {
   test('the case header and the lab lobby use plain labels', async ({ page }) => {
     await resetDemo(page);
@@ -294,6 +327,8 @@ test.describe('faculty copy and data', () => {
     await nav(page, 'Student detail');
     await expect(page.locator('.profile-card')).toContainText('1 mission completed · 1 hint used');
     await expect(page.locator('.mission-table li').first()).toContainText('1 answer · 0 wrong · 1 hint');
+    await expect(page.locator('.mission-table li').first()).toContainText('Mission score:');
+    await expect(page.locator('.mission-table li').first()).not.toContainText(' XP');
   });
 
   test('no class: the empty state does not promise a creation flow that does not exist', async ({ page }) => {

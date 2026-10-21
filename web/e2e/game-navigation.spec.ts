@@ -100,7 +100,13 @@ for (const width of [320, 390, 600, 601, 768, 1280]) test(`game navigation and s
     if (label !== 'Leaderboard') await expect(page.locator('.leaderboard-row')).toHaveCount(0);
     await noOverflow(page);
     await panelsContainTheirCards(page);
-    if ([320, 390, 1280].includes(width)) await expect(page).toHaveScreenshot(`${label.toLowerCase()}-${width}.png`, { animations: 'disabled', scale: 'css', maxDiffPixelRatio: 0.002 });
+    if ([320, 390, 1280].includes(width)) {
+      const screenshotOptions = { animations: 'disabled' as const, scale: 'css' as const, maxDiffPixelRatio: 0.002 };
+      // Earned timestamps are server data, not layout. Mask only that volatile text;
+      // the badge row, status, icons and all geometry remain under visual assertion.
+      if (label === 'Badges') Object.assign(screenshotOptions, { mask: [page.locator('.badge-row time')] });
+      await expect(page).toHaveScreenshot(`${label.toLowerCase()}-${width}.png`, screenshotOptions);
+    }
     if (phone) {
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       const end = (await page.locator('main').boundingBox())!;

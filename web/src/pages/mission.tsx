@@ -17,10 +17,11 @@ import { missionScene } from '../lib/mission-scenes';
 import { CompetencyBars, FLAG_WORDS, Stat, formatSeconds, secondsLeft, timerTone, useDocumentTitle, useMediaQuery } from '../ui/common';
 import { describeError, useLoad } from '../ui/state';
 import { useCountUp } from '../ui/motion';
-import { LanguageSwitch, formatInt, plural, t, useLang } from '../i18n';
+import { LanguageSwitch, formatInt, plural, t, type Vars, useLang } from '../i18n';
 
 type Feedback = { correct: boolean; ordinal: number; message: string; progress: { correct: number; total: number } | null; penaltyXp: number | null };
 type StepReview = { attemptId: string; nextStepId: string; step: PublicStep; answer: EngineAnswer; revealed: Attempt['revealed'] };
+type LiveAnnouncement = { prefix: string; prefixVars?: Vars; detail?: string; nonce: number };
 
 const labArtwork = (missionId: string, ordinal: number) => {
   const n = +missionId.at(-1)!;
@@ -88,6 +89,12 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
   const [now, setNow] = useState(() => performance.now());
   const [answer, setAnswer] = useState<EngineAnswer>(() => (initial.step ? initialAnswer(initial.step) : {}));
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [feedbackSequence, setFeedbackSequence] = useState(0);
+  // Keep one live node mounted for the whole mission. Inserting an already-filled status node is not announced reliably by every screen reader.
+  const [liveAnnouncement, setLiveAnnouncement] = useState<LiveAnnouncement>({ prefix: '', nonce: 0 });
+  // Keep English source keys in state, not translated text, so a language switch also updates
+  // the persistent screen-reader announcement instead of leaving a stale English sentence.
+  const announce = useCallback((prefix: string, prefixVars?: Vars, detail?: string) => setLiveAnnouncement((previous) => ({ prefix, prefixVars, detail, nonce: previous.nonce + 1 })), []);
   // The answer is already saved and the server is on the next step. This snapshot only lets the learner read the correction first.
   const [review, setReview] = useState<StepReview | null>(null);
   const reviewRef = useRef(review);
@@ -102,6 +109,10 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
   const [serverExpired, setServerExpired] = useState(initial.expired);
   const [noMoreHints, setNoMoreHints] = useState<string | null>(null);
   const [result, setResult] = useState<MissionResult | null>(null);
+  // The final answer response carries the explanation for the exact last decision.
+  // Keep it separately from the stored result so a reload still falls back to the
+  // server's persisted finalExplanation without pretending it was the same field.
+  const [lastFeedback, setLastFeedback] = useState<string | null>(null);
   // The server no longer knows this attempt (for example the guest session was reset from another tab).
   const [gone, setGone] = useState(false);
   // Shown after an unreadable server reply: the screen was refreshed from what the server recorded.
@@ -190,6 +201,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
   }, []);
 
   const showResult = useCallback(async (attemptId: string) => {
+    setLastFeedback(null);
     setResult(normalizeAttemptResult(await api(`/attempts/${attemptId}/result`)));
   }, []);
 
@@ -362,7 +374,10 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
     let followUp: (() => Promise<void>) | null = null;
     try {
       const reply = normalizeMissionAnswer(await api(`/attempts/${attempt.attemptId}/answer`, { method: 'POST', body: JSON.stringify({ stepId: step.id, response: answer }) }));
+      setFeedbackSequence((sequence) => sequence + 1);
       setFeedback({ correct: reply.correct, ordinal: step.ordinal, message: reply.message, progress: reply.progress, penaltyXp: reply.penaltyXp });
+      if (reply.correct) announce('Step {ordinal} correct.', { ordinal: step.ordinal });
+      else announce('Wrong answer recorded.');
       if (reply.correct && !reply.completed && reply.attempt.step && reply.attempt.step.id !== step.id) {
         const snapshot = { attemptId: reply.attempt.attemptId, nextStepId: reply.attempt.step.id, step, answer, revealed: attempt.revealed };
         reviewRef.current = snapshot;
@@ -372,6 +387,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
       if (reply.fragment) {
         setFragments((list) => [...list, reply.fragment!]);
         setFragmentNote(reply.fragment);
+        announce('Step {ordinal} correct.', { ordinal: step.ordinal }, `Position ${reply.fragment.position} added to the Code Vault.`);
       } else {
         setFragmentNote(null);
       }
@@ -380,6 +396,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
       applyAttempt(reply.attempt);
       if (reply.completed && reply.result) {
         // The server embeds the same complete result as GET /attempts/:id/result (vault, competencies, recommendation): nothing to re-read.
+        setLastFeedback(reply.message);
         setResult(reply.result);
       }
     } catch (e) {
@@ -403,6 +420,8 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
     let followUp: (() => Promise<void>) | null = null;
     try {
       const reply = normalizeHint(await api(`/attempts/${attempt.attemptId}/hint`, { method: 'POST', body: JSON.stringify({ stepId: step.id }) }));
+      const deliveredHint = reply.attempt.step?.hintsGiven.at(-1);
+      if (deliveredHint) announce('Hint {level}.', { level: deliveredHint.level }, deliveredHint.text);
       setSyncNote(null);
       mutations.current += 1;
       applyAttempt(reply.attempt);
@@ -441,8 +460,10 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
       setFragments([]);
       setFragmentNote(null);
       setNoMoreHints(null);
-      setFeedback(null);
-      if (fromResult) setResult(null);
+      if (fromResult) {
+        setLastFeedback(null);
+        setResult(null);
+      }
     } catch (e) {
       setProblem(e);
     } finally {
@@ -460,7 +481,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
     setFragmentNote(null);
   };
 
-  if (result) return <ResultScreen result={result} newFragments={fragments} onExit={onDone} onReturnToLab={onReturnToLab} onStartMission={onStartMission} onReplay={() => void restart(true)} replayBusy={restartBusy} replayError={problem} />;
+  if (result) return <ResultScreen result={result} lastFeedback={lastFeedback} newFragments={fragments} onExit={onDone} onReturnToLab={onReturnToLab} onStartMission={onStartMission} onReplay={() => void restart(true)} replayBusy={restartBusy} replayError={problem} />;
   if (!step) {
     // A completed attempt whose result has not been fetched yet (for example completed in another tab).
     return <CompletedFetch attemptId={attempt.attemptId} onResult={setResult} onExit={onDone} />;
@@ -469,6 +490,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
   // One request at a time: the server answers 409 hint_in_progress to an answer and a hint that overlap.
   const inFlight = busy || hintBusy || restartBusy;
   const closed = expired || gone;
+  const staleStep = problem instanceof ApiError && problem.code === 'wrong_step';
   const hintsLeft = step.hintsAvailable - step.hintsOnStep;
   const hintsGone = hintsLeft <= 0 || noMoreHints === step.id;
   const ready = isAnswerReady(step, answer);
@@ -533,6 +555,9 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
 
   return (
     <div className={`player mission-${attempt.labSlug}`}>
+    <p className="sr-only mission-announcement" role="status" aria-live="polite" aria-atomic="true">
+      <span key={liveAnnouncement.nonce}>{t(liveAnnouncement.prefix, liveAnnouncement.prefixVars)}{liveAnnouncement.detail ? ` ${t(liveAnnouncement.detail)}` : ''}</span>
+      </p>
       <header>
         {/* Leaving while an answer is being checked would drop its outcome (a recorded answer whose result the learner never sees). */}
         <button type="button" className="back-button" aria-label={t('Exit mission')} disabled={busy} onClick={onExit}><ArrowLeft size={18} aria-hidden="true" /><span className="back-label">{t('Exit mission')}</span></button>
@@ -605,7 +630,13 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
               </div>
             )
             : (
-              <div className="feedback wrong" role="alert" ref={feedbackRef}>
+              <div
+                key={`wrong-${step.id}-${feedbackSequence}-${feedback.ordinal}-${feedback.penaltyXp ?? 'none'}-${feedback.progress?.correct ?? 'none'}`}
+                className="feedback wrong"
+                role="alert"
+                data-feedback-sequence={feedbackSequence}
+                ref={feedbackRef}
+              >
                 <X size={16} aria-hidden="true" />
                 <div>
                   <b>{t('Not quite.')}</b>
@@ -663,7 +694,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
               </div>
             </div>
           )}
-          {!closed && problem !== null && <div className="feedback wrong" role="alert"><X size={16} aria-hidden="true" /><div><b>{t('This could not be completed.')}</b><p>{describeError(problem)}</p></div></div>}
+          {!closed && problem !== null && <div className="feedback wrong" role="alert"><X size={16} aria-hidden="true" /><div><b>{staleStep ? t('Investigation updated.') : t('This could not be completed.')}</b><p>{staleStep ? t('Another tab advanced this investigation. The latest server step is now shown below; review it before answering.') : describeError(problem)}</p></div></div>}
           {closed && problem !== null && <p className="inline-error" role="alert">{t('Restart failed: {detail}', { detail: describeError(problem) })}</p>}
           {syncNote && <p className="sync-note" role="status">{t('Could not refresh the timer from the server: {detail}', { detail: describeError(syncNote.error) })}</p>}
           {resyncNote && <p className="sync-note" role="status">{t('The server recorded your action, but its reply could not be read, so this screen was refreshed from the server. Check your answer count and hints before continuing.')}</p>}
@@ -673,7 +704,7 @@ export function Mission({ initial, onExit, onDone, onReturnToLab, onStartMission
 
           {review
             ? <button type="button" className="primary review-continue" disabled={inFlight || closed} onClick={continueReview}>{t('Continue')} <ArrowRight size={19} aria-hidden="true" /></button>
-            : <button type="button" className="primary submit" ref={submitRef} disabled={inFlight || closed || !ready} onClick={() => void submit()}>
+            : <button type="button" className="primary submit" ref={submitRef} disabled={inFlight || closed || !ready} onKeyDown={(event) => { if (event.key === 'Enter' && event.repeat) event.preventDefault(); }} onClick={() => void submit()}>
                 {busy ? t('Checking…') : t('Submit answer')} <ArrowRight size={17} aria-hidden="true" />
               </button>}
           <p className="mission-disclaimer">{t('Educational scenario — not clinical guidance')}</p>
@@ -784,7 +815,7 @@ export function resultXpNote(result: Pick<MissionResult, 'newBest' | 'xpAwarded'
 
 type ExitState = { phase: 'idle' } | { phase: 'busy' } | { phase: 'done'; labName: string; badges: { id: string; name: string }[]; already: boolean } | { phase: 'error'; error: unknown };
 
-export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onStartMission, onReplay, replayBusy = false, replayError = null }: { result: MissionResult; newFragments: Fragment[]; onExit: () => void; onReturnToLab?: () => void; onStartMission?: (missionId: string) => Promise<unknown>; onReplay?: () => void; replayBusy?: boolean; replayError?: unknown }) {
+export function ResultScreen({ result, lastFeedback, newFragments, onExit, onReturnToLab, onStartMission, onReplay, replayBusy = false, replayError = null }: { result: MissionResult; lastFeedback?: string | null; newFragments: Fragment[]; onExit: () => void; onReturnToLab?: () => void; onStartMission?: (missionId: string) => Promise<unknown>; onReplay?: () => void; replayBusy?: boolean; replayError?: unknown }) {
   useLang();
   // The result replaces a long case page: start at its top, not wherever the Submit button was.
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -830,7 +861,7 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onSt
       </section>
       <p className="result-lede result-record">{t('Case archived. Here is your mission debrief.')}</p>
       <section className="result-score-card" aria-label={t('Mission score')}>
-        <div className="result-score-top"><span><Sparkles size={18} aria-hidden="true" />{t('SCORE')}</span><b>{formatInt(shownScore)} <small>/ {formatInt(result.maxScore)} XP</small></b></div>
+        <div className="result-score-top"><span><Sparkles size={18} aria-hidden="true" />{t('SCORE')}</span><b aria-hidden="true">{formatInt(shownScore)} <small>/ {formatInt(result.maxScore)} XP</small></b><span className="sr-only" role="status" aria-live="polite">{t('Final score: {score} of {max} XP.', { score: formatInt(result.score), max: formatInt(result.maxScore) })}</span></div>
         <div className="result-score-bar" role="progressbar" aria-label={t('Score')} aria-valuemin={0} aria-valuemax={result.maxScore} aria-valuenow={Math.min(result.maxScore, result.score)}><i style={{ width: `${filled ? scorePct : 0}%` }} /></div>
       </section>
       <div className="result-stats">
@@ -884,12 +915,12 @@ export function ResultScreen({ result, newFragments, onExit, onReturnToLab, onSt
       )}
       <section className="result-explanation" aria-labelledby="result-explanation-title">
         <h2 id="result-explanation-title">{t('Final step explained')}</h2>
-        <p>{t(result.finalExplanation)}</p>
+        <p>{t(lastFeedback ?? result.finalExplanation)}</p>
       </section>
       {result.ledger.length > 0 && (
         <ul className="ledger" aria-label={t('Score ledger')}>
           {result.ledger.map((row, index) => (
-            <li key={`${row.id}-${index}`} className={row.kind}><span>{t(row.label)}<small>{t(row.reason)}</small></span><b>{row.points > 0 ? `+${formatInt(row.points)}` : formatInt(row.points)}</b></li>
+            <li key={`${row.id}-${index}`} className={row.kind}><span>{row.kind === 'unearned' ? t('Not earned: {label}', { label: t(row.label) }) : t(row.label)}<small>{t(row.reason)}</small></span><b>{row.points > 0 ? `+${formatInt(row.points)}` : formatInt(row.points)}</b></li>
           ))}
         </ul>
       )}

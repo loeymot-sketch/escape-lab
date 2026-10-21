@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { createConnection } from 'node:net';
 import { after, before, test } from 'node:test';
-import { configFromEnv } from '../src/app.ts';
+import { configFromEnv, normalizeRateLimitAddress } from '../src/app.ts';
 import { MISSION_BY_ID } from '../src/content.ts';
-import { correct, harness } from './helpers.ts';
+import { DEMO_STUDENT_EMAIL, seedDemo } from '../src/demo.ts';
+import { correct, harness, solve } from './helpers.ts';
 import type { Harness } from './helpers.ts';
 
 let h: Harness;
@@ -122,6 +123,18 @@ test('leaderboard always returns the caller in `me`, whatever the scope or cohor
   }
 });
 
+test('leaderboard reads are rate limited per student without changing the default contract', async () => {
+  const p = await harness({ limits: { registerPerHour: 10_000, loginFailuresPerIp: 10_000, leaderboardPerMinute: 2 } });
+  try {
+    const u = await p.signup('Leaderboard Reader');
+    assert.equal((await p.call('GET', '/api/leaderboard', { token: u.token })).status, 200);
+    assert.equal((await p.call('GET', '/api/leaderboard', { token: u.token })).status, 200);
+    const limited = await p.call('GET', '/api/leaderboard', { token: u.token });
+    assert.equal(limited.status, 429);
+    assert.equal(limited.headers.get('retry-after'), '60');
+  } finally { await p.close(); }
+});
+
 test('failed logins from a stranger cannot lock the account owner out', async () => {
   const p = await harness({ trustProxy: true });
   try {
@@ -131,6 +144,15 @@ test('failed logins from a stranger cannot lock the account owner out', async ()
   assert.equal((await strike('9.9.9.9')).status, 429, 'the same source is throttled');
   const owner = await fetch(`${p.base}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '10.0.0.7' }, body: JSON.stringify({ email: 'owner@uni.edu', password: 'correct horse battery' }) });
   assert.equal(owner.status, 200);
+  } finally { await p.close(); }
+});
+
+test('the API server has bounded slow-request and connection settings', async () => {
+  const p = await harness();
+  try {
+    assert.equal(p.app.server.requestTimeout, 30_000);
+    assert.equal(p.app.server.headersTimeout, 15_000);
+    assert.equal(p.app.server.maxConnections, 512);
   } finally { await p.close(); }
 });
 
@@ -148,14 +170,16 @@ test('class join-code guessing is rate limited per student', async () => {
   assert.equal(statuses.at(-1), 429);
 });
 
-test('oversized answer payloads are truncated in the answer log', async () => {
+test('oversized answer payloads are represented by a compact digest in the answer log', async () => {
   const u = await h.signup('Verbose Student');
   const m = mission('hem-01');
   const a = (await h.call('POST', '/api/missions/hem-01/start', { token: u.token })).body.attempt;
   const r = await h.call('POST', `/api/attempts/${a.attemptId}/answer`, { token: u.token, body: { stepId: m.steps[0]!.id, response: { ...(correct(m.steps[0]!) as object), junk: 'x'.repeat(50_000) } } });
   assert.equal(r.status, 200);
   const row = h.app.db.prepare('SELECT LENGTH(response_json) AS n FROM answer_log WHERE attempt_id = ?').get(a.attemptId) as { n: number };
-  assert.ok(row.n <= 2000);
+  assert.ok(row.n <= 512);
+  const logged = h.app.db.prepare('SELECT response_json FROM answer_log WHERE attempt_id = ?').get(a.attemptId) as { response_json: string };
+  assert.deepEqual(Object.keys(JSON.parse(logged.response_json)).sort(), ['bytes', 'sha256', 'truncated']);
 });
 
 // ------------------------------------------------------------- round 2
@@ -213,6 +237,24 @@ test('proxy hops pick the right client address and ignore spoofed left-hand entr
   } finally { await p.close(); }
 });
 
+test('rate-limit identities canonicalize IPv4-mapped addresses and group native IPv6 by /64', () => {
+  assert.equal(normalizeRateLimitAddress('::ffff:192.0.2.7'), 'v4:192.0.2.7');
+  assert.equal(normalizeRateLimitAddress('192.0.2.7'), 'v4:192.0.2.7');
+  assert.equal(normalizeRateLimitAddress('2001:db8:0:1::7'), 'v6:2001:db8:0:1/64');
+  assert.equal(normalizeRateLimitAddress('2001:0DB8:0:1:abcd::8'), 'v6:2001:db8:0:1/64');
+  assert.notEqual(normalizeRateLimitAddress('2001:db8:0:2::7'), normalizeRateLimitAddress('2001:db8:0:1::7'));
+  assert.equal(normalizeRateLimitAddress('not-an-ip'), 'invalid');
+});
+
+test('trusted proxy rate limits use the canonicalized client identity', async () => {
+  const p = await harness({ trustProxy: true, limits: { loginFailuresPerIp: 3, registerPerHour: 10_000 } });
+  try {
+    const fail = (ip: string) => fetch(`${p.base}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify({ email: `canonical-${Math.random()}@uni.edu`, password: 'definitely wrong pw' }) });
+    for (let i = 0; i < 3; i++) assert.equal((await fail(`2001:db8:0:1::${i + 1}`)).status, 401);
+    assert.equal((await fail('2001:0DB8:0:1:0:0:0:99')).status, 429);
+  } finally { await p.close(); }
+});
+
 test('successful sign-ins never consume the failure budget; failures do', async () => {
   const p = await harness({ limits: { loginFailuresPerIp: 4, registerPerHour: 10_000 } });
   try {
@@ -220,6 +262,30 @@ test('successful sign-ins never consume the failure budget; failures do', async 
     for (let i = 0; i < 15; i++) assert.equal((await p.call('POST', '/api/auth/login', { body: { email: 'many@uni.edu', password: 'correct horse battery' } })).status, 200);
     for (let i = 0; i < 4; i++) assert.equal((await p.call('POST', '/api/auth/login', { body: { email: 'ghost@uni.edu', password: 'definitely wrong pw' } })).status, 401);
     assert.equal((await p.call('POST', '/api/auth/login', { body: { email: 'ghost@uni.edu', password: 'definitely wrong pw' } })).status, 429);
+  } finally { await p.close(); }
+});
+
+test('a configurable RATE_* value of zero disables only that limiter', async () => {
+  const p = await harness({ limits: { loginFailuresPerIp: 0, registerPerHour: 10_000 } });
+  try {
+    for (let i = 0; i < 10; i++) {
+      const result = await p.call('POST', '/api/auth/login', { body: { email: `zero-${i}@uni.edu`, password: 'definitely wrong pw' } });
+      assert.equal(result.status, 401);
+    }
+  } finally { await p.close(); }
+});
+
+test('demo reset is rate limited per demo account', async () => {
+  const p = await harness({ demo: true });
+  try {
+    await seedDemo(p.app.db, p.clock.t);
+    const login = await p.call('POST', '/api/auth/demo', { body: { role: 'student' } });
+    assert.equal(login.status, 200);
+    for (let i = 0; i < 6; i++) assert.equal((await p.call('POST', '/api/demo/reset', { token: login.body.token })).status, 200);
+    const limited = await p.call('POST', '/api/demo/reset', { token: login.body.token });
+    assert.equal(limited.status, 429);
+    assert.match(String(limited.body.error.message), /Too many|try again/i);
+    assert.equal((await p.call('POST', '/api/auth/login', { body: { email: DEMO_STUDENT_EMAIL, password: 'demo-password-1' } })).status, 200);
   } finally { await p.close(); }
 });
 
@@ -261,6 +327,22 @@ test('timers never leak negative or oversized values, and results of expired att
     assert.equal(res.status, 409);
     assert.equal(res.body.error.code, 'time_expired');
   } finally { h.clock.t -= 3 * 86_400_000; }
+});
+
+test('attempt timing stays monotone after a wall-clock rollback', async () => {
+  const u = await h.signup('Rollback Student');
+  const m = mission('hem-01');
+  h.clock.t += 60 * 60 * 1000;
+  const started = (await h.call('POST', '/api/missions/hem-01/start', { token: u.token })).body.attempt;
+  h.clock.t -= 60 * 60 * 1000;
+  const view = (await h.call('GET', `/api/attempts/${started.attemptId}`, { token: u.token })).body;
+  assert.equal(view.elapsedSec, 0);
+  assert.equal(view.remainingSec, m.timeLimitSec);
+  await solve(h, u.token, 'hem-01');
+  const result = (await h.call('GET', `/api/attempts/${started.attemptId}/result`, { token: u.token })).body;
+  assert.equal(result.stats.elapsedSec, m.timeLimitSec);
+  assert.equal(result.ledger.find((row: any) => row.id === 'time_bonus')?.points, 0);
+  assert.ok(result.stats.elapsedSec >= 0);
 });
 
 test('a hint that finishes after the attempt expired reports time_expired and refunds the penalty', async () => {

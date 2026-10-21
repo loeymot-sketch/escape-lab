@@ -19,6 +19,7 @@ function movePointWithKeyboard(e: KeyboardEvent<HTMLButtonElement>, marker: { x:
 
 export function PointEngine({ step, answer, setAnswer, disabled }: EngineProps) {
   useLang();
+  const imageRef = useRef<HTMLImageElement>(null);
   const asset = step.image ? SCIENTIFIC_ASSETS[step.image.asset] : undefined;
   const targets = step.pointTargets ?? [];
   const points = answer.points ?? {};
@@ -43,7 +44,10 @@ export function PointEngine({ step, answer, setAnswer, disabled }: EngineProps) 
       if (!marker) choosePoint({ x: 50, y: 50 });
       return;
     }
-    choosePoint(pointAsPercent(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect()));
+    // Measure the rendered artwork itself. The button is intentionally the hit target,
+    // but using its box would make percentages drift if the image is letterboxed or
+    // receives a future frame treatment.
+    choosePoint(pointAsPercent(e.clientX, e.clientY, imageRef.current?.getBoundingClientRect() ?? e.currentTarget.getBoundingClientRect()));
   };
   const [imageFailed, setImageFailed] = useState(false);
   const keyboard = (e: KeyboardEvent<HTMLButtonElement>) => movePointWithKeyboard(e, activeMarker, (point) => choosePoint(point, false));
@@ -52,7 +56,7 @@ export function PointEngine({ step, answer, setAnswer, disabled }: EngineProps) 
   return <>
     <div className="image-frame">
       <button type="button" className="image-placeholder scientific" style={{ aspectRatio: `${asset.width} / ${asset.height}` }} onClick={pick} onKeyDown={keyboard} disabled={disabled} aria-label={t('Select a point on the scientific image')} aria-describedby="point-help">
-        <img className="scientific-image" src={asset.src} alt="" width={asset.width} height={asset.height} draggable={false} onError={() => setImageFailed(true)} />
+        <img ref={imageRef} className="scientific-image" src={asset.src} alt="" width={asset.width} height={asset.height} draggable={false} onError={() => setImageFailed(true)} />
         {targets.length ? targets.map((target) => points[target.id] && <span key={target.id} className="marker" aria-hidden="true" style={{ left: `${points[target.id]!.x}%`, top: `${points[target.id]!.y}%` }} />) : marker && <span className="marker" aria-hidden="true" style={{ left: `${marker.x}%`, top: `${marker.y}%` }} />}
       </button>
       <span className="image-watermark">{t('Illustrative training image')}</span>
@@ -67,13 +71,14 @@ export function PointEngine({ step, answer, setAnswer, disabled }: EngineProps) 
         const content = <><i aria-hidden="true">{selected ? '✓' : String(index + 1)}</i><span>{t(target.label)}</span><b>{selected ? t('Selected') : t('Pending')}</b></>;
         return disabled
           ? <div className={className} key={target.id}>{content}</div>
-          : <button type="button" className={className} key={target.id} aria-pressed={active} onClick={() => setActiveId(target.id)}>{content}</button>;
+          : <button type="button" className={className} key={target.id} aria-pressed={selected} aria-current={active ? 'step' : undefined} onClick={() => setActiveId(target.id)}>{content}</button>;
       })}
     </div>}
-    <p id="point-help" className="image-instruction-text">
-      {targets.length ? <>{t('Select each observation on the image.')} {activeTarget && t('Current observation: {target}.', { target: t(activeTarget.label) })} {t('{done} of {total} observations selected.', { done: new Set([...Object.keys(points), ...Object.keys(selections)]).size, total: targets.length })}</> : <>{t('Click the image, or focus it and use the arrow keys (Shift for larger steps) to mark the suspected finding.')}{marker && <> {t('Marker at {x}% across, {y}% down.', { x: Math.round(marker.x), y: Math.round(marker.y) })}</>}</>}
+    <p id="point-help" className="image-instruction-text" role="status" aria-live="polite" aria-atomic="true">
+      {targets.length ? <>{t('Select each observation on the image.')} {activeTarget && t('Current observation: {target}.', { target: t(activeTarget.label) })} {activeMarker && t('Marker at {x}% across, {y}% down.', { x: Math.round(activeMarker.x), y: Math.round(activeMarker.y) })} {t('{done} of {total} observations selected.', { done: new Set([...Object.keys(points), ...Object.keys(selections)]).size, total: targets.length })}</> : <>{t('Click the image, or focus it and use the arrow keys (Shift for larger steps) to mark the suspected finding.')}{marker && <> {t('Marker at {x}% across, {y}% down.', { x: Math.round(marker.x), y: Math.round(marker.y) })}</>}</>}
       {asset.textAlternative && <> {t('A text version of this image, with a button for each result, follows the image.')}</>}
     </p>
+    {asset.description && <div className="point-text point-description"><p><strong>{t('Non-visual image description')}</strong></p><p>{t(asset.description)}</p><p>{t('The image control is keyboard-operable: use the arrow keys to move the marker, Shift plus an arrow for larger steps, then submit the answer.')}</p></div>}
     {asset.textAlternative && <PointTextAlternative alt={asset.textAlternative} selected={textTarget ? selections[textTarget.id] : undefined} disabled={disabled} choose={chooseTextSelection} />}
     <p className="image-caption">{t('{label}: illustrative training material, not a real specimen, not a validated image and not for clinical use.', { label: t(asset.label) })}</p>
   </>;
@@ -85,7 +90,7 @@ function PointTextAlternative({ alt, selected, disabled, choose }: { alt: AssetT
   return <details className="point-text"><summary>{t('Text version of this image')}</summary><div className="point-text-body">
     <ul className="point-text-indices">{alt.indices.map((index) => <li key={index}>{t(index)}</li>)}</ul>
     <p id={captionId} className="point-text-caption">{t(alt.caption)}</p><p className="point-text-hint">{t('Swipe sideways to see every column.')}</p>
-    <div className="point-text-scroll" role="region" aria-label={t('Chemistry panel table')} tabIndex={0}><table aria-labelledby={captionId}><thead><tr><th scope="col">{t('Test')}</th><th scope="col">{t('Result')}</th><th scope="col">{t('Reference')}</th><th scope="col">{t('Flag')}</th><th scope="col">{t('Choose')}</th></tr></thead><tbody>
+    <div className="point-text-scroll" role="region" aria-label={t('Chemistry panel table')} tabIndex={0}><table><caption className="sr-only">{t('Chemistry panel table')}</caption><thead><tr><th scope="col">{t('Test')}</th><th scope="col">{t('Result')}</th><th scope="col">{t('Reference')}</th><th scope="col">{t('Flag')}</th><th scope="col">{t('Choose')}</th></tr></thead><tbody>
       {alt.rows.map((row) => { const selectedRow = selected === row.test; return <tr key={row.test}><th scope="row">{t(row.test)}</th><td>{row.result} {row.unit}</td><td>{row.reference}</td><td>{row.flag ? t(FLAG_WORDS[row.flag] ?? row.flag) : t('none')}</td><td><button type="button" className="ghost" aria-pressed={selectedRow} aria-label={t('Select {test} result', { test: t(row.test) })} disabled={disabled} onClick={() => choose(row.test)}>{t('Select')}</button></td></tr>; })}
     </tbody></table></div>
   </div></details>;

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Check, GripVertical, ImageOff, X, ZoomIn } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, ImageOff, X, ZoomIn } from 'lucide-react';
 import { SCIENTIFIC_ASSETS } from '../lib/assets';
 import cultureObservation1 from '../assets/culture-observation-01.webp';
 import cultureObservation2 from '../assets/culture-observation-02.webp';
@@ -212,12 +212,12 @@ function DragOrder({ step, answer, setAnswer, disabled }: EngineProps) {
 
   return (
     <>
+      <p className="engine-instruction">{t('Use the arrow buttons to place each item in the correct order.')}</p>
       <ol className="drag-list" aria-label={t('Order the items. Use the move buttons to change a position.')}>
         {order.map((id, index) => {
           const label = t(labels.get(id) ?? id);
           return (
             <li className="drag-row" key={id}>
-              <GripVertical size={16} aria-hidden="true" />
               <span className="drag-number" aria-hidden="true">{index + 1}</span>
               <b>{label}</b>
               <div className="move-buttons">

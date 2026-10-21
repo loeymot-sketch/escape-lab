@@ -73,7 +73,8 @@ test.describe('faculty roster, detail and class scope', () => {
     // R9-C-03: an empty class has no completion or attention figure to show.
     await expect(page.locator('.stat').filter({ hasText: /^Completion/ })).toContainText('—');
     await nav(page, 'Student detail');
-    await expect(page.getByLabel('Class', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Class', { exact: true })).toHaveValue(/2/);
+    await expect(page.getByRole('heading', { name: 'No students in this class yet' })).toBeVisible();
   });
 
   test('a single class shows no selector', async ({ page }) => {

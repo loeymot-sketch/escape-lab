@@ -355,3 +355,20 @@ test('a failed mission scene stays accessible and does not block the investigati
   await expect(scene).toHaveAttribute('role', 'img');
   await expect(page.getByRole('button', { name: 'Submit answer' })).toBeVisible();
 });
+
+test('mission scene stays centred in the case panel on desktop and mobile', async ({ page }) => {
+  await resetDemo(page);
+  await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
+
+  for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    const geometry = await page.locator('[data-testid="mission-scene"]').evaluate((scene) => {
+      const panel = scene.closest('.case-panel')?.getBoundingClientRect();
+      const box = scene.getBoundingClientRect();
+      return panel ? { delta: Math.abs((box.left + box.width / 2) - (panel.left + panel.width / 2)), ratio: box.width / box.height } : null;
+    });
+    expect(geometry).not.toBeNull();
+    expect(geometry!.delta).toBeLessThan(1);
+    expect(geometry!.ratio).toBeCloseTo(1400 / 934, 2);
+  }
+});

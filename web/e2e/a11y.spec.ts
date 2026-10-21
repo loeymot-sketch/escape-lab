@@ -121,7 +121,7 @@ test.describe('axe: zero violations on every screen', () => {
     await clean(page, 'stepper step 1');
     await page.locator('.answer-options button').filter({ hasText: 'Microcytic' }).click();
     await submit(page).click();
-    await expect(page.getByRole('status').filter({ hasText: 'Step 1 correct.' })).toBeVisible();
+    await expect(page.locator('.feedback.correct').filter({ hasText: 'Step 1 correct.' })).toBeVisible();
     await clean(page, 'stepper correction with saved answer and explanation');
     await continueStep(page);
     await expect(page.getByText('STEP 2 / 3')).toBeVisible();
@@ -206,6 +206,19 @@ test.describe('semantics and conventions', () => {
     await submit(page).click();
     await expect(page.locator('.feedback.correct')).toHaveAttribute('role', 'status');
     await expect(page.locator('.feedback.correct')).toHaveAttribute('aria-live', 'polite');
+    await expect(page.locator('.mission-announcement')).toHaveText(/Step \d+ correct\./);
+  });
+
+  test('a repeated wrong answer re-arms the alert with the new server penalty', async ({ page }) => {
+    await resetDemo(page);
+    await startMissionViaUi(page, 'Hematology Lab', 'Fix the Sample');
+    await page.getByRole('button', { name: DECISION.accept }).click();
+    await submit(page).click();
+    await expect(page.locator('.feedback.wrong')).toHaveAttribute('data-feedback-sequence', '1');
+    await submit(page).click();
+    await expect(page.locator('.feedback.wrong')).toHaveAttribute('data-feedback-sequence', '2');
+    await expect(page.locator('.feedback.wrong')).toHaveAttribute('role', 'alert');
+    await expect(page.locator('.mission-announcement')).toHaveText('Wrong answer recorded.');
   });
 
   test('the mission side panel uses h2, not a skipped heading level, with no runtime DOM rewriting', async ({ page }) => {

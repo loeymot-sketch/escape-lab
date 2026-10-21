@@ -15,7 +15,7 @@ export interface Deps {
   secret: string;
   teacherInviteCode: string;
   now: () => number;
-  limits?: { registerPerHour?: number; loginFailuresPerIp?: number; joinPerUser?: number; answerPerMinute?: number; hintPerMinute?: number; startPerMinute?: number; writePerMinute?: number };
+  limits?: { registerPerHour?: number; loginFailuresPerIp?: number; joinPerUser?: number; answerPerMinute?: number; hintPerMinute?: number; startPerMinute?: number; leaderboardPerMinute?: number; writePerMinute?: number; demoResetPer10Minutes?: number };
   demo?: boolean;
 }
 
@@ -100,10 +100,25 @@ const intParam = (v: string, name: string): number => {
 export function buildRoutes(d: Deps): Route[] {
   const { db, game, limiter, secret } = d;
   const uid = (c: Ctx) => c.user!.id;
+  /** An explicit zero disables an optional limiter; omitted values keep the safe default. */
+  const hit = (key: string, max: number, windowMs: number) => { if (max > 0) limiter.hit(key, max, windowMs); };
   // The shared E2E demo learner legitimately bursts far above a human pace.
   const perUserScale = process.env.NODE_ENV === 'test' ? 50 : 1;
+  // Password verification is intentionally expensive. Bound only simultaneous
+  // work from one address; sequential successful sign-ins remain unthrottled so
+  // a classroom sharing a network is not penalised for normal use.
+  const loginInFlight = new Map<string, number>();
+  const enterLogin = (ip: string) => {
+    const active = loginInFlight.get(ip) ?? 0;
+    if (active >= 32) throw new ApiError(429, 'rate_limited', 'Too many sign-ins are being checked from this address. Try again shortly.', { retryAfterSeconds: 1 }, { 'Retry-After': '1' });
+    loginInFlight.set(ip, active + 1);
+  };
+  const leaveLogin = (ip: string) => {
+    const active = (loginInFlight.get(ip) ?? 1) - 1;
+    if (active > 0) loginInFlight.set(ip, active); else loginInFlight.delete(ip);
+  };
   /** Account-changing writes (profile, classes, content review): one shared per-account budget, so a script cannot flood the tables. */
-  const write = (c: Ctx) => limiter.hit(`write:${uid(c)}`, (d.limits?.writePerMinute ?? 60) * perUserScale, 60_000);
+  const write = (c: Ctx) => hit(`write:${uid(c)}`, (d.limits?.writePerMinute ?? 60) * perUserScale, 60_000);
   const issue = (u: { id: number; role: 'student' | 'teacher' }) =>
     signToken({ sub: u.id, role: u.role, exp: Math.floor(d.now() / 1000) + 7 * 86400 }, secret);
 
@@ -121,7 +136,7 @@ export function buildRoutes(d: Deps): Route[] {
         const secret = b.password.normalize('NFC');
         if ([...secret].length < 10) throw bad('The password is too short.', ['body.password must be at least 10 characters (counted after Unicode NFC normalisation)']);
         if (visibleSecretLength(secret) < MIN_VISIBLE_PASSWORD) throw bad('The password needs more visible characters.', [`body.password must contain at least ${MIN_VISIBLE_PASSWORD} visible characters (whitespace, zero-width and filler characters do not count)`]);
-        limiter.hit(`reg:${c.ip}`, d.limits?.registerPerHour ?? 100, 3600_000);
+        hit(`reg:${c.ip}`, d.limits?.registerPerHour ?? 100, 3600_000);
         let role: 'student' | 'teacher' = 'student';
         if (b.teacherInviteCode !== undefined && b.teacherInviteCode !== '') {
           if (!d.teacherInviteCode || b.teacherInviteCode !== d.teacherInviteCode) throw forbidden('Invalid teacher invite code.', 'invalid_invite');
@@ -153,25 +168,30 @@ export function buildRoutes(d: Deps): Route[] {
         const perIp = d.limits?.loginFailuresPerIp ?? 60;
         const ipKey = `loginfail:${c.ip}`;
         const accountKey = `loginfail:${c.ip}:${email}`;
-        // Each attempt reserves its failure slots BEFORE the (slow, awaited) password check, so concurrent wrong guesses count
-        // against each other; a success gives its slots back, so successes still never throttle anyone.
-        limiter.hit(ipKey, perIp, 600_000);
-        try { limiter.hit(accountKey, 8, 600_000); } catch (e) { limiter.release(ipKey); throw e; }
-        const candidates = findUsersByEmail<{ id: number; role: 'student' | 'teacher'; password_hash: string; is_demo_account: number }>(db, email, 'id, role, password_hash, is_demo_account');
-        // Same work and same message whether or not the account exists (one password check at least; several only for rows stored before the e-mail rule that share one key).
-        // With DEMO_MODE off the seeded accounts (published password) are refused through the same path as a wrong password.
-        let u: (typeof candidates)[number] | undefined;
-        let checked = false;
-        for (const candidate of candidates) {
-          if (!d.demo && candidate.is_demo_account) continue;
-          checked = true;
-          if (await verifyPassword(b.password, candidate.password_hash)) { u = candidate; break; }
+        enterLogin(c.ip);
+        try {
+          // Each attempt reserves its failure slots BEFORE the (slow, awaited) password check, so concurrent wrong guesses count
+          // against each other; a success gives its slots back, so successes still never throttle anyone.
+          hit(ipKey, perIp, 600_000);
+          try { limiter.hit(accountKey, 8, 600_000); } catch (e) { if (perIp > 0) limiter.release(ipKey); throw e; }
+          const candidates = findUsersByEmail<{ id: number; role: 'student' | 'teacher'; password_hash: string; is_demo_account: number }>(db, email, 'id, role, password_hash, is_demo_account');
+          // Same work and same message whether or not the account exists (one password check at least; several only for rows stored before the e-mail rule that share one key).
+          // With DEMO_MODE off the seeded accounts (published password) are refused through the same path as a wrong password.
+          let u: (typeof candidates)[number] | undefined;
+          let checked = false;
+          for (const candidate of candidates) {
+            if (!d.demo && candidate.is_demo_account) continue;
+            checked = true;
+            if (await verifyPassword(b.password, candidate.password_hash)) { u = candidate; break; }
+          }
+          if (!checked) await verifyPassword(b.password, 'scrypt$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+          if (!u) throw unauthorized('Incorrect email or password.');
+          limiter.release(ipKey);
+          limiter.release(accountKey);
+          return { token: issue(u), user: game.me(u.id) };
+        } finally {
+          leaveLogin(c.ip);
         }
-        if (!checked) await verifyPassword(b.password, 'scrypt$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
-        if (!u) throw unauthorized('Incorrect email or password.');
-        limiter.release(ipKey);
-        limiter.release(accountKey);
-        return { token: issue(u), user: game.me(u.id) };
       },
     },
     {
@@ -180,7 +200,7 @@ export function buildRoutes(d: Deps): Route[] {
         if (!d.demo) throw notFound('Demo mode is not enabled on this server.');
         // Keep production demo sign-in rate-limited; the higher test-only ceiling
         // prevents repeated isolated E2E workers from exhausting shared localhost state.
-        limiter.hit(`demo:${c.ip}`, process.env.NODE_ENV === 'test' ? 1000 : 60, 600_000);
+        hit(`demo:${c.ip}`, process.env.NODE_ENV === 'test' ? 1000 : 60, 600_000);
         const email = (c.body as { role: 'student' | 'teacher' }).role === 'teacher' ? DEMO_TEACHER_EMAIL : DEMO_STUDENT_EMAIL;
         const u = db.prepare('SELECT id, role FROM users WHERE email = ?').get(email) as { id: number; role: 'student' | 'teacher' } | undefined;
         if (!u) throw notFound('Demo data has not been seeded. Run npm run seed:demo.');
@@ -214,27 +234,33 @@ export function buildRoutes(d: Deps): Route[] {
         { name: 'scope', schema: { type: 'string', enum: ['week', 'all'] }, description: 'week = XP earned in the last 7 days; all = all-time (default).' },
         { name: 'cohort', schema: { type: 'string', enum: ['class', 'all'] }, description: 'class = students sharing a class with you (default); all = every student.' },
       ],
-      handler: (c) => game.leaderboard(uid(c), (c.query.get('scope') as 'week' | 'all') ?? 'all', (c.query.get('cohort') as 'class' | 'all') ?? 'class'),
+      handler: (c) => {
+        // Leaderboards are read-only but can still be expensive for large cohorts.
+        // Keep the limit per authenticated student so one client cannot monopolise
+        // the single-threaded SQLite process; zero explicitly disables it.
+        hit(`leaderboard:${uid(c)}`, (d.limits?.leaderboardPerMinute ?? 60) * perUserScale, 60_000);
+        return game.leaderboard(uid(c), (c.query.get('scope') as 'week' | 'all') ?? 'all', (c.query.get('cohort') as 'class' | 'all') ?? 'class');
+      },
     },
     { method: 'GET', path: '/api/profile', auth: 'user', tag: 'Profile', summary: 'Profile: identity, XP and level, accuracy, average mission time, labs, badges and settings (language, sound, reduced motion, notifications).', handler: (c) => game.profile(uid(c)) },
     { method: 'PUT', path: '/api/profile', auth: 'user', tag: 'Profile', summary: 'Update settings and identity. Only the fields you send change. A teacher rename can answer 409 name_taken.', body: S.profile,
       description: 'Errors: 400 validation_error (invalid body, an empty or invisible name, a name containing "(teacher #number)"), 409 name_taken (another teacher account already uses this name, or it is the reserved demo teacher name), 429 too many writes.', handler: (c) => { write(c); return game.updateProfile(uid(c), c.body as Parameters<Game['updateProfile']>[1]); } },
 
     // ------------------------------------------------------------- missions
-    { method: 'POST', path: '/api/missions/:id/start', auth: 'student', tag: 'Missions', summary: 'Start a mission, or resume the attempt already in progress.', status: 201, body: EMPTY_BODY, handler: (c) => { limiter.hit(`start:${uid(c)}`, (d.limits?.startPerMinute ?? 60) * perUserScale, 60_000); return game.startMission(uid(c), c.params.id!); } },
+    { method: 'POST', path: '/api/missions/:id/start', auth: 'student', tag: 'Missions', summary: 'Start a mission, or resume the attempt already in progress.', status: 201, body: EMPTY_BODY, handler: (c) => { hit(`start:${uid(c)}`, (d.limits?.startPerMinute ?? 60) * perUserScale, 60_000); return game.startMission(uid(c), c.params.id!); } },
     { method: 'GET', path: '/api/attempts/:id', auth: 'student', tag: 'Missions', summary: 'Current state of an attempt: current step (with the hints already delivered on it, in level order, as step.hintsGiven), revealed values, timer, penalties.', handler: (c) => game.getAttempt(uid(c), c.params.id!) },
     {
       method: 'POST', path: '/api/attempts/:id/answer', auth: 'student', tag: 'Missions', summary: 'Submit the answer for the current step. Correct answers return the explanation and may return a code fragment.', body: S.answer,
-      handler: (c) => { limiter.hit(`answer:${uid(c)}`, (d.limits?.answerPerMinute ?? 120) * perUserScale, 60_000); const b = c.body as { stepId: string; response: unknown }; return game.answer(uid(c), c.params.id!, b.stepId, b.response); },
+      handler: (c) => { hit(`answer:${uid(c)}`, (d.limits?.answerPerMinute ?? 120) * perUserScale, 60_000); const b = c.body as { stepId: string; response: unknown }; return game.answer(uid(c), c.params.id!, b.stepId, b.response); },
     },
     {
       method: 'POST', path: '/api/attempts/:id/hint', auth: 'student', tag: 'Missions', summary: 'Ask the Lab Assistant (BETA) for a hint. Costs 15 XP. Never returns the answer; falls back to the standard hint. The delivered text is stored and listed in attempt.step.hintsGiven from then on.', body: S.hint,
-      handler: (c) => { limiter.hit(`hint:${uid(c)}`, (d.limits?.hintPerMinute ?? 30) * perUserScale, 60_000); return game.hint(uid(c), c.params.id!, (c.body as { stepId: string }).stepId); },
+      handler: (c) => { hit(`hint:${uid(c)}`, (d.limits?.hintPerMinute ?? 30) * perUserScale, 60_000); return game.hint(uid(c), c.params.id!, (c.body as { stepId: string }).stepId); },
     },
     { method: 'GET', path: '/api/attempts/:id/result', auth: 'student', tag: 'Missions', summary: 'Result screen payload: ledger, stats, badges, competencies.', handler: (c) => game.result(uid(c), c.params.id!) },
 
     // -------------------------------------------------------------- classes
-    { method: 'POST', path: '/api/classes/join', auth: 'student', tag: 'Classes', summary: 'Join a class with its code.', body: S.join, handler: (c) => { limiter.hit(`join:${uid(c)}`, d.limits?.joinPerUser ?? 10, 600_000); return game.joinClass(uid(c), (c.body as { joinCode: string }).joinCode); } },
+    { method: 'POST', path: '/api/classes/join', auth: 'student', tag: 'Classes', summary: 'Join a class with its code.', body: S.join, handler: (c) => { hit(`join:${uid(c)}`, d.limits?.joinPerUser ?? 10, 600_000); return game.joinClass(uid(c), (c.body as { joinCode: string }).joinCode); } },
     { method: 'POST', path: '/api/classes', auth: 'teacher', tag: 'Classes', summary: 'Create a class and get its join code.', description: 'A class name needs at least 2 visible characters (invisible ones do not count). A teacher cannot own two classes with the same name: 409 class_name_taken. Two names are the same when they differ only by case (including ß / SS and final sigma), by whitespace (any whitespace of any length counts as one space), by invisible characters (zero-width, soft hyphen, bidi and format characters, a stray combining U+0345 ypogegrammeni), by compatibility forms (fullwidth letters, ligatures, mathematical alphabets) or by Cyrillic / Greek look-alikes of Latin letters. Punctuation, accents, digits and the shapes I / l / 1 / | and O / 0 are significant, so "Section 1.2" / "Section 12" and "Year 1" / "Year I" are different classes. At most 50 classes per teacher: 409 class_limit_reached.', status: 201, body: S.className, handler: (c) => { write(c); return game.createClass(uid(c), (c.body as { name: string }).name.trim()); } },
     { method: 'GET', path: '/api/classes', auth: 'teacher', tag: 'Classes', summary: 'Your classes.', handler: (c) => ({ classes: game.listClasses(uid(c)) }) },
     {
@@ -253,7 +279,11 @@ export function buildRoutes(d: Deps): Route[] {
     { method: 'PUT', path: '/api/content/missions/:id/status', auth: 'teacher', tag: 'Content', summary: 'Internal: move a mission through Draft, Reviewed, Approved. Approval requires a review first.', body: S.contentStatus, handler: (c) => { write(c); return game.setContentStatus(uid(c), c.params.id!, (c.body as { status: 'draft' | 'reviewed' | 'approved' }).status); } },
     {
       method: 'POST', path: '/api/demo/reset', auth: 'user', tag: 'Demo', summary: 'Restore the demo student (Alex Martin) or the demo teacher (Dr. Claire Moreau: name, classes, content review) to the prepared presentation state. 403 for every other account.', body: EMPTY_BODY,
-      handler: (c) => { if (!d.demo) throw notFound('Demo mode is not enabled on this server.'); return c.user!.role === 'teacher' ? resetDemoTeacher(db, game, uid(c)) : resetDemoStudent(db, game, uid(c)); },
+      handler: (c) => {
+        if (!d.demo) throw notFound('Demo mode is not enabled on this server.');
+        if (c.user!.email === DEMO_STUDENT_EMAIL || c.user!.email === DEMO_TEACHER_EMAIL) limiter.hit(`demo-reset:${uid(c)}`, d.limits?.demoResetPer10Minutes ?? 6, 600_000);
+        return c.user!.role === 'teacher' ? resetDemoTeacher(db, game, uid(c)) : resetDemoStudent(db, game, uid(c));
+      },
     },
   ];
 }

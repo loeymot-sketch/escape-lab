@@ -72,6 +72,7 @@ test.describe('About & demo guide: content', () => {
     expect(text).toContain('qualified biomedical experts or educators');
     expect(text).toContain('All validation so far is local');
     expect(text).toContain('no independent human security or accessibility review');
+    expect(text).toContain('no expert-authored non-visual assessment path');
     expect(text).toContain('Planned, not done');
     expect(text).toContain('Images in this prototype are presented as illustrative training material, not as clinical or diagnostic reference. Their provenance and licensing still have to be documented and reviewed before any teaching use. This is a teaching prototype, not a medical device or diagnostic tool.');
     expect(text).not.toMatch(/production[- ]ready/i);
@@ -82,6 +83,18 @@ test.describe('About & demo guide: content', () => {
     expect(levels[0]).toBe(1);
     levels.reduce((previous, level) => { expect(level - previous, `heading jump ${previous} -> ${level}`).toBeLessThanOrEqual(1); return level; }, 1);
     await expect(page.getByRole('heading', { level: 2 })).toHaveText(['What it is, and what it is not', 'A guided demonstration', 'How quality is assured', 'Scientific validation roadmap']);
+  });
+
+  test('print view keeps the guide content and removes navigation and guest controls', async ({ page }) => {
+    await resetDemo(page);
+    await openAbout(page);
+    await page.emulateMedia({ media: 'print' });
+    await expect(page.locator('.about')).toBeVisible();
+    await expect(page.locator('.app > aside')).toBeHidden();
+    await expect(page.locator('.app-main > header')).toBeHidden();
+    await expect(page.locator('.game-primary-nav')).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Reset guest session' })).toBeHidden();
+    await expect(aboutHeading(page)).toBeVisible();
   });
 
   test('lists the eight demonstration steps and five roadmap phases, all of them PLANNED', async ({ page }) => {

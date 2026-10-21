@@ -20,6 +20,9 @@ export type Nav = {
   openStudent: (classId: number, studentId: number) => void;
   /** Where a student detail request was pointed (set by the faculty roster). */
   student: { classId: number; studentId: number } | null;
+  /** The last class selected in the faculty views, kept while navigating between those views. */
+  facultyClassId: number | null;
+  setFacultyClassId: (id: number | null) => void;
   labSlug: string | null;
   /** Id of the mission whose start request is in flight (null when none). */
   starting: string | null;
@@ -120,6 +123,9 @@ export function Bar({ pct, alert = false }: { pct: number; alert?: boolean }) {
 /** Competency percentages as simple bars, plus the server's strongest area and improvement advice. */
 export function CompetencyBars({ data, title }: { data: Competencies; title: string }) {
   if (data.items.length === 0) return <p className="bar-note">{t('No competency data yet.')}</p>;
+  const maxPct = Math.max(...data.items.map((item) => item.pct));
+  const strongestItems = data.items.filter((item) => item.pct === maxPct && item.pct > 0);
+  const strongestLabel = strongestItems.length > 1 ? 'Strongest areas:' : 'Strongest area:';
   return (
     <>
       <ul className="bar-list" aria-label={t(title)}>
@@ -131,7 +137,8 @@ export function CompetencyBars({ data, title }: { data: Competencies; title: str
           </li>
         ))}
       </ul>
-      {data.strongest && <p className="insight"><b>{t('Strongest area:')}</b> {t(data.strongest)}.</p>}
+      {/* A single zero-percent competency is a baseline, not a meaningful "strongest" area. */}
+      {data.items.length > 1 && strongestItems.length > 0 && data.strongest && <p className="insight"><b>{t(strongestLabel)}</b> {strongestItems.map((item) => t(item.name)).join(', ')}.</p>}
       {data.improvement && <p className="insight"><b>{t('To improve:')}</b> {t(data.improvement.advice)}</p>}
     </>
   );

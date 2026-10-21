@@ -172,15 +172,17 @@ export function LabMap() {
 }
 
 /** The laboratory as a route: one stop per mission (state and server mastery), the code fragments, the exit. Server data only. */
-export function RouteStrip({ missions, vault }: { missions: Pick<LobbyMission, 'id' | 'ordinal' | 'title' | 'state' | 'mastery'>[]; vault: LabLobby['vault'] }) {
+type RouteMission = Pick<LobbyMission, 'id' | 'ordinal' | 'title' | 'state' | 'mastery'> & Partial<Pick<LobbyMission, 'inProgress'>>;
+
+export function RouteStrip({ missions, vault }: { missions: RouteMission[]; vault: LabLobby['vault'] }) {
   const exit = vault === null ? null : vault.exited ? 'open' : vault.complete ? 'ready' : 'sealed';
-  const stopWord = (m: Pick<LobbyMission, 'state' | 'mastery'>) => (m.state === 'completed' ? (t(masteryLabel(m.mastery)) || t('Completed')) : m.state === 'locked' ? t('Locked') : m.state === 'current' ? t('In progress') : t('Ready'));
+  const stopWord = (m: Pick<LobbyMission, 'state' | 'mastery'> & Partial<Pick<LobbyMission, 'inProgress'>>) => (m.inProgress ? t('In progress') : m.state === 'completed' ? (t(masteryLabel(m.mastery)) || t('Completed')) : m.state === 'locked' ? t('Locked') : m.state === 'current' ? t('In progress') : t('Ready'));
   return (
     <section className="route-strip" aria-label={t('Laboratory route')}>
       <ol className="route-missions">
         {missions.map((m) => (
-          <li key={m.id} className="route-stop" data-state={m.state} data-mastery={m.mastery ?? undefined}>
-            <span className="route-dot" aria-hidden="true">{m.state === 'completed' ? <Check size={12} /> : String(m.ordinal).padStart(2, '0')}</span>
+          <li key={m.id} className="route-stop" data-state={m.inProgress ? 'current' : m.state} data-mastery={m.inProgress ? undefined : m.mastery ?? undefined}>
+            <span className="route-dot" aria-hidden="true">{m.inProgress ? String(m.ordinal).padStart(2, '0') : m.state === 'completed' ? <Check size={12} /> : String(m.ordinal).padStart(2, '0')}</span>
             <span className="route-label"><span>{t(m.title)}</span><small>{stopWord(m)}</small></span>
           </li>
         ))}
@@ -254,7 +256,7 @@ function LobbyView({ lobby }: { lobby: LabLobby }) {
                       <h3>{t(m.title)}</h3>
                       <p>{t('{engine} · Difficulty: {difficulty} · about {minutes} min', { engine: engineLabel(m.engine), difficulty: t(m.difficulty), minutes: m.estMinutes })}</p>
                       <p>
-                        {m.state === 'completed' ? <>{t('Completed')}{m.mastery !== null && m.mastery !== 'completed' && <span className={`mastery-chip ${m.mastery}`}>{t(masteryLabel(m.mastery))}</span>}</> : m.state === 'locked' ? (m.unlocksWith === undefined ? undefined : t(m.unlocksWith)) : m.inProgress ? t('In progress') : t('Ready')}
+                        {m.inProgress ? t('In progress') : m.state === 'completed' ? <>{t('Completed')}{m.mastery !== null && m.mastery !== 'completed' && <span className={`mastery-chip ${m.mastery}`}>{t(masteryLabel(m.mastery))}</span>}</> : m.state === 'locked' ? (m.unlocksWith === undefined ? undefined : t(m.unlocksWith)) : t('Ready')}
                         {m.bestScore !== null && <> · {t('best score {score} of {max} XP', { score: m.bestScore, max: m.maxScore })}</>}
                       </p>
                     </div>

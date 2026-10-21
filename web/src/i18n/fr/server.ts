@@ -88,6 +88,8 @@ export default {
   'This attempt expired before it was completed.': 'Cette tentative a expiré avant d’être terminée.',
   'This attempt is already complete.': 'Cette tentative est déjà terminée.',
   'This is not the current step.': 'Ce n’est pas l’étape en cours.',
+  'Investigation updated.': 'Enquête mise à jour.',
+  'Another tab advanced this investigation. The latest server step is now shown below; review it before answering.': 'Un autre onglet a fait avancer cette enquête. La dernière étape du serveur est affichée ci-dessous ; vérifiez-la avant de répondre.',
   'The step changed while the hint was being prepared.': 'L’étape a changé pendant la préparation de l’indice.',
   'Wait for the current hint request to finish.': 'Attendez la fin de la demande d’indice en cours.',
   'A hint request is already being prepared.': 'Une demande d’indice est déjà en cours de préparation.',

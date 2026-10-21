@@ -38,6 +38,7 @@ export default {
   '{item} is already in position {position} of {total}.': '{item} est déjà en position {position} sur {total}.',
   '{item} moved to position {position} of {total}.': '{item} déplacé en position {position} sur {total}.',
   'Order the items. Use the move buttons to change a position.': 'Ordonnez les éléments. Utilisez les boutons de déplacement pour changer une position.',
+  'Use the arrow buttons to place each item in the correct order.': 'Utilisez les boutons fléchés pour placer chaque élément dans le bon ordre.',
   'Move up: {item}': 'Monter : {item}',
   'Move down: {item}': 'Descendre : {item}',
   'Association for {item}': 'Association pour {item}',

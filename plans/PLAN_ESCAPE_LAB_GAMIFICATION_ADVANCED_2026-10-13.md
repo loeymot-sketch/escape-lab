@@ -117,13 +117,13 @@ Améliorer le caractère jouable et impressionnant d’Escape Lab avec des inter
 | Parcours moderne des missions | PASS technique | Phases d’enquête, scènes par étape, progression, feedback, debrief et rejouabilité présents | Validation esthétique finale encore humaine |
 | Analyse visuelle multi-zones | PARTIELLEMENT PASS | Contrat serveur multi-cible, pilote `bio-02-s1` à deux observations, alternative textuelle mixte, progression partielle | Une seule mission possède des coordonnées biomédicales explicitement validées |
 | Cohérence scientifique des zones | PARTIELLEMENT PASS | Garde-fou public/privé, géométrie bornée, coordonnées privées, contenu marqué illustratif | Relecture scientifique indépendante absente pour une extension plus large |
-| Robustesse serveur | PASS | `276/276`, concurrence, expiration, scoring, fragments, déverrouillages, absence de fuite | Aucun défaut reproductible restant dans la couverture exécutée |
+| Robustesse serveur | PASS | `279/279`, concurrence, expiration, scoring, fragments, déverrouillages, absence de fuite | Aucun défaut reproductible restant dans la couverture exécutée |
 | Bilingue FR/EN | PASS technique | Couverture i18n, bascule dans les missions, scènes, résultats et erreurs | Vérification native par locuteur non effectuée |
 | Accessibilité et responsive | PASS technique | Playwright axe, clavier, tactile, forced-colors, réduction des mouvements et largeurs ciblées | Safari physique non testé |
 | Poids et intégration des images | PASS | Build et budget raster conformes ; scènes en `1400 × 934`; fallback image testé `1/1` | Provenance/licence des visuels à documenter avant usage pédagogique officiel |
-| Validation complète A–Z | PARTIELLEMENT PASS | Frontend `357/357`, backend `276/276`, Playwright ciblé `35/35` et image integration `31/31` | La suite E2E intégrale n’a pas encore obtenu une passe propre `559/559` après toutes les dernières évolutions |
+| Validation complète A–Z | PASS technique | Frontend `395/395`, backend `279/279`, Playwright intégral `593/593`, build et budgets conformes | Validation scientifique indépendante, locuteur natif FR/EN, Safari physique et provenance/licences restent humains |
 
-**Verdict d’audit : NEEDS_FIX.** Le produit est techniquement jouable et fortement renforcé, mais le goal ne peut pas être marqué complet tant que la validation scientifique indépendante et la preuve E2E intégrale ne sont pas obtenues.
+**Verdict d’audit : PASS technique — NEEDS_HUMAN_VALIDATION global.** La preuve E2E intégrale et les suites unitaires sont maintenant vertes. Le goal ne peut pas être marqué complet tant que la validation scientifique indépendante, la relecture native FR/EN, le test Safari physique et la provenance/licence des visuels ne sont pas clôturés.
 
 ## Correctif de clôture technique — 14 octobre 2026
 
@@ -133,7 +133,7 @@ Améliorer le caractère jouable et impressionnant d’Escape Lab avec des inter
 - Rejeu immédiat des deux scénarios concernés après correction : `2/2` réussis, sans erreur console. La couverture E2E cumulée des 534 scénarios est donc complète par passage intégral puis rejeu ciblé ; une nouvelle passe intégrale unique reste une preuve de confort, pas une correction encore attendue.
 - Validation finale locale sous Node `v22.23.2` : frontend `357/357`, backend `276/276`, test ciblé résultat `2/2`, `git diff --check` propre.
 - Build production validé : JS entrée `398549/400000`, lazy JS `114295/160000`, CSS `119980/120000`, 34 rasters sous `300000` octets.
-- Le verdict global reste `NEEDS_FIX` uniquement pour les limites explicites de contenu et de validation humaine : revue scientifique indépendante des futures coordonnées biomédicales, validation native FR/EN, test Safari physique et documentation de provenance/licence des visuels. Aucun correctif technique reproductible ne reste dans le périmètre exécuté.
+- Le statut global reste `NEEDS_HUMAN_VALIDATION` uniquement pour les limites explicites de contenu et de validation humaine : revue scientifique indépendante des futures coordonnées biomédicales, validation native FR/EN, test Safari physique et documentation de provenance/licence des visuels. Aucun correctif technique reproductible ne reste dans le périmètre exécuté.
 - Preuve complémentaire finale : nouvelle suite Chromium intégrale après les correctifs de clés React, `534/534` réussis en `9,1 min` avec un seul worker. Les deux échecs précédents ne se reproduisent donc plus dans la passe complète.
 - Une matrice de validation explicite a été ajoutée dans `docs/ESCAPE_LAB_CONTENT_VALIDATION_MATRIX_2026-10-14.md`. Elle distingue les trois étapes visuelles jouables, le pilote multi-zone et les quatre observations microbiologiques inspectables mais volontairement non-hotspotées faute de zones scientifiquement approuvées.
 - La mission de microbiologie marque maintenant chaque photo comme « preuve examinée » après ouverture de son inspection. Ce marqueur est local à l’interface, ne déclare aucune identification correcte et ne modifie ni la réponse envoyée ni le score ; il rend la boucle d’enquête plus lisible sans inventer de coordonnées.
@@ -158,3 +158,16 @@ Spécification : `docs/superpowers/specs/2026-10-14-escape-lab-premium-polish-de
 ## Passe 2 — boucle pédagogique visible (15 octobre 2026)
 
 Rapport détaillé : `docs/PREMIUM_POLISH_REPORT_2026-10-14.md`, section « Passe 2 ». Journal d'enquête en mission, débriefing par compétence et par étape, progression personnelle, sortie ouverte avec les fragments gagnés, mission recommandée, parcours et maîtrise dans la salle de laboratoire : tout vient du serveur (`journal`, `competency`, `previousBest`, `steps`, `recommended`, `mastery`, seuils dans `/api/rules`). Preuves : backend 279/279, frontend 394/394, Playwright 590/590 (dont WebKit), build JS 414 414/440 000 et CSS 133 342/140 000.
+
+## Addendum de validation — 15 octobre 2026
+
+- Le helper E2E `freshStudent()` plafonnait à 30 inscriptions alors que le serveur de test est configuré à 40 ; la garde a été alignée sur `RATE_REGISTER_PER_HOUR=40`. Le produit et le contrat d’authentification n’ont pas changé.
+- Une alerte de démarrage de mission en échec reçoit maintenant le focus dès son apparition, afin de rendre ses actions accessibles au clavier et aux lecteurs d’écran.
+- Sous Node `v22.23.2`, la suite Playwright intégrale passe `593/593` en `9,2 min`, avec Chromium desktop, Chromium mobile, bundle de production et WebKit desktop/iPhone. La base SQLite E2E était explicitement isolée pour cette preuve.
+- Validation isolée complémentaire : le parcours `polish` passe `66/66` sur trois répétitions ; le scénario de timeout/focus passe `1/1`.
+- Frontend : `395/395` ; backend : `279/279` ; build production, budgets et `git diff --check` réussis.
+- Le verdict technique est donc `PASS`. Le statut global reste limité aux validations humaines déjà listées : science des coordonnées biomédicales, relecture native, Safari physique et provenance/licences des visuels.
+- Le registre `docs/ESCAPE_LAB_ASSET_PROVENANCE_2026-10-15.md` identifie les groupes d’actifs, leurs dimensions et des empreintes SHA-256 ; il documente explicitement que ces empreintes ne remplacent pas une preuve de licence.
+- Correctif complémentaire : les observations guidées séparent désormais la sélection (`aria-pressed`) de la cible active (`aria-current="step"`), le Blood Smear expose une description neutre et un repérage clavier, et le score final est annoncé par une valeur serveur stable au lecteur d’écran sans lire chaque frame de l’animation.
+- Preuves ciblées après ce correctif : frontend `395/395`, axe/clavier `25/25`, scènes et résultats `54/54` ; aucune régression de tabulation, de centrage ou de débrief détectée.
+- Passe E2E intégrale finale après tous ces changements : `593/593` en `9,2 min`, sans échec, avec la base SQLite isolée, Chromium desktop/mobile, bundle production et WebKit desktop/iPhone.

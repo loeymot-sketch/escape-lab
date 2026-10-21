@@ -1,5 +1,5 @@
 // Game rules: availability, attempts, server-authoritative scoring, vault, badges, dashboard.
-import { randomInt, randomUUID } from 'node:crypto';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import type { HintProvider } from './assistant.ts';
 import { StandardOnlyProvider, exceedsHintLimit, hasSubstance, leaksAnswer } from './assistant.ts';
 import { LABS, LAB_BY_SLUG, MISSIONS, MISSION_BY_ID, STANDARD_LAB_SLUGS, STEP_COMPETENCIES, exitCode, fragmentSlots, missionsOf } from './content.ts';
@@ -14,6 +14,7 @@ import type { Lab, Mission, Step } from './types.ts';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type P = any[];
+type StudentAggregates = { xp: number; lastActiveAt: number | null; labsCompleted: number };
 
 export const BADGES = [
   { id: 'hematology-detective', name: 'Hematology Detective', description: 'Escape the Hematology Lab.', lab: 'hematology' },
@@ -58,11 +59,26 @@ const GRAPHEMES = new Intl.Segmenter('en', { granularity: 'grapheme' });
 /** Hangul filler letters: \p{L}, drawn as nothing. */
 const INITIAL_FILLERS = /[\u3164\u115F\u1160\uFFA0]/u;
 
+/**
+ * Round a computed percentage without letting the last floating-point bit
+ * decide an exact half (for example 75.5 becoming 75 after a long sum).
+ * The tolerance is deliberately tiny and only covers accumulated IEEE-754
+ * noise; values materially below the half remain below it.
+ */
+export const roundPercentage = (value: number): number =>
+  Math.round(value + Number.EPSILON * 1024 * Math.max(1, Math.abs(value)));
+
 export interface HintGiven { level: number; text: string; source: 'standard' | 'assistant' }
 export interface Opts { now?: () => number; assistant?: HintProvider }
 
 export class Game {
   private readonly hintInFlight = new Set<string>();
+  /** Last wall-clock observation per live attempt; prevents a clock rollback from making elapsed time run backwards. */
+  private readonly attemptClock = new Map<string, number>();
+  /** A detected rollback makes the elapsed-time bonus untrusted for that attempt. */
+  private readonly attemptClockSkew = new Set<string>();
+  /** Same protection for the short-lived wrong exit-code window. */
+  private readonly codeClock = new Map<string, number>();
   db: DB;
   now: () => number;
   assistant: HintProvider;
@@ -70,6 +86,22 @@ export class Game {
     this.db = db;
     this.now = opts.now ?? Date.now;
     this.assistant = opts.assistant ?? new StandardOnlyProvider();
+  }
+
+  private attemptNow(attemptId: string, startedAt: number): number {
+    const current = this.now();
+    const previous = this.attemptClock.get(attemptId);
+    if (current < startedAt || (previous !== undefined && current < previous)) this.attemptClockSkew.add(attemptId);
+    const observed = Math.max(current, startedAt, previous ?? Number.NEGATIVE_INFINITY);
+    this.attemptClock.set(attemptId, observed);
+    return observed;
+  }
+
+  private codeNow(uid: number, slug: string, persistedLatest = 0): number {
+    const key = `${uid}:${slug}`;
+    const observed = Math.max(this.now(), persistedLatest, this.codeClock.get(key) ?? Number.NEGATIVE_INFINITY);
+    this.codeClock.set(key, observed);
+    return observed;
   }
 
   // Statements are prepared once per SQL text (the leaderboard and analytics run the same few queries per student).
@@ -118,6 +150,36 @@ export class Game {
   private labsCompleted(uid: number): number {
     const done = this.completedIds(uid);
     return STANDARD_LAB_SLUGS.filter((slug) => missionsOf(slug).every((m) => done.has(m.id))).length;
+  }
+
+  private labsCompletedFromRows(rows: BestRow[]): number {
+    const done = new Set(rows.map((r) => r.mission_id));
+    return STANDARD_LAB_SLUGS.filter((slug) => missionsOf(slug).every((m) => done.has(m.id))).length;
+  }
+
+  /** Load the expensive student aggregates once for a cohort-shaped view. */
+  private studentPreloads(students: Array<{ id: number }>) {
+    const ids = students.map((s) => s.id);
+    const memberIds = JSON.stringify(ids);
+    const bestByStudent = new Map<number, BestRow[]>();
+    for (const id of ids) bestByStudent.set(id, []);
+    for (const row of this.bestRowsForUsers(ids)) bestByStudent.get(row.user_id)!.push(row);
+    const carryByStudent = new Map(this.all<{ id: number; carry: number | null }>(
+      'SELECT id, xp_carry AS carry FROM users WHERE id IN (SELECT value FROM json_each(?))', memberIds,
+    ).map((r) => [r.id, r.carry ?? 0]));
+    const lastByStudent = new Map(this.all<{ user_id: number; t: number | null }>(
+      'SELECT a.user_id, MAX(al.created_at) AS t FROM answer_log al JOIN attempts a ON a.id = al.attempt_id WHERE a.user_id IN (SELECT value FROM json_each(?)) GROUP BY a.user_id', memberIds,
+    ).map((r) => [r.user_id, r.t]));
+    const aggregates = new Map<number, StudentAggregates>();
+    for (const id of ids) {
+      const rows = bestByStudent.get(id) ?? [];
+      aggregates.set(id, {
+        xp: rows.reduce((sum, r) => sum + r.best_score, 0) + (carryByStudent.get(id) ?? 0),
+        lastActiveAt: lastByStudent.get(id) ?? null,
+        labsCompleted: this.labsCompletedFromRows(rows),
+      });
+    }
+    return { bestByStudent, aggregates };
   }
 
   private exits(uid: number): Set<string> {
@@ -234,12 +296,15 @@ export class Game {
     // The wrong-code count and the exit state are read under the write lock, so a concurrent request cannot slip past the limit or unlock twice.
     const outcome = tx(this.db, () => {
       if (this.exits(uid).has(slug)) return { kind: 'already' as const };
-      const since = this.now() - CODE_WINDOW_MS;
+      const latest = this.one<{ created_at: number }>('SELECT MAX(created_at) AS created_at FROM code_tries WHERE user_id = ? AND lab_slug = ?', uid, slug)?.created_at ?? 0;
+      const t = this.codeNow(uid, slug, latest);
+      const since = t - CODE_WINDOW_MS;
       const wrongs = this.all<{ created_at: number }>('SELECT created_at FROM code_tries WHERE user_id = ? AND lab_slug = ? AND ok = 0 AND created_at > ? ORDER BY created_at', uid, slug, since);
-      if (wrongs.length >= CODE_MAX_WRONG) return { kind: 'limited' as const, retry: Math.max(1, Math.ceil((wrongs[0]!.created_at + CODE_WINDOW_MS - this.now()) / 1000)) };
-      this.run('INSERT INTO code_tries (user_id, lab_slug, ok, created_at) VALUES (?,?,?,?)', uid, slug, ok ? 1 : 0, this.now());
+      if (wrongs.length >= CODE_MAX_WRONG) return { kind: 'limited' as const, retry: Math.max(1, Math.ceil((wrongs[0]!.created_at + CODE_WINDOW_MS - t) / 1000)) };
+      this.run('INSERT INTO code_tries (user_id, lab_slug, ok, created_at) VALUES (?,?,?,?)', uid, slug, ok ? 1 : 0, t);
       if (!ok) return { kind: 'wrong' as const, attemptsLeft: Math.max(0, CODE_MAX_WRONG - wrongs.length - 1) };
-      this.run('INSERT OR IGNORE INTO lab_exits (user_id, lab_slug, exited_at) VALUES (?,?,?)', uid, slug, this.now());
+      this.run('INSERT OR IGNORE INTO lab_exits (user_id, lab_slug, exited_at) VALUES (?,?,?)', uid, slug, t);
+      this.codeClock.delete(`${uid}:${slug}`);
       return { kind: 'ok' as const, badges: this.grantBadges(uid) };
     });
     if (outcome.kind === 'already') return { unlocked: true, alreadyUnlocked: true, lab: this.labSummary(lab), newBadges: [] as Badge[] };
@@ -268,7 +333,8 @@ export class Game {
   }
 
   badges(uid: number) {
-    if (!this.readOnly) tx(this.db, () => this.grantBadges(uid)); // idempotent: catches up badges added after the account was created
+    // Badge grants happen in the completion/unlock write paths. Reads stay read-only so a dashboard, profile or badges request
+    // cannot take SQLite's write lock merely to render already-derived state.
     const earned = new Map(this.all<{ badge_id: string; earned_at: number }>('SELECT badge_id, earned_at FROM badges_earned WHERE user_id = ?', uid).map((r) => [r.badge_id, r.earned_at]));
     return BADGES.map((b) => ({ ...b, earned: earned.has(b.id), earnedAt: earned.get(b.id) ?? null }));
   }
@@ -277,10 +343,14 @@ export class Game {
   /** Closes this student's in-progress attempts that ran past their time limit, so the mission can be restarted. */
   private expireStale(uid: number) {
     if (this.readOnly) return; // a HEAD request never materialises the expiry (R15-A-04): the next GET does
-    const t = this.now();
     for (const a of this.all<{ id: string; mission_id: string; started_at: number }>("SELECT id, mission_id, started_at FROM attempts WHERE user_id = ? AND status = 'in_progress'", uid)) {
       const limit = MISSION_BY_ID.get(a.mission_id)?.timeLimitSec;
-      if (limit !== undefined && t - a.started_at > limit * 1000) this.run("UPDATE attempts SET status = 'expired' WHERE id = ? AND status = 'in_progress'", a.id);
+      const t = this.attemptNow(a.id, a.started_at);
+      if (limit !== undefined && t - a.started_at > limit * 1000) {
+        this.run("UPDATE attempts SET status = 'expired' WHERE id = ? AND status = 'in_progress'", a.id);
+        this.attemptClock.delete(a.id);
+        this.attemptClockSkew.delete(a.id);
+      }
     }
   }
 
@@ -337,7 +407,7 @@ export class Game {
 
   attemptView(a: AttemptRow) {
     const m = MISSION_BY_ID.get(a.mission_id)!;
-    const end = a.completed_at ?? this.now();
+    const end = Math.max(a.completed_at ?? this.attemptNow(a.id, a.started_at), a.started_at);
     const limitMs = m.timeLimitSec * 1000;
     const expired = a.status === 'expired' || (a.status === 'in_progress' && end - a.started_at > limitMs);
     // Clamp so a stepped-back or long-idle clock never leaks a negative or oversized timer.
@@ -401,7 +471,7 @@ export class Game {
     if (a.status !== 'in_progress') throw conflict('attempt_finished', 'This attempt is already complete.');
     if (this.hintInFlight.has(attemptId)) throw conflict('hint_in_progress', 'Wait for the current hint request to finish.');
     const m = MISSION_BY_ID.get(a.mission_id)!;
-    if (this.now() - a.started_at > m.timeLimitSec * 1000) throw conflict('time_expired', 'This attempt has exceeded its time limit.');
+    if (this.attemptNow(a.id, a.started_at) - a.started_at > m.timeLimitSec * 1000) throw conflict('time_expired', 'This attempt has exceeded its time limit.');
     const step = m.steps[a.current_step]!;
     if (step.id !== stepId) throw conflict('wrong_step', 'This is not the current step.', { currentStepId: step.id });
     const verdict = checkResponse(step, response);
@@ -414,7 +484,7 @@ export class Game {
       if (a.status === 'expired') throw conflict('time_expired', 'This attempt has exceeded its time limit.');
       if (a.status !== 'in_progress') throw conflict('attempt_finished', 'This attempt is already complete.');
       if (a.current_step !== staleStep) throw conflict('wrong_step', 'This is not the current step.', { currentStepId: m.steps[a.current_step]?.id ?? null });
-      const t = this.now();
+      const t = this.attemptNow(a.id, a.started_at);
       if (t - a.started_at > m.timeLimitSec * 1000) throw conflict('time_expired', 'This attempt has exceeded its time limit.');
       // The log is for review, not accounting (counters live on the attempt): cap it so retries cannot grow it without bound.
       if ((this.one<{ n: number }>('SELECT COUNT(*) AS n FROM answer_log WHERE attempt_id = ?', a.id)?.n ?? 0) < 400) {
@@ -461,7 +531,7 @@ export class Game {
     const wrong = srs.reduce((s, r) => s + r.wrong, 0);
     const hints = srs.reduce((s, r) => s + r.hints, 0);
     const firstTry = srs.filter((r) => r.wrong === 0).length;
-    const elapsedSec = Math.max(0, Math.round((t - a.started_at) / 1000)); // a clock stepped backwards must not produce a negative duration
+    const elapsedSec = this.attemptClockSkew.has(a.id) ? m.timeLimitSec : Math.max(0, Math.round((t - a.started_at) / 1000));
     const score = computeScore({ profile: m.scoring, stepCount: m.steps.length, firstTrySteps: firstTry, wrong, hints, elapsedSec, timeLimitSec: m.timeLimitSec });
 
     const prev = this.one<{ best_score: number }>('SELECT best_score FROM mission_best WHERE user_id = ? AND mission_id = ?', uid, m.id);
@@ -485,6 +555,8 @@ export class Game {
       if (Number(r.changes) > 0) fragment = { labSlug: m.labSlug, position: m.ordinal, digit: m.fragment };
     }
     this.run("UPDATE attempts SET status = 'completed', completed_at = ?, score = ?, current_step = ? WHERE id = ?", t, score.total, m.steps.length, a.id);
+    this.attemptClock.delete(a.id);
+    this.attemptClockSkew.delete(a.id);
     const newBadges = this.grantBadges(uid);
 
     const payload = {
@@ -523,13 +595,13 @@ export class Game {
     if (a.status === 'expired') throw conflict('time_expired', 'This attempt has exceeded its time limit.');
     if (a.status !== 'in_progress') throw conflict('attempt_finished', 'This attempt is already complete.');
     const m = MISSION_BY_ID.get(a.mission_id)!;
-    if (this.now() - a.started_at > m.timeLimitSec * 1000) throw conflict('time_expired', 'This attempt has exceeded its time limit.');
+    if (this.attemptNow(a.id, a.started_at) - a.started_at > m.timeLimitSec * 1000) throw conflict('time_expired', 'This attempt has exceeded its time limit.');
     const step = m.steps[a.current_step]!;
     if (step.id !== stepId) throw conflict('wrong_step', 'This is not the current step.', { currentStepId: step.id });
     const reservation = tx(this.db, () => {
       const cur = this.attemptRow(attemptId, uid);
       if (cur.status !== 'in_progress' || cur.current_step !== a.current_step) throw conflict('wrong_step', 'The step changed while the hint was being prepared.');
-      if (this.now() - cur.started_at > m.timeLimitSec * 1000) throw conflict('time_expired', 'This attempt has exceeded its time limit.');
+      if (this.attemptNow(cur.id, cur.started_at) - cur.started_at > m.timeLimitSec * 1000) throw conflict('time_expired', 'This attempt has exceeded its time limit.');
       const sr = this.one<{ wrong: number; hints: number }>('SELECT wrong, hints FROM step_results WHERE attempt_id = ? AND step_id = ?', a.id, step.id)!;
       if (sr.hints >= step.hints.length) throw conflict('no_more_hints', 'No more hints are available for this step.');
       const level = sr.hints + 1;
@@ -537,7 +609,7 @@ export class Game {
       this.run('UPDATE attempts SET hints_total = hints_total + 1 WHERE id = ?', a.id);
       // R16-A-02: the charge and the hint the learner paid for are ONE commit. The faculty-written hint of this level is always available, so it is logged right here;
       // when the assistant answers (and passes the guard) the row is upgraded to its text. A stop between the two steps leaves the learner with the standard hint.
-      this.run('INSERT INTO hint_log (attempt_id, step_id, level, source, created_at, text) VALUES (?,?,?,?,?,?)', a.id, step.id, level, 'standard', this.now(), step.hints[level - 1]!);
+      this.run('INSERT INTO hint_log (attempt_id, step_id, level, source, created_at, text) VALUES (?,?,?,?,?,?)', a.id, step.id, level, 'standard', this.attemptNow(a.id, a.started_at), step.hints[level - 1]!);
       return { level, wrong: sr.wrong };
     });
     const level = reservation.level;
@@ -562,7 +634,7 @@ export class Game {
           this.run('DELETE FROM hint_log WHERE attempt_id = ? AND step_id = ? AND level = ?', a.id, step.id, level);
           return { error: cur.status === 'expired' ? 'time_expired' as const : 'wrong_step' as const };
         }
-        if (this.now() - cur.started_at > m.timeLimitSec * 1000) {
+        if (this.attemptNow(cur.id, cur.started_at) - cur.started_at > m.timeLimitSec * 1000) {
           this.run('UPDATE step_results SET hints = hints - 1 WHERE attempt_id = ? AND step_id = ? AND hints > 0', a.id, step.id);
           this.run('UPDATE attempts SET hints_total = hints_total - 1 WHERE id = ? AND hints_total > 0', a.id);
           this.run('DELETE FROM hint_log WHERE attempt_id = ? AND step_id = ? AND level = ?', a.id, step.id, level);
@@ -627,7 +699,7 @@ export class Game {
     }
     const items = STEP_COMPETENCIES.filter((c) => by.has(c)).map((c) => {
       const v = by.get(c)!;
-      return { name: c, pct: Math.round((100 * v.reduce((a, b) => a + b, 0)) / v.length), steps: v.length };
+      return { name: c, pct: roundPercentage((100 * v.reduce((a, b) => a + b, 0)) / v.length), steps: v.length };
     }).sort((a, b) => b.pct - a.pct);
     const strongest = items[0] ? items[0].name : null;
     const weakest = items.length > 1 ? items[items.length - 1]! : null;
@@ -637,12 +709,29 @@ export class Game {
 
   // ------------------------------------------------------------- dashboard
   private streak(uid: number): number {
-    const days = new Set(this.all<{ created_at: number }>('SELECT created_at FROM answer_log al JOIN attempts a ON a.id = al.attempt_id WHERE a.user_id = ?', uid).map((r) => Math.floor(r.created_at / DAY)));
-    let d = Math.floor(this.now() / DAY);
-    if (!days.has(d)) d -= 1; // today may not have started yet
-    let n = 0;
-    while (days.has(d)) { n++; d--; }
-    return n;
+    // Collapse the log in SQLite before it reaches JavaScript. The previous
+    // implementation materialised every answer row, so a long-running account
+    // could make the dashboard retain millions of timestamps (A37-003).
+    // `latest - offset` counts only the consecutive run from the latest active
+    // day; if today is empty, yesterday naturally becomes the latest day.
+    return this.one<{ n: number }>(
+      `WITH days AS (
+         SELECT DISTINCT CAST(al.created_at / ? AS INTEGER) AS day
+           FROM answer_log al JOIN attempts a ON a.id = al.attempt_id
+          WHERE a.user_id = ?
+       ), ordered AS (
+         SELECT day, ROW_NUMBER() OVER (ORDER BY day DESC) - 1 AS offset
+           FROM days
+       ), latest AS (
+         SELECT MAX(day) AS day FROM days
+       )
+       SELECT CASE
+                WHEN latest.day IS NULL OR latest.day < ? THEN 0
+                ELSE SUM(CASE WHEN ordered.day = latest.day - ordered.offset THEN 1 ELSE 0 END)
+              END AS n
+         FROM ordered CROSS JOIN latest`,
+      DAY, uid, Math.floor(this.now() / DAY) - 1,
+    )?.n ?? 0;
   }
 
   /** The next mission worth opening: the first open mission that is not the continue target, else the lowest best score to replay. Shared by the dashboard and the result debrief. */
@@ -713,19 +802,45 @@ export class Game {
       `SELECT mb.mission_id, mb.best_score, a.id AS attempt_id, a.wrong_total, a.hints_total, a.started_at, a.completed_at, a.result_json
          FROM mission_best mb JOIN attempts a ON a.id = mb.best_attempt_id WHERE mb.user_id = ?`, uid);
   }
+  private bestRowsForUsers(ids: number[]): Array<BestRow & { user_id: number }> {
+    if (!ids.length) return [];
+    return this.all<BestRow & { user_id: number }>(
+      `SELECT mb.user_id, mb.mission_id, mb.best_score, a.id AS attempt_id, a.wrong_total, a.hints_total, a.started_at, a.completed_at, a.result_json
+         FROM mission_best mb JOIN attempts a ON a.id = mb.best_attempt_id
+        WHERE mb.user_id IN (SELECT value FROM json_each(?))`, JSON.stringify(ids));
+  }
+  /** Preload the leaderboard's per-student facts with fixed-shape cohort queries. */
+  private leaderboardPreloads(ids: number[], scope: 'week' | 'all', since: number) {
+    const bestByStudent = new Map<number, BestRow[]>();
+    for (const id of ids) bestByStudent.set(id, []);
+    for (const row of this.bestRowsForUsers(ids)) bestByStudent.get(row.user_id)!.push(row);
+    const memberIds = JSON.stringify(ids);
+    const xpByStudent = new Map<number, number>();
+    if (scope === 'all') {
+      for (const row of this.all<{ id: number; carry: number | null }>(
+        'SELECT id, xp_carry AS carry FROM users WHERE id IN (SELECT value FROM json_each(?))', memberIds,
+      )) xpByStudent.set(row.id, row.carry ?? 0);
+      for (const [id, rows] of bestByStudent) xpByStudent.set(id, (xpByStudent.get(id) ?? 0) + rows.reduce((sum, r) => sum + r.best_score, 0));
+    } else {
+      for (const row of this.all<{ user_id: number; xp: number | null }>(
+        'SELECT user_id, SUM(delta) AS xp FROM xp_events WHERE user_id IN (SELECT value FROM json_each(?)) AND at > ? GROUP BY user_id', memberIds, since,
+      )) xpByStudent.set(row.user_id, row.xp ?? 0);
+    }
+    return { bestByStudent, xpByStudent };
+  }
   private static acc(r: BestRow): number { const n = MISSION_BY_ID.get(r.mission_id)!.steps.length; return n / (n + r.wrong_total); }
-  private static sec(r: BestRow): number { return Math.round(((r.completed_at ?? r.started_at) - r.started_at) / 1000); }
-  private static meanPct(rows: BestRow[]): number | null { return rows.length ? Math.round((100 * rows.reduce((a, r) => a + Game.acc(r), 0)) / rows.length) : null; }
+  private static sec(r: BestRow): number { return Math.max(0, Math.round(((r.completed_at ?? r.started_at) - r.started_at) / 1000)); }
+  private static meanPct(rows: BestRow[]): number | null { return rows.length ? roundPercentage((100 * rows.reduce((a, r) => a + Game.acc(r), 0)) / rows.length) : null; }
   private standardRows(rows: BestRow[]): BestRow[] { return rows.filter((r) => MISSION_BY_ID.get(r.mission_id)!.labSlug !== 'master'); }
 
   /** Competency percentages from specific attempts (latest-per-step logic is for the global view; labs use the best attempts). */
   private competenciesOf(attemptIds: string[]) {
     if (!attemptIds.length) return { items: [] as { name: string; pct: number; steps: number }[], strongest: null as string | null, improvement: null as { name: string; advice: string } | null };
     const rows = this.all<{ competency: string; wrong: number; hints: number }>(
-      `SELECT competency, wrong, hints FROM step_results WHERE solved_at IS NOT NULL AND attempt_id IN (${attemptIds.map(() => '?').join(',')})`, ...attemptIds);
+      'SELECT competency, wrong, hints FROM step_results WHERE solved_at IS NOT NULL AND attempt_id IN (SELECT value FROM json_each(?))', JSON.stringify(attemptIds));
     const by = new Map<string, number[]>();
     for (const r of rows) by.set(r.competency, [...(by.get(r.competency) ?? []), Math.max(0, 1 - 0.34 * r.wrong - 0.15 * r.hints)]);
-    const items = STEP_COMPETENCIES.filter((c) => by.has(c)).map((c) => { const v = by.get(c)!; return { name: c, pct: Math.round((100 * v.reduce((a, b) => a + b, 0)) / v.length), steps: v.length }; }).sort((a, b) => b.pct - a.pct);
+    const items = STEP_COMPETENCIES.filter((c) => by.has(c)).map((c) => { const v = by.get(c)!; return { name: c, pct: roundPercentage((100 * v.reduce((a, b) => a + b, 0)) / v.length), steps: v.length }; }).sort((a, b) => b.pct - a.pct);
     const weakest = items.length > 1 ? items[items.length - 1]! : null;
     return { items, strongest: items[0]?.name ?? null, improvement: weakest && weakest.pct < 100 ? { name: weakest.name, advice: `${weakest.name}: ${IMPROVE[weakest.name] ?? 'review the related missions.'}` } : null };
   }
@@ -915,12 +1030,20 @@ export class Game {
       ? this.all<{ id: number }>(`SELECT DISTINCT u.id FROM class_members m1 JOIN class_members m2 ON m1.class_id = m2.class_id JOIN users u ON u.id = m2.user_id WHERE m1.user_id = ? AND u.role = 'student'`, uid).map((r) => r.id)
       : this.all<{ id: number }>("SELECT id FROM users WHERE role = 'student'").map((r) => r.id);
     const since = this.now() - 7 * DAY;
-    const std = LABS.filter((l) => l.playable && l.slug !== 'master').map((l) => l.slug);
-    const names = new Map(this.all<{ id: number; name: string }>('SELECT id, name FROM users').map((r) => [r.id, r.name]));
+    // Read names only for the selected cohort. The previous full-table read made a
+    // class-scoped leaderboard touch every registered user's name before it even
+    // computed the rows; this keeps the read isolated to the requested cohort.
+    const selectedIds = [...new Set([...ids, uid])];
+    const names = new Map(this.all<{ id: number; name: string }>(
+      'SELECT id, name FROM users WHERE id IN (SELECT value FROM json_each(?))', JSON.stringify(selectedIds),
+    ).map((r) => [r.id, r.name]));
+    const { bestByStudent, xpByStudent } = this.leaderboardPreloads(selectedIds, scope, since);
+    const entry = (id: number) => {
+      const rows = bestByStudent.get(id) ?? [];
+      return { id, name: Game.shortName(names.get(id) ?? '?'), xp: xpByStudent.get(id) ?? 0, labs: this.labsCompletedFromRows(rows), accuracyPct: Game.meanPct(this.standardRows(rows)), you: id === uid };
+    };
     const all = ids.map((id) => {
-      const xp = scope === 'all' ? this.totalXp(id) : (this.one<{ s: number | null }>('SELECT SUM(delta) AS s FROM xp_events WHERE user_id = ? AND at > ?', id, since)?.s ?? 0);
-      const exits = this.exits(id);
-      return { id, name: Game.shortName(names.get(id) ?? '?'), xp, labs: this.labsCompleted(id), accuracyPct: Game.meanPct(this.standardRows(this.bestRows(id))), you: id === uid };
+      return entry(id);
     }).filter((r) => r.xp > 0);
     // `total` is the number of students in the cohort who have XP in the window: the same figure for every viewer. A viewer without XP is not
     // ranked (they are not in `rows` and not counted); their own row comes back as `me`, placed below everyone who is ranked.
@@ -932,9 +1055,8 @@ export class Game {
     // The caller's own row is always returned, even when they sit outside the cohort or have no XP in the window.
     let me = ranked.find((r) => r.you);
     if (!me) {
-      const xp = scope === 'all' ? this.totalXp(uid) : (this.one<{ s: number | null }>('SELECT SUM(delta) AS s FROM xp_events WHERE user_id = ? AND at > ?', uid, since)?.s ?? 0);
-      const exits = this.exits(uid);
-      me = { rank: ranked.filter((r) => r.xp > xp).length + 1, id: uid, name: Game.shortName(names.get(uid) ?? '?'), xp, labs: this.labsCompleted(uid), accuracyPct: Game.meanPct(this.standardRows(this.bestRows(uid))), you: true };
+      const own = entry(uid);
+      me = { rank: ranked.filter((r) => r.xp > own.xp).length + 1, ...own };
     }
     return { scope, cohort, rows: top.map(({ id: _id, ...r }) => r), me: { ...me, id: undefined }, total: ranked.length, cohortAvailable: cohort === 'all' || ids.length > 0 };
   }
@@ -989,10 +1111,10 @@ export class Game {
   }
 
   /** One student as a teacher sees them. */
-  private studentRow(s: { id: number; name: string; joined_at: number }) {
-    const rows = this.standardRows(this.bestRows(s.id));
-    const xp = this.totalXp(s.id);
-    const last = this.lastActive(s.id);
+  private studentRow(s: { id: number; name: string; joined_at: number }, preloadedBest?: BestRow[], preloaded?: StudentAggregates) {
+    const rows = this.standardRows(preloadedBest ?? this.bestRows(s.id));
+    const xp = preloaded ? preloaded.xp : this.totalXp(s.id);
+    const last = preloaded ? preloaded.lastActiveAt : this.lastActive(s.id);
     const progressPct = Math.round((100 * rows.length) / STANDARD_MISSION_COUNT);
     const accuracyPct = Game.meanPct(rows);
     const idleDays = Math.floor((this.now() - (last ?? s.joined_at)) / DAY);
@@ -1003,7 +1125,7 @@ export class Game {
       id: s.id, name: s.name, xp, level: levelProgress(xp).level,
       missionsCompleted: rows.length, progressPct, accuracyPct,
       hintsUsed: rows.reduce((a, r) => a + r.hints_total, 0), avgMissionSec: avgSec, avgMissionTime: avgSec === null ? null : mmss(avgSec),
-      labsEscaped: this.labsCompleted(s.id), lastActiveAt: last, idleDays: last === null ? null : Math.floor((this.now() - last) / DAY),
+      labsEscaped: preloaded ? preloaded.labsCompleted : this.labsCompleted(s.id), lastActiveAt: last, idleDays: last === null ? null : Math.floor((this.now() - last) / DAY),
       active: !inactive, needsAttention,
       attentionReason: needsAttention ? (accuracyPct !== null && accuracyPct < ATTENTION_ACCURACY ? `Accuracy under ${ATTENTION_ACCURACY}%` : `No activity for ${idleDays} days`) : null,
     };
@@ -1017,7 +1139,9 @@ export class Game {
     const c = this.ownedClass(teacherId, classId);
     const fold = (v: string) => v.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
     const q = fold((filter.q ?? '').trim());
-    let rows = this.members(classId).map((m) => this.studentRow(m));
+    const members = this.members(classId);
+    const { bestByStudent, aggregates } = this.studentPreloads(members);
+    let rows = members.map((m) => this.studentRow(m, bestByStudent.get(m.id), aggregates.get(m.id)));
     if (q) rows = rows.filter((r) => fold(r.name).includes(q));
     if (filter.status === 'attention') rows = rows.filter((r) => r.needsAttention);
     if (filter.status === 'active') rows = rows.filter((r) => r.active);
@@ -1049,7 +1173,7 @@ export class Game {
     const c = this.ownedClass(teacherId, classId);
     const students = this.members(classId);
     const ids = students.map((s) => s.id);
-    const inList = ids.length ? ids.map(() => '?').join(',') : 'NULL';
+    const memberIds = JSON.stringify(ids);
     const content = new Map(this.all<{ mission_id: string; status: string }>('SELECT mission_id, status FROM content_status').map((r) => [r.mission_id, r.status]));
 
     // Clean first try: of the students whose FIRST completed attempt exists, the share with zero wrong answers.
@@ -1059,26 +1183,33 @@ export class Game {
       `SELECT user_id, mission_id, wrong_total, hints_total FROM (
          SELECT a.user_id, a.mission_id, a.wrong_total, a.hints_total,
                 RANK() OVER (PARTITION BY a.user_id, a.mission_id ORDER BY a.started_at) AS rk
-           FROM attempts a WHERE a.user_id IN (${inList}) AND a.status = 'completed')
-        WHERE rk = 1`, ...ids);
-    const started = this.all<{ mission_id: string; n: number }>(`SELECT mission_id, COUNT(DISTINCT user_id) AS n FROM attempts WHERE user_id IN (${inList}) GROUP BY mission_id`, ...ids);
+           FROM attempts a WHERE a.user_id IN (SELECT value FROM json_each(?)) AND a.status = 'completed')
+        WHERE rk = 1`, memberIds);
+    const started = this.all<{ mission_id: string; n: number }>('SELECT mission_id, COUNT(DISTINCT user_id) AS n FROM attempts WHERE user_id IN (SELECT value FROM json_each(?)) GROUP BY mission_id', memberIds);
     const startedBy = new Map(started.map((r) => [r.mission_id, r.n]));
     const stepWrongs = this.all<{ step_id: string; w: number; n: number }>(
-      `SELECT sr.step_id, SUM(sr.wrong) AS w, COUNT(*) AS n FROM step_results sr JOIN attempts a ON a.id = sr.attempt_id WHERE a.user_id IN (${inList}) AND sr.solved_at IS NOT NULL GROUP BY sr.step_id`, ...ids);
+      'SELECT sr.step_id, SUM(sr.wrong) AS w, COUNT(*) AS n FROM step_results sr JOIN attempts a ON a.id = sr.attempt_id WHERE a.user_id IN (SELECT value FROM json_each(?)) AND sr.solved_at IS NOT NULL GROUP BY sr.step_id', memberIds);
     const wrongBy = new Map(stepWrongs.map((r) => [r.step_id, r]));
 
     // Success per mission = class mean accuracy, from each student's best attempt (the same figure the roster uses).
-    const best = ids.flatMap((id) => this.bestRows(id));
+    // Keep the best rows by student: the per-lab summary below is derived from
+    // this same dataset and must not query mission_best again for every lab.
+    const { bestByStudent, aggregates } = this.studentPreloads(students);
+    const bestRows = [...bestByStudent.values()].flat();
+    const best = bestRows;
+    const exactSuccess = new Map<string, number | null>();
     const missions = MISSIONS.map((m) => {
       const f = first.filter((x) => x.mission_id === m.id);
       const clean = f.filter((x) => x.wrong_total === 0).length;
       const b = best.filter((x) => x.mission_id === m.id);
       const avgSec = b.length ? Math.round(b.reduce((a, r) => a + Game.sec(r), 0) / b.length) : null;
+      const exactPct = b.length ? (100 * b.reduce((a, r) => a + Game.acc(r), 0)) / b.length : null;
+      exactSuccess.set(m.id, exactPct);
       const steps = m.steps.map((s) => { const r = wrongBy.get(s.id); return { stepId: s.id, prompt: s.prompt, avgWrong: r ? Math.round((100 * r.w) / r.n) / 100 : null, solved: r?.n ?? 0 }; });
       return {
         missionId: m.id, title: m.title, labSlug: m.labSlug,
         studentsStarted: startedBy.get(m.id) ?? 0, studentsCompleted: b.length,
-        successPct: Game.meanPct(b),
+        successPct: exactPct === null ? null : roundPercentage(exactPct),
         cleanFirstTryPct: f.length ? Math.round((100 * clean) / f.length) : null,
         avgSec, avgTime: avgSec === null ? null : mmss(avgSec),
         avgHints: b.length ? Math.round((10 * b.reduce((a, r) => a + r.hints_total, 0)) / b.length) / 10 : null,
@@ -1092,16 +1223,16 @@ export class Game {
     const eligible = missions.filter((m) => m.labSlug !== 'master' && m.successPct !== null && m.studentsCompleted >= minSample);
     let hardest: (typeof missions)[number] | null = null;
     if (eligible.length) {
-      hardest = eligible.reduce((a, b) => (b.successPct! < a.successPct! ? b : a));
-      if (hardest.successPct! < NEEDS_ATTENTION_BELOW) hardest.needsAttention = true;
+      hardest = eligible.reduce((a, b) => (exactSuccess.get(b.missionId)! < exactSuccess.get(a.missionId)! ? b : a));
+      if (exactSuccess.get(hardest.missionId)! < NEEDS_ATTENTION_BELOW) hardest.needsAttention = true;
     }
 
-    const roster = students.map((s) => this.studentRow(s));
+    const roster = students.map((s) => this.studentRow(s, bestByStudent.get(s.id), aggregates.get(s.id)));
     const withAcc = roster.filter((r) => r.accuracyPct !== null);
     const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
     const perLab = LABS.filter((l) => l.playable && l.slug !== 'master').map((l) => {
       const ms = missionsOf(l.slug);
-      const rows = ids.flatMap((id) => this.bestRows(id).filter((r) => MISSION_BY_ID.get(r.mission_id)!.labSlug === l.slug));
+      const rows = ids.flatMap((id) => (bestByStudent.get(id) ?? []).filter((r) => MISSION_BY_ID.get(r.mission_id)!.labSlug === l.slug));
       return { slug: l.slug, name: l.name, completionPct: students.length ? Math.round((100 * rows.length) / (ms.length * students.length)) : 0, accuracyPct: Game.meanPct(rows) };
     });
     return {
@@ -1167,7 +1298,12 @@ export class Game {
 
 /** The answer log is for review only: a pathological (very deep) response must never fail the answer itself. */
 function safeJson(v: unknown): string {
-  try { return JSON.stringify(v).slice(0, 2000); } catch { return '"[unserializable response]"'; }
+  try {
+    const json = JSON.stringify(v);
+    const bytes = Buffer.byteLength(json, 'utf8');
+    if (bytes <= 512) return json;
+    return JSON.stringify({ truncated: true, bytes, sha256: createHash('sha256').update(json, 'utf8').digest('hex') });
+  } catch { return '"[unserializable response]"'; }
 }
 
 interface BestRow {

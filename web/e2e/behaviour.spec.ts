@@ -187,6 +187,7 @@ test.describe('hints', () => {
     await expect(page.getByText('Hints used on this step: 0 of 1.')).toBeVisible();
     await page.getByRole('button', { name: 'Ask Lab Assistant' }).click();
     await expect(page.locator('.hint-result')).toBeVisible();
+    await expect(page.locator('.mission-announcement')).toContainText('Hint 1.');
     await expect(page.getByText('Hints used on this step: 1 of 1.')).toBeVisible();
     await expect(caseStatus(page, 'Hints used')).toHaveText('1');
     await expect(caseStatus(page, 'XP penalty')).toHaveText('-15');
@@ -291,6 +292,20 @@ test.describe('submission safety and input rules', () => {
     await expect(page.getByRole('alert')).not.toContainText('Recheck the values');
   });
 
+  test('a stale-tab answer explains the race and keeps the server step visible', async ({ page }) => {
+    await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
+    await page.route('**/api/attempts/*/answer', (route) => route.fulfill({
+      status: 409,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: { code: 'wrong_step', message: 'This is not the current step.' } }),
+    }));
+    await clickArtwork(page, ARTWORK.smear);
+    await submit(page).click();
+    await expect(page.getByRole('alert')).toContainText('Investigation updated.');
+    await expect(page.getByRole('alert')).toContainText('Another tab advanced this investigation.');
+    await expect(page.locator('#case-prompt')).toBeVisible();
+  });
+
   test('a step payload without a kind is rejected cleanly instead of crashing the renderer', async ({ page }) => {
     await startMissionViaUi(page, 'Hematology Lab', 'Blood Smear Code');
     await page.route(/\/api\/attempts\/[^/]+$/, (route) => patchJson(route, (body) => ({ ...body, step: { ...body.step, kind: undefined } })));
@@ -379,6 +394,21 @@ test.describe('lab lobby, map and leaderboard', () => {
     await expect(page.getByText('Complete mission 01 to unlock')).toHaveCount(1);
     await expect(page.getByText('Complete mission 02 to unlock')).toHaveCount(1);
     await expect(page.getByText('fragments', { exact: false }).first()).toBeVisible();
+  });
+
+  test('an active replay is labelled in progress, not completed, while its action says Resume', async ({ page }) => {
+    await page.route('**/api/labs/hematology', (route) => patchJson(route, (body) => ({
+      ...body,
+      missions: body.missions.map((mission: Record<string, unknown>, index: number) => index === 0
+        ? { ...mission, state: 'completed', inProgress: true }
+        : mission),
+    })));
+    await navigateSection(page, 'Lab map');
+    await page.getByRole('button', { name: /^(Enter|Review) Hematology Lab$/ }).click();
+    const row = page.locator('.mission-picker .picker-row').first();
+    await expect(row).toContainText('In progress');
+    await expect(row).not.toContainText('Completed');
+    await expect(row.getByRole('button', { name: 'Resume Blood Smear Code' })).toBeVisible();
   });
 
   test('a learner outside the top of the table still sees their own row, labelled "You"', async ({ page }) => {

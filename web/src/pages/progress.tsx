@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { ArrowRight, Check, Clock3, LockKeyhole, Sparkles, Trophy } from 'lucide-react';
 import vaultArt from '../assets/progression-vault.webp';
 import hematologyArt from '../assets/lab-hematology-door.webp';
@@ -29,6 +29,25 @@ export function ProgressHub() {
   const { state, reload, setData } = useLoad(loadProgress, []);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [refreshError, setRefreshError] = useState<unknown>(null);
+
+  // The vault is shared by the guest session: another tab may reset it or unlock an exit while this page stays open.
+  // Returning to this tab must re-read the server snapshot, with focus + visibility treated as one browser event.
+  const lastVisibleRefresh = useRef(-Infinity);
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const at = performance.now();
+      if (at - lastVisibleRefresh.current < 1000) return;
+      lastVisibleRefresh.current = at;
+      reload();
+    };
+    window.addEventListener('focus', onVisible);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', onVisible);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [reload]);
 
   const refresh = async (): Promise<ProgressData | null> => {
     try {
@@ -134,6 +153,9 @@ function VaultCard({ vault, lab, name, outcome, setOutcome, refresh }: { vault: 
   // In the vault, the open Master door means its exit was earned, not merely that the room is accessible.
   const art = lab?.discipline === 'hematology' ? hematologyArt : lab?.discipline === 'microbiology' ? microbiologyArt : lab?.discipline === 'biochemistry' ? biochemistryArt : lab?.discipline === 'master' ? vault.exited ? masterOpenArt : masterArt : null;
   const ready = new RegExp(`^[0-9]{${vault.codeLength}}$`).test(code);
+  const blockHeldEnter = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' && event.repeat) event.preventDefault();
+  };
 
   const unlock = async (event: FormEvent) => {
     event.preventDefault();
@@ -199,13 +221,17 @@ function VaultCard({ vault, lab, name, outcome, setOutcome, refresh }: { vault: 
             inputMode="numeric"
             pattern="[0-9]*"
             autoComplete="off"
-            maxLength={vault.codeLength}
+            // Allow separators while pasting a discovered code (for example "7 4 2").
+            // The normalized value is capped after non-digits are removed; a native
+            // maxLength equal to codeLength would truncate the paste before cleanup.
+            maxLength={vault.codeLength * 3}
             placeholder={t('{n} digits', { n: vault.codeLength })}
             value={code}
             aria-invalid={outcome?.kind === 'error'}
-            onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))}
+            onKeyDown={blockHeldEnter}
+            onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, vault.codeLength))}
           />
-          <button type="submit" className="primary" disabled={busy || !ready}>{busy ? t('Checking…') : t('Unlock')}</button>
+          <button type="submit" className="primary" disabled={busy || !ready} onKeyDown={blockHeldEnter}>{busy ? t('Checking…') : t('Unlock')}</button>
         </form>
       )}
       {outcome && (outcome.kind === 'error'
@@ -335,7 +361,7 @@ function ResultCard({ result: r }: { result: LabResult }) {
       {r.ledger.length > 0 && (
         <ul className="ledger" aria-label={t('{lab} score ledger', { lab: labName })}>
           {r.ledger.map((row) => (
-            <li key={row.id} className={row.kind}><span>{t(row.label)}<small>{t(row.reason)}</small></span><b>{row.points > 0 ? `+${row.points}` : row.points}</b></li>
+            <li key={row.id} className={row.kind}><span>{row.kind === 'unearned' ? t('Not earned: {label}', { label: t(row.label) }) : t(row.label)}<small>{t(row.reason)}</small></span><b>{row.points > 0 ? `+${row.points}` : row.points}</b></li>
           ))}
         </ul>
       )}

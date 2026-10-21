@@ -19,7 +19,7 @@ const apiCommand = [
   'mkdir -p "$(dirname "$E2E_DB_PATH")"',
   'rm -f "$E2E_DB_PATH" "$E2E_DB_PATH-wal" "$E2E_DB_PATH-shm"',
   'NODE_ENV=test DB_PATH="$E2E_DB_PATH" node --disable-warning=ExperimentalWarning scripts/seed-demo.ts',
-  `AUTH_SECRET=e2e-secret DEMO_MODE=1 RATE_REGISTER_PER_HOUR=40 NODE_ENV=test PORT=${API_PORT} DB_PATH="$E2E_DB_PATH" node --disable-warning=ExperimentalWarning src/server.ts`,
+  `AUTH_SECRET=e2e-secret DEMO_MODE=1 RATE_REGISTER_PER_HOUR=40 RATE_DEMO_RESET_PER_10_MINUTES=10000 NODE_ENV=test PORT=${API_PORT} DB_PATH="$E2E_DB_PATH" node --disable-warning=ExperimentalWarning src/server.ts`,
 ].join(' && ');
 
 // The production-bundle project exercises `vite build` output served by `vite preview` (not the dev server): minified

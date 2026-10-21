@@ -377,6 +377,23 @@ test.describe('adversarial audit fixes', () => {
     await expect(master.locator('.vault-card-head span')).toHaveText('NOT STARTED');
   });
 
+  test('a visible vault re-reads the server after another tab resets the guest session', async ({ page }) => {
+    const token = await sessionToken(page);
+    await completeLabViaApi(token, 'biochemistry');
+    await navigateSection(page, 'Vault');
+    const biochemistry = page.locator('.vault-card').filter({ hasText: /Biochemistry/ });
+    await expect(biochemistry.locator('.vault-card-head span')).toHaveText('ESCAPED');
+
+    expect((await apiCall(token, '/demo/reset', { method: 'POST' })).status).toBe(200);
+    await expect.poll(async () => (await apiCall(token, '/vault')).body.vaults.find((v: { labSlug: string }) => v.labSlug === 'biochemistry')?.exited).toBe(false);
+    await page.bringToFront();
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('focus'));
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(biochemistry.locator('.vault-card-head span')).toHaveText('NOT STARTED');
+  });
+
   test('R7-01: the sticky mission header never hides a focused control, and it is not sticky on very short screens', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
@@ -726,6 +743,7 @@ test.describe('round 9: engines, long server strings, request timeout', () => {
     await expect(page.getByRole('button', { name: /^Starting Blood Smear Code$/ })).toBeVisible();
     await page.clock.fastForward(21_000);
     await expect(page.getByRole('alert')).toContainText(/did not answer in time/);
+    await expect(page.locator('main > .error[role="alert"]')).toBeFocused();
     await expect(start).toBeEnabled();
   });
 });

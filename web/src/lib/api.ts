@@ -1,4 +1,8 @@
-const DEV_API_BASE = 'http://localhost:3000/api';
+/** Keep the development API on the same loopback hostname as the opened UI (localhost vs 127.0.0.1 matters on some machines). */
+export function devApiBase(hostname = typeof window !== 'undefined' ? window.location.hostname : ''): string {
+  const host = hostname.trim() || 'localhost';
+  return `http://${host}:3000/api`;
+}
 
 /**
  * A production bundle never guesses where the API lives: a missing VITE_API_URL is a configuration error that
@@ -8,7 +12,7 @@ export function resolveApiBase(env: { PROD?: boolean; VITE_API_URL?: string }): 
   const configured = env.VITE_API_URL?.trim();
   if (configured) return { base: configured.replace(/\/+$/, ''), error: null };
   if (env.PROD) return { base: null, error: 'This build has no API address: VITE_API_URL must be set when the production bundle is built.' };
-  return { base: DEV_API_BASE, error: null };
+  return { base: devApiBase(), error: null };
 }
 
 const resolved = resolveApiBase(import.meta.env);

@@ -43,3 +43,20 @@ Les quatre images sont inspectables dans `mic-03-s1`, mais le parcours actuel re
 ## Décision au 14 octobre 2026
 
 Le pilote multi-zone est publiable techniquement. L’extension multi-zone aux quatre observations microbiologiques et aux autres missions reste en attente d’une validation de contenu explicite ; cette attente est volontaire et empêche de déclarer le goal complet sur la seule base des tests logiciels.
+
+## Fiche de clôture humaine — à compléter avant diffusion publique
+
+Cette fiche est volontairement séparée des tests automatisés : un test peut prouver la cohérence d’une coordonnée, mais pas la pertinence scientifique de ce qu’elle désigne.
+
+| Contrôle | Preuve attendue | Responsable | Date | Statut |
+|---|---|---|---|---|
+| `hem-01-s1` : observation et emplacement du schistocyte | Référence de cours ou image source + annotation relue | Enseignant/scientifique | — | À relire |
+| `bio-02-s1` : indice d’hémolyse et potassium | Référence de cours + validation des deux zones | Enseignant/scientifique | — | À relire |
+| Quatre cultures microbiologiques | Référence de cours + validation des quatre associations | Enseignant/scientifique | — | À relire |
+| Textes FR/EN des consignes et corrections | Relecture par locuteur natif de chaque écran | Réviseur FR/EN | — | À relire |
+| Images et scènes de jeu | Source, créateur, licence et autorisation de recadrage | Propriétaire du projet | — | À documenter |
+| Safari réel | Parcours mission, résultat, coffre et enseignant sur appareil physique | QA | — | À tester |
+
+### Critère de clôture
+
+Le dossier pourra passer de `NEEDS_HUMAN_VALIDATION` à `CLOSED` uniquement lorsque chaque ligne aura une preuve jointe ou référencée, un responsable, une date et un statut `Validé`. En cas de désaccord scientifique, la zone reste non interactive ; on ne corrige pas l’incertitude par une détection de pixels ou une supposition visuelle.

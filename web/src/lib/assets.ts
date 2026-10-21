@@ -9,6 +9,8 @@ export type ScientificAsset = {
   /** Natural size of the artwork. The image is always rendered at this aspect ratio so percentages map 1:1. */
   width: number;
   height: number;
+  /** Neutral description for non-visual learners; it must not disclose a hotspot or answer key. */
+  description?: string;
   /** Text version of an image whose content is itself a table of values (R36 B36-001). Only offered where it cannot give the answer away. */
   textAlternative?: AssetTextAlternative;
 };
@@ -32,7 +34,10 @@ export type AssetTextAlternative = {
 
 /** The catalogue is deliberately explicit: placeholder imagery is never presented as validated science. */
 export const SCIENTIFIC_ASSETS: Record<string, ScientificAsset> = {
-  'smear-schistocyte-01': { id: 'smear-schistocyte-01', label: 'Stylised blood smear', status: 'illustrative', src: bloodSmearHero, width: 1672, height: 941 },
+  'smear-schistocyte-01': {
+    id: 'smear-schistocyte-01', label: 'Stylised blood smear', status: 'illustrative', src: bloodSmearHero, width: 1672, height: 941,
+    description: 'Illustrative peripheral blood smear with several red-cell forms on a pale field. Inspect the field and select the finding requested in the question; the artwork is not a validated specimen.',
+  },
   'panel-hemolysis-01': {
     id: 'panel-hemolysis-01', label: 'Stylised chemistry panel', status: 'illustrative', src: chemistryPanel, width: 1600, height: 900,
     // Transcribed from the text of chemistry-panel.svg (assets.test.ts compares every cell with the SVG). The values are the picture's own: nothing is added, reordered or interpreted.

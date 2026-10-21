@@ -173,9 +173,15 @@ export class RateLimiter {
   private lastSweep = 0;
   now: () => number;
   constructor(now: () => number = Date.now) { this.now = now; }
+  /** Keep an active key's window monotone when the wall clock steps backwards. */
+  private keyNow(key: string): number {
+    const current = this.now();
+    const last = this.hits.get(key)?.at.at(-1);
+    return last === undefined ? current : Math.max(current, last);
+  }
   /** Registers one hit; throws 429 when the key exceeded `max` hits in `windowMs`. */
   hit(key: string, max: number, windowMs: number): void {
-    const t = this.now();
+    const t = this.keyNow(key);
     const arr = (this.hits.get(key)?.at ?? []).filter((x) => t - x < windowMs);
     if (arr.length >= max) {
       const retry = Math.max(1, Math.ceil((windowMs - (t - arr[0]!)) / 1000));
@@ -196,7 +202,7 @@ export class RateLimiter {
   }
   /** Throws 429 when `key` is already at its limit, without recording a hit (count failures separately with hit()). */
   peek(key: string, max: number, windowMs: number): void {
-    const t = this.now();
+    const t = this.keyNow(key);
     const arr = (this.hits.get(key)?.at ?? []).filter((x) => t - x < windowMs);
     if (arr.length >= max) {
       const retry = Math.max(1, Math.ceil((windowMs - (t - arr[0]!)) / 1000));

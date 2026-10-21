@@ -36,6 +36,7 @@ function App() {
   const [view, setView] = useState<View>('home');
   const [labSlug, setLabSlug] = useState<string | null>(null);
   const [student, setStudent] = useState<{ classId: number; studentId: number } | null>(null);
+  const [facultyClassId, setFacultyClassId] = useState<number | null>(null);
   const [notice, setNotice] = useState('');
   const entering = useRef(false);
   // The role of the current guest session, so recovery after an expired session reopens the SAME kind of guest (faculty stays faculty).
@@ -93,6 +94,7 @@ function App() {
       setView(role === 'teacher' ? 'teacher' : 'home');
       setLabSlug(null);
       setStudent(null);
+      setFacultyClassId(null);
       if (noticeRole.current !== role) setNotice('');
       missed401.current = false;
       setToken(login.token);
@@ -138,6 +140,8 @@ function App() {
       setLabSlug={setLabSlug}
       student={student}
       setStudent={setStudent}
+      facultyClassId={facultyClassId}
+      setFacultyClassId={setFacultyClassId}
       notice={notice}
       setNotice={setNotice}
       enterGuest={enterGuest}
@@ -153,6 +157,8 @@ type AuthProps = {
   setLabSlug: (s: string | null) => void;
   student: { classId: number; studentId: number } | null;
   setStudent: (s: { classId: number; studentId: number } | null) => void;
+  facultyClassId: number | null;
+  setFacultyClassId: (id: number | null) => void;
   notice: string;
   setNotice: (n: string) => void;
   enterGuest: (role: Role) => Promise<unknown>;
@@ -167,7 +173,7 @@ function Authenticated(props: AuthProps) {
   return <Ready me={me.state.data} {...props} />;
 }
 
-function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student, setStudent, notice, setNotice, enterGuest }: AuthProps & { me: Me }) {
+function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student, setStudent, facultyClassId, setFacultyClassId, notice, setNotice, enterGuest }: AuthProps & { me: Me }) {
   const teacher = me.role === 'teacher';
   // A role only ever sees its own screens, whatever view was requested before a reload or a guest switch.
   const view: View = resolveView(requestedView, teacher);
@@ -320,10 +326,12 @@ function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student,
     startMission: (id) => void startMission(id),
     openStudent: (classId, studentId) => { navEpoch.current += 1; setStudent({ classId, studentId }); setView('student'); },
     student,
+    facultyClassId,
+    setFacultyClassId,
     labSlug,
     starting: startingId,
     busy: startingId !== null || guestBusy !== null,
-  }), [setView, setLabSlug, setStudent, startMission, student, labSlug, startingId, guestBusy]);
+  }), [setView, setLabSlug, setStudent, setFacultyClassId, startMission, student, facultyClassId, labSlug, startingId, guestBusy]);
 
   if (restore.phase === 'checking') return <main className="boot"><LoadingPanel label={t('Restoring your investigation…')} detail={t('Asking the server for your unfinished attempt.')} /></main>;
   if (restore.phase === 'error') {

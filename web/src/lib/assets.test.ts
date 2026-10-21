@@ -47,7 +47,8 @@ describe('chemistry panel text alternative', () => {
     expect(new Set(alt!.rows.map((r) => r.test)).size).toBe(alt!.rows.length);
   });
 
-  it('is not offered for the blood smear: a cell shape cannot be given as text without giving the answer away', () => {
+  it('offers a neutral description for the blood smear without exposing its hotspot', () => {
+    expect(SCIENTIFIC_ASSETS['smear-schistocyte-01']?.description).toContain('not a validated specimen');
     expect(SCIENTIFIC_ASSETS['smear-schistocyte-01']?.textAlternative).toBeUndefined();
   });
 });

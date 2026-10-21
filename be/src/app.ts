@@ -22,7 +22,7 @@ export interface Config {
   /** Enables POST /api/auth/demo and the seeded demo data. Never enable in production. */
   demo?: boolean;
   /** Per-IP limits; defaults suit production. */
-  limits?: { registerPerHour?: number; loginFailuresPerIp?: number; joinPerUser?: number; answerPerMinute?: number; hintPerMinute?: number; startPerMinute?: number; writePerMinute?: number };
+  limits?: { registerPerHour?: number; loginFailuresPerIp?: number; joinPerUser?: number; answerPerMinute?: number; hintPerMinute?: number; startPerMinute?: number; leaderboardPerMinute?: number; writePerMinute?: number; demoResetPer10Minutes?: number };
   assistant?: HintProvider;
   /** Number of trusted reverse-proxy hops in front of the API (true = 1). The client address is the Nth entry from the right of X-Forwarded-For. Only safe when the API port is reachable solely through those proxies. */
   trustProxy?: boolean | number;
@@ -48,13 +48,41 @@ export function configFromEnv(env = process.env): Config {
     trustProxy: hops > 0 ? hops : false,
     limits: {
       registerPerHour: intEnv(env.RATE_REGISTER_PER_HOUR), loginFailuresPerIp: intEnv(env.RATE_LOGIN_FAILURES_PER_IP), joinPerUser: intEnv(env.RATE_JOIN_PER_USER),
-      answerPerMinute: intEnv(env.RATE_ANSWER_PER_MINUTE), hintPerMinute: intEnv(env.RATE_HINT_PER_MINUTE), startPerMinute: intEnv(env.RATE_START_PER_MINUTE), writePerMinute: intEnv(env.RATE_WRITE_PER_MINUTE),
+      answerPerMinute: intEnv(env.RATE_ANSWER_PER_MINUTE), hintPerMinute: intEnv(env.RATE_HINT_PER_MINUTE), startPerMinute: intEnv(env.RATE_START_PER_MINUTE), leaderboardPerMinute: intEnv(env.RATE_LEADERBOARD_PER_MINUTE), writePerMinute: intEnv(env.RATE_WRITE_PER_MINUTE), demoResetPer10Minutes: intEnv(env.RATE_DEMO_RESET_PER_10_MINUTES),
     },
     assistant: env.LAB_ASSISTANT_API_KEY && env.LAB_ASSISTANT_MODEL ? new AnthropicHintProvider(env.LAB_ASSISTANT_API_KEY, env.LAB_ASSISTANT_MODEL) : new StandardOnlyProvider(),
   };
 }
 
 const HOSTNAME = /^(?=.{1,253}$)[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?(\.[A-Za-z0-9_]([A-Za-z0-9_-]{0,61}[A-Za-z0-9_])?)*$/;
+
+/**
+ * Stable limiter identity for a client address. IPv4-mapped IPv6 values are
+ * folded to IPv4; native IPv6 values share one budget per /64. The latter is
+ * deliberately only a limiter key: this value is used for throttling only and
+ * is not exposed as a user-facing identity.
+ */
+export function normalizeRateLimitAddress(raw: string): string {
+  const value = raw.trim().replace(/^\[|\]$/g, '').split('%', 1)[0]!;
+  if (isIP(value) === 4) return `v4:${value}`;
+  if (isIP(value) !== 6) return 'invalid';
+
+  const [leftRaw, rightRaw] = value.split('::');
+  const hasCompression = value.includes('::');
+  const parsePart = (part: string): number[] => part ? part.split(':').flatMap((piece) => {
+    if (piece.includes('.')) {
+      const octets = piece.split('.').map(Number);
+      return [(octets[0]! << 8) | octets[1]!, (octets[2]! << 8) | octets[3]!];
+    }
+    return [Number.parseInt(piece, 16)];
+  }) : [];
+  const left = parsePart(leftRaw ?? '');
+  const right = parsePart(hasCompression ? (rightRaw ?? '') : '');
+  const words = hasCompression ? [...left, ...Array(8 - left.length - right.length).fill(0), ...right] : left;
+  if (words.length !== 8 || words.some((word) => !Number.isInteger(word) || word < 0 || word > 0xffff)) return 'invalid';
+  if (words.slice(0, 5).every((word) => word === 0) && words[5] === 0xffff) return `v4:${(words[6]! >> 8) & 0xff}.${words[6]! & 0xff}.${words[7]! >> 8}.${words[7]! & 0xff}`;
+  return `v6:${words.slice(0, 4).map((word) => word.toString(16)).join(':')}/64`;
+}
 
 /**
  * Interface the HTTP server binds to. Demo mode mints passwordless tokens, so it stays on loopback unless HOST says otherwise; without demo mode all interfaces (undefined) as before.
@@ -119,9 +147,9 @@ export function createApp(cfg: Config): App {
     const hops = cfg.trustProxy === true ? 1 : cfg.trustProxy || 0;
     if (hops > 0) {
       const fwd = String(req.headers['x-forwarded-for'] ?? '').split(',').map((x) => x.trim()).filter(Boolean);
-      if (fwd.length >= hops) return fwd[fwd.length - hops]!;
+      if (fwd.length >= hops) return normalizeRateLimitAddress(fwd[fwd.length - hops]!);
     }
-    return req.socket.remoteAddress ?? 'unknown';
+    return normalizeRateLimitAddress(req.socket.remoteAddress ?? 'unknown');
   };
 
   const server = createServer(async (req, res) => {
@@ -204,6 +232,13 @@ export function createApp(cfg: Config): App {
       }
     }
   });
+  // The API accepts small JSON bodies only. Keep slowloris connections from
+  // retaining their buffers for Node's five-minute default, and cap the
+  // process-level socket population; a reverse proxy should still enforce its
+  // own per-IP and edge limits before public exposure.
+  server.requestTimeout = 30_000;
+  server.headersTimeout = 15_000;
+  server.maxConnections = 512;
 
   return {
     server, db, game, limiter,

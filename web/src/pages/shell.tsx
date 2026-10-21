@@ -107,6 +107,7 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
     </button>
   );
   const mainRef = useRef<HTMLElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [menuHeight, setMenuHeight] = useState<number>();
@@ -140,6 +141,13 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
     const heading = root?.querySelector('h1');
     if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({ preventScroll: true }); } else root?.focus({ preventScroll: true });
   };
+  // A failed mission start disables its button while waiting. Move focus to the actionable
+  // error as soon as it appears, so keyboard and screen-reader users hear the failure and
+  // can reach Retry/Dismiss without searching the page.
+  useEffect(() => {
+    if (!error || !errorRef.current) return;
+    errorRef.current.focus({ preventScroll: true });
+  }, [error]);
   // Same when the Retry of the banner succeeds and the banner disappears under the focused button.
   const retryPressed = useRef(false);
   useEffect(() => {
@@ -324,7 +332,7 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
               <button type="button" aria-disabled={banner.retrying || undefined} aria-busy={banner.retrying} onClick={() => { retryPressed.current = true; banner.retry(); }}>{banner.retrying ? t('Retrying…') : t('Retry')}</button>
             </div>
           )}
-          {error && <div role="alert" className="error"><X size={16} aria-hidden="true" />{error}<button type="button" onClick={() => { focusPage(); clearError(); }}>{t('Dismiss')}</button></div>}
+          {error && <div ref={errorRef} role="alert" tabIndex={-1} className="error"><X size={16} aria-hidden="true" />{error}<button type="button" onClick={() => { focusPage(); clearError(); }}>{t('Dismiss')}</button></div>}
           {children}
         </main>
         {!teacher && <nav className="game-primary-nav" aria-label={t('Game navigation')}>{primaryStudentNav(true)}</nav>}

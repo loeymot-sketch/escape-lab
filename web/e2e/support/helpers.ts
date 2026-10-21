@@ -68,10 +68,10 @@ export async function resetDemo(page: Page) {
 }
 
 let registrations = 0;
-/** Registers a throwaway learner (the e2e API allows 40 registrations per hour per address; the budget is guarded). */
+/** Registers a throwaway learner (the e2e API allows 40 registrations per hour per address; keep the helper aligned with that server limit). */
 export async function freshStudent(): Promise<string> {
   registrations += 1;
-  if (registrations > 30) throw new Error('E2E registration budget exhausted: reuse an existing fresh learner.');
+  if (registrations > 40) throw new Error('E2E registration budget exhausted: reuse an existing fresh learner.');
   const email = `e2e-${Date.now()}-${registrations}-${Math.random().toString(36).slice(2, 8)}@example.test`;
   const reply = await apiCall(null, '/auth/register', { method: 'POST', body: { name: 'E2E Learner', email, password: 'e2e learner password 1' } });
   expect(reply.status).toBe(201);

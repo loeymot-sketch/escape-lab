@@ -111,9 +111,27 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     await expect(penalty(page)).toHaveText('-10');
     await option(page, 'Kidney').click();
     await submit(page).click();
-    await expect(page.getByRole('status').filter({ hasText: 'Step 1 correct.' })).toBeVisible();
+    await expect(page.locator('.feedback.correct').filter({ hasText: 'Step 1 correct.' })).toBeVisible();
     await continueStep(page);
     await expect(page.getByText('STEP 2 / 3')).toBeVisible();
+  });
+
+  test('a physically held Enter key submits a wrong answer only once', async ({ page }) => {
+    await startMissionViaUi(page, 'Clinical Biochemistry Lab', 'Organ Rescue Mission');
+    await option(page, 'Liver').click();
+    let requests = 0;
+    await page.route('**/api/attempts/*/answer', async (route) => {
+      requests += 1;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      await route.continue();
+    });
+    await submit(page).focus();
+    await page.keyboard.down('Enter');
+    await page.waitForTimeout(650);
+    await page.keyboard.up('Enter');
+    await expect(page.getByRole('alert')).toContainText('Not quite.');
+    await expect(wrongAnswers(page)).toHaveText('1');
+    expect(requests).toBe(1);
   });
 
   test('decision', async ({ page }) => {
@@ -177,12 +195,13 @@ test.describe('six engines: wrong answer, retry and refresh with the penalty res
     const rows = page.locator('.drag-row b');
     const before = await rows.allTextContents();
     expect(before).not.toEqual(correct);
+    await expect(page.getByText('Use the arrow buttons to place each item in the correct order.')).toBeVisible();
 
     // Accessible names are item specific, ends are disabled and moves are announced.
     await expect(page.getByRole('button', { name: `Move up: ${before[0]}` })).toBeDisabled();
     await expect(page.getByRole('button', { name: `Move down: ${before.at(-1)}` })).toBeDisabled();
     await page.getByRole('button', { name: `Move down: ${before[0]}` }).click();
-    await expect(page.locator('p.sr-only[role="status"]')).toHaveText(`${before[0]} moved to position 2 of 6.`);
+    await expect(page.locator('p.sr-only[role="status"]').filter({ hasText: `${before[0]} moved to position 2 of 6.` })).toHaveText(`${before[0]} moved to position 2 of 6.`);
     await page.getByRole('button', { name: `Move up: ${before[0]}` }).click();
     expect(await rows.allTextContents()).toEqual(before);
 

@@ -49,6 +49,20 @@ describe('illustrative image frame', () => {
     expect(marker.textContent).toBe('');
     expect(marker.style.left).toBe('40%');
     expect(marker.style.top).toBe('60%');
+    expect(host.querySelector('#point-help')?.getAttribute('role')).toBe('status');
+    expect(host.querySelector('#point-help')?.textContent).toContain('Marker at 40% across, 60% down.');
+  });
+
+  it('announces the active point position after keyboard movement', () => {
+    const step = normalizeStep(steps.point);
+    function Harness() {
+      const [answer, setAnswer] = useState<EngineAnswer>({});
+      return createElement(PointEngine, { step, answer, setAnswer, disabled: false });
+    }
+    act(() => root.render(createElement(Harness)));
+    const image = host.querySelector<HTMLButtonElement>('button.scientific')!;
+    act(() => { image.focus(); image.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); });
+    expect(host.querySelector('#point-help')?.textContent).toContain('Marker at 55% across, 50% down.');
   });
 
   it('renders a revisable checklist and every confirmed marker for a guided image', () => {
@@ -76,9 +90,11 @@ describe('illustrative image frame', () => {
     act(() => { rows()[1]!.click(); });
     act(() => { (host.querySelector('summary') as HTMLElement).click(); });
     act(() => { host.querySelector<HTMLButtonElement>('[aria-label="Select Potassium result"]')!.click(); });
-    expect(rows()[2]!.getAttribute('aria-pressed')).toBe('true');
+    expect(rows()[2]!.getAttribute('aria-current')).toBe('step');
+    expect(host.querySelector('.point-text summary')?.textContent).toBe('Text version of this image');
+    expect(host.querySelector('.point-text table caption')?.textContent).toBe('Chemistry panel table');
     act(() => { (host.querySelector('button.scientific') as HTMLButtonElement).click(); });
-    expect(rows()[2]!.getAttribute('aria-pressed')).toBe('true');
+    expect(rows()[2]!.getAttribute('aria-current')).toBe('step');
   });
 });
 
@@ -97,6 +113,18 @@ describe('competency bars', () => {
     expect(host.textContent).toBe('No competency data yet.');
     act(() => root.render(createElement(CompetencyBars, { title: 'x', data: { items: [{ name: 'A', pct: 140, steps: 1 }], strongest: null, improvement: null } })));
     expect((host.querySelector('.bar i') as HTMLElement).style.width).toBe('100%');
+  });
+  it('does not call a lone zero-percent competency the strongest area', () => {
+    act(() => root.render(createElement(CompetencyBars, { title: 'x', data: { items: [{ name: 'Clinical biochemistry', pct: 0, steps: 1 }], strongest: 'Clinical biochemistry', improvement: null } })));
+    expect(host.textContent).not.toContain('Strongest area:');
+  });
+  it('names every tied top competency instead of inventing one winner', () => {
+    act(() => root.render(createElement(CompetencyBars, { title: 'x', data: {
+      items: [{ name: 'Hematology interpretation', pct: 100, steps: 2 }, { name: 'Clinical biochemistry', pct: 100, steps: 2 }, { name: 'Microbiology', pct: 88, steps: 2 }],
+      strongest: 'Hematology interpretation', improvement: null,
+    } })));
+    expect(host.textContent).toContain('Strongest areas: Hematology interpretation, Clinical biochemistry.');
+    expect(host.textContent).not.toContain('Strongest area: Hematology interpretation.');
   });
 });
 
@@ -261,6 +289,15 @@ describe('laboratory route (lobby missions, fragments and exit from the server)'
     expect(host.querySelector('.route-exit')?.getAttribute('data-exit')).toBe('ready');
     act(() => root.render(createElement(RouteStrip, { missions, vault: { labSlug: 'hematology', codeLength: 3, slots: [7, 4, 2], complete: true, exited: true } })));
     expect(host.querySelector('.route-exit')?.getAttribute('data-exit')).toBe('open');
+  });
+  it('shows a completed mission with an active replay state as in progress throughout the route', () => {
+    const replay = missions.map((mission, index) => index === 0 ? { ...mission, inProgress: true } : mission);
+    act(() => root.render(createElement(RouteStrip, { missions: replay, vault: null })));
+    const first = host.querySelector('.route-stop')!;
+    expect(first.getAttribute('data-state')).toBe('current');
+    expect(first.getAttribute('data-mastery')).toBeNull();
+    expect(first.querySelector('.route-label')?.textContent).toContain('In progress');
+    expect(first.querySelector('.route-dot svg')).toBeNull();
   });
 });
 

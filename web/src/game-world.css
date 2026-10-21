@@ -733,3 +733,19 @@ html[data-reduce-motion="true"] .timer.critical { animation: none; }
 .case-panel { box-shadow: 0 16px 38px rgb(0 0 0 / 20%); }
 .case-aside .aside-card, .values .value, .values-block { box-shadow: none; }
 .mission-scene.hero-science { box-shadow: 0 10px 28px rgb(0 0 0 / 30%); }
+/* Mission evidence scenes use the full case-panel width. The shared hero style
+   was intended for the dashboard and left these images narrow and visually
+   off-centre on wide screens. Keep the source ratio so the scene is never
+   cropped differently between missions or viewport sizes. */
+.mission-scene.hero-science {
+  width: min(100%, 760px);
+  height: auto;
+  aspect-ratio: 1400 / 934;
+  margin: 24px auto 0;
+}
+.mission-scene.hero-science > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}

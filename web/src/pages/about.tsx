@@ -58,7 +58,7 @@ sentence(stepOf('feedback')?.purpose, () => t('In {fix}, ask for a hint and note
 sentence(stepOf('feedback')?.hint, () => t('Do this in the decision step of {fix}, the suggested place for a hint plus a wrong answer plus a retry. If that mission is unavailable, use {micro} or {anemia}. {blood} also accepts a wrong answer and a retry; it simply ends on its first correct answer.', { fix: L.fix(), micro: L.micro(), anemia: L.anemia(), blood: L.blood() }));
 sentence(stepOf('faculty')?.purpose, () => `${t('Switch to the {faculty}, then show the class analytics, the roster, a student detail and the {review}.', { faculty: L.faculty(), review: L.review() })} ${FACULTY_DATA()}`);
 sentence(stepOf('faculty')?.purposeHere, () => `${t('Show the class analytics, the roster, a student detail and the {review}.', { review: L.review() })} ${FACULTY_DATA()} ${t('Look, but do not change any review status.')}`);
-sentence(QUALITY_POINTS.find((point) => point.title === 'Accessibility testing')?.text, () => t('Not yet tested with a real screen reader; the {mission} mission has no non-visual alternative.', { mission: L.blood() }));
+sentence(QUALITY_POINTS.find((point) => point.title === 'Accessibility testing')?.text, () => t('Not yet tested with a real screen reader; the {mission} mission now has a neutral description and keyboard-operable point control, but it still has no expert-authored non-visual assessment path and needs a real screen-reader review.', { mission: L.blood() }));
 
 /** The French or English text of a sentence of the guide data. */
 const say = (english: string): string => (labelled.get(english) ?? (() => t(english)))();
