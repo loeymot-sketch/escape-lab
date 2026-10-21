@@ -501,3 +501,36 @@ test('review fix: a late answer closes the attempt for good (no rollback), a new
     assert.equal(closed.body.error.code, 'room_closed');
   } finally { await h.close(); }
 });
+
+// ------------------------------------------------------------------ teacher rooms earn XP (owner decision, 2026-10-21)
+test('a finished room adds its best score to the student\'s XP, the leaderboard and the weekly XP; only an improvement counts again', async () => {
+  const { h, teacher, student } = await setup();
+  try {
+    const doc = { ...sampleDoc(), mode: 'exam', showFeedback: true, vaultCode: '' };
+    const room = await publishedRoom(h, teacher.token, doc);
+    const xp0 = (await h.call('GET', '/api/me', { token: student.token })).body.xp;
+    const play = async (good: boolean) => {
+      let a = (await h.call('POST', `/api/rooms/${room.id}/start`, { token: student.token, body: {} })).body.attempt;
+      while (a.status === 'in_progress') {
+        const q = a.question;
+        const igm = q.type === 'choice' ? q.options.find((o: { label: string }) => o.label === (good ? 'IgM' : 'IgE')).id : null;
+        const response = q.type === 'choice' ? { choice: igm } : q.type === 'hotspot' ? { x: 1, y: 1 } : q.type === 'text' ? { text: 'macrophage' } : q.type === 'number' ? { value: 3 } : { pairs: Object.fromEntries(q.left.map((l: { id: string }, j: number) => [l.id, q.right[j].id])) };
+        a = (await h.call('POST', `/api/room-attempts/${a.attemptId}/answer`, { token: student.token, body: { questionId: q.id, response } })).body.attempt;
+      }
+      return a;
+    };
+    const first = await play(true);
+    assert.equal(first.status, 'completed');
+    assert.ok(first.score > 0);
+    assert.equal(first.xpAwarded, first.score);
+    assert.equal((await h.call('GET', '/api/me', { token: student.token })).body.xp, xp0 + first.score);
+    const board = (await h.call('GET', '/api/leaderboard?scope=week&cohort=class', { token: student.token })).body;
+    assert.equal(board.me.xp, first.score, 'room XP counts in the weekly leaderboard');
+    const worse = await play(false);
+    assert.equal(worse.xpAwarded, 0, 'a lower score adds nothing');
+    assert.equal((await h.call('GET', '/api/me', { token: student.token })).body.xp, xp0 + first.score);
+    // Deleting the room does not take earned XP away.
+    await h.call('DELETE', `/api/studio/rooms/${room.id}`, { token: teacher.token });
+    assert.equal((await h.call('GET', '/api/me', { token: student.token })).body.xp, xp0 + first.score);
+  } finally { await h.close(); }
+});

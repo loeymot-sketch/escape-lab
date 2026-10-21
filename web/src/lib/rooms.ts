@@ -88,6 +88,8 @@ export interface AttemptView {
   progress: { ordinal: number; done: boolean; solved: boolean | null }[];
   vault: { length: number; fragments: { ordinal: number; chars: string | null; size: number }[]; triesLeft: number } | null;
   outro: string;
+  /** XP the finished attempt added (improvement over the room's previous best); null while it runs. */
+  xpAwarded?: number | null;
 }
 export interface AnswerResult {
   recorded: true; correct: boolean | null; trap: boolean | null; feedback: string | null; explanation: string | null; earned: number | null; fragment: string | null; attempt: AttemptView;

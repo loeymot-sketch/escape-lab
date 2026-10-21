@@ -460,6 +460,9 @@ export default {
   'One teacher room is waiting for you': 'Une salle d’enseignant vous attend',
   'One teacher room already open for {name}': 'Une salle d’enseignant déjà ouverte pour {name}',
   'One teacher room open': 'Une salle d’enseignant ouverte',
+  '+{n} XP added to your level': '+{n} XP ajoutés à votre niveau',
+  'No new XP: your best score on this room stays the one that counts.': 'Pas de nouveaux XP : c’est votre meilleur score sur cette salle qui compte.',
+  'Each student\'s best score on the room counts as XP for their level and the leaderboard, like a mission.': 'Le meilleur score de chaque étudiant sur la salle compte en XP pour son niveau et le classement, comme une mission.',
   // studio extras
   'All classes': 'Toutes les classes',
   Export: 'Exporter',

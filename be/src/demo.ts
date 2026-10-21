@@ -235,7 +235,7 @@ const insertUser = (db: DB, name: string, email: string, role: 'student' | 'teac
 async function playAlex(db: DB, uid: number, base: number) {
   const clock = { t: base };
   const g = new Game(db, { now: () => clock.t });
-  for (const t of ['attempts', 'fragments', 'lab_exits', 'code_tries', 'badges_earned', 'mission_best', 'xp_events', 'room_attempts']) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(uid);
+  for (const t of ['attempts', 'fragments', 'lab_exits', 'code_tries', 'badges_earned', 'mission_best', 'xp_events', 'room_attempts', 'room_best']) db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).run(uid);
   // Identity is part of the prepared state too. Keep class memberships: resetting this shared demo user must not silently remove
   // the student from a real teacher's roster or change that teacher's class analytics.
   db.prepare('UPDATE users SET name = ?, program = ?, study_level = ? WHERE id = ?').run('Alex Martin', 'Biomedical Sciences', 'L3', uid);

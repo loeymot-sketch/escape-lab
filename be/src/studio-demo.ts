@@ -291,7 +291,8 @@ function playAttempt(studio: Studio, clock: { t: number }, uid: number, roomId: 
 /** Deletes the demo teacher's rooms and pictures, then recreates the showcase rooms and replays the class's attempts. Deterministic. */
 export function seedShowcaseRooms(db: DB, teacherId: number, base: number): { rooms: number; attempts: number } {
   const clock = { t: base - 9 * DAY };
-  const studio = new Studio(db, () => clock.t);
+  // The simulated class earns no XP from the showcase rooms: their levels and the leaderboard stay those of the prepared story.
+  const studio = new Studio(db, () => clock.t, { awardsXp: false });
   const classes = db.prepare('SELECT id FROM classes WHERE teacher_id = ? ORDER BY id LIMIT 2').all(teacherId) as Array<{ id: number }>;
   const l3 = classes[0]?.id;
   if (l3 === undefined) return { rooms: 0, attempts: 0 };

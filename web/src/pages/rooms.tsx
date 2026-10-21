@@ -224,6 +224,9 @@ function RoomPlayer({ initial, onClose, onReview }: { initial: AttemptView; onCl
               {a.status === 'timeout' ? <Clock3 size={34} aria-hidden="true" /> : <DoorOpen size={34} aria-hidden="true" />}
               <h1 id="finish-title" ref={headingRef} tabIndex={-1}>{a.status === 'timeout' ? t('Time is up') : a.vault ? t('You escaped!') : t('Room completed')}</h1>
               {a.score !== null && <p className="room-finish-score">{t('{score} / {max} pts', { score: a.score, max: a.maxScore })}</p>}
+              {a.xpAwarded !== undefined && a.xpAwarded !== null && (
+                <p className="room-xp">{a.xpAwarded > 0 ? t('+{n} XP added to your level', { n: a.xpAwarded }) : t('No new XP: your best score on this room stays the one that counts.')}</p>
+              )}
               {a.outro && a.status === 'completed' && <p>{a.outro}</p>}
               <div className="room-card-actions center">
                 <button type="button" className="primary" onClick={() => onReview(a.attemptId)}>{t('See my review')} <ArrowRight size={15} aria-hidden="true" /></button>

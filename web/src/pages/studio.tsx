@@ -426,6 +426,7 @@ function SettingsPane({ doc, edit, classes, room, toggleClass, busy }: { doc: Ro
           <Field label={t('Pass mark (%)')}>{(id) => <input id={id} type="number" min={0} max={100} value={doc.passPct} onChange={(e) => set({ passPct: Math.max(0, Math.min(100, Math.round(Number(e.target.value) || 0))) })} />}</Field>
           <Field label={t('Attempts per student (0 = unlimited)')}>{(id) => <input id={id} type="number" min={0} max={20} value={doc.maxAttempts} onChange={(e) => set({ maxAttempts: Math.max(0, Math.min(20, Math.round(Number(e.target.value) || 0))) })} />}</Field>
         </div>
+        <p className="studio-help">{t('Each student\'s best score on the room counts as XP for their level and the leaderboard, like a mission.')}</p>
         <Toggle checked={doc.shuffleQuestions} onChange={(v) => set({ shuffleQuestions: v })} label={t('Shuffle the questions for each student')} />
         <Toggle checked={doc.shuffleOptions} onChange={(v) => set({ shuffleOptions: v })} label={t('Shuffle the options')} />
         {doc.mode === 'exam' && <Toggle checked={doc.showFeedback} onChange={(v) => set({ showFeedback: v })} label={t('Say right or wrong after each answer')} />}

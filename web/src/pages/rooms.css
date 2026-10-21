@@ -125,6 +125,7 @@
 .room-finish{text-align:center;display:grid;justify-items:center;gap:10px}
 .room-finish p{margin:0;color:var(--muted)}
 .room-finish.completed svg{color:#4ade80}.room-finish.timeout svg{color:var(--gold)}
+.room-xp{color:#4ade80!important;font-weight:800;font-size:16px}
 .room-finish-score{font-size:30px;font-weight:900;color:var(--gold)!important}
 
 /* review */

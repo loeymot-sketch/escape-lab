@@ -324,6 +324,20 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (attempt_id, question_id, level)
   );
   `,
+  // Teacher rooms earn XP (owner decision, 2026-10-21): the best score per room counts like the best score per mission, and every improvement
+  // is an xp_events row (mission_id 'room:<id>') for the weekly leaderboard. No foreign key to rooms: XP a student earned outlives a deleted room.
+  `
+  CREATE TABLE room_best (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    room_id TEXT NOT NULL,
+    best_score INTEGER NOT NULL CHECK (best_score >= 0),
+    best_attempt_id TEXT NOT NULL,
+    completions INTEGER NOT NULL,
+    first_completed_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, room_id)
+  );
+  ALTER TABLE room_attempts ADD COLUMN xp_awarded INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 export type DB = DatabaseSync;

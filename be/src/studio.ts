@@ -19,7 +19,7 @@ type AttemptStatus = 'in_progress' | 'vault' | 'completed' | 'timeout';
 interface RoomRow { id: string; teacher_id: number; title: string; status: RoomStatus; version: number; doc_json: string; showcase: number; created_at: number; updated_at: number; published_at: number | null }
 interface AttemptRow {
   id: string; room_id: string; user_id: number; room_version: number; doc_json: string; salt: string; order_json: string; status: AttemptStatus; current: number;
-  started_at: number; completed_at: number | null; score: number; max_score: number; correct: number; wrong_total: number; hints_total: number; traps_total: number; vault_tries: number;
+  started_at: number; completed_at: number | null; score: number; max_score: number; correct: number; wrong_total: number; hints_total: number; traps_total: number; vault_tries: number; xp_awarded: number;
 }
 interface AnswerRow { attempt_id: string; question_id: string; correct: number; trap: number; fraction: number; response_json: string; created_at: number }
 
@@ -38,7 +38,33 @@ const median = (xs: number[]) => {
 export class Studio {
   db: DB;
   now: () => number;
-  constructor(db: DB, now: () => number = Date.now) { this.db = db; this.now = now; }
+  /** Finished attempts earn XP (room_best, xp_events). Off only for the simulated demo class, whose XP figures are part of the prepared story. */
+  awardsXp: boolean;
+  constructor(db: DB, now: () => number = Date.now, opts: { awardsXp?: boolean } = {}) { this.db = db; this.now = now; this.awardsXp = opts.awardsXp ?? true; }
+
+  /** A finished attempt: its score becomes the room's best when it beats it, and the improvement is XP (also for the weekly leaderboard). Idempotent. */
+  private award(attemptId: string) {
+    const a = this.attemptRow(attemptId);
+    if (!a || !this.awardsXp || (a.status !== 'completed' && a.status !== 'timeout') || a.xp_awarded !== 0) return;
+    const doc = JSON.parse(a.doc_json) as RoomDoc;
+    const score = this.tally(a, doc).reduce((s, x) => s + x.earned, 0);
+    const at = a.completed_at ?? this.now();
+    const prev = this.one<{ best_score: number }>('SELECT best_score FROM room_best WHERE user_id = ? AND room_id = ?', a.user_id, a.room_id);
+    let gained = 0;
+    if (!prev) {
+      this.run('INSERT INTO room_best (user_id, room_id, best_score, best_attempt_id, completions, first_completed_at) VALUES (?,?,?,?,1,?)', a.user_id, a.room_id, score, a.id, at);
+      gained = score;
+    } else {
+      this.run('UPDATE room_best SET completions = completions + 1 WHERE user_id = ? AND room_id = ?', a.user_id, a.room_id);
+      if (score > prev.best_score) {
+        this.run('UPDATE room_best SET best_score = ?, best_attempt_id = ? WHERE user_id = ? AND room_id = ?', score, a.id, a.user_id, a.room_id);
+        gained = score - prev.best_score;
+      }
+    }
+    if (gained > 0) this.run('INSERT INTO xp_events (user_id, mission_id, delta, at) VALUES (?,?,?,?)', a.user_id, `room:${a.room_id}`, gained, at);
+    // -1 marks "awarded, nothing gained" so a second call never awards twice.
+    this.run('UPDATE room_attempts SET xp_awarded = ? WHERE id = ?', gained > 0 ? gained : -1, a.id);
+  }
 
   private readonly statements = new Map<string, ReturnType<DB['prepare']>>();
   private stmt(sql: string) {
@@ -313,6 +339,7 @@ export class Studio {
     const doc = JSON.parse(a.doc_json) as RoomDoc;
     if (this.remaining(a, doc) === 0) {
       this.run("UPDATE room_attempts SET status = 'timeout', completed_at = ? WHERE id = ? AND status IN ('in_progress','vault')", a.started_at + doc.timeLimitSec * 1000, a.id);
+      this.award(a.id);
       return this.attemptRow(a.id)!;
     }
     return a;
@@ -360,6 +387,8 @@ export class Studio {
         ? { length: [...doc.vaultCode].length, fragments: t.map((x, i) => ({ ordinal: i + 1, chars: x.solved && doc.mode === 'escape' ? slices[i]! : null, size: [...slices[i]!].length })), triesLeft: ROOM_RULES.maxVaultTries - a.vault_tries }
         : null,
       outro: finished ? doc.outro : '',
+      /** XP this attempt added (its improvement over the previous best of the room); null while it runs. */
+      xpAwarded: finished ? Math.max(0, a.xp_awarded) : null,
     };
   }
 
@@ -389,6 +418,7 @@ export class Studio {
       const score = t.reduce((s, x) => s + x.earned, 0);
       this.run(`UPDATE room_attempts SET current = ?, status = ?, completed_at = ?, score = ?, correct = correct + ?, wrong_total = wrong_total + ?, traps_total = traps_total + ? WHERE id = ?`,
         next, status, status === 'completed' ? this.now() : null, score, v.correct ? 1 : 0, v.correct ? 0 : 1, v.trap ? 1 : 0, a.id);
+      if (status === 'completed') this.award(a.id);
       const after = this.attemptRow(a.id)!;
       const reveal = doc.mode === 'escape' || doc.showFeedback;
       const index = t.findIndex((x) => x.q.id === q.id);
@@ -438,6 +468,7 @@ export class Studio {
         return { error: new ApiError(422, 'wrong_code', 'The vault stays shut: that is not the code.', { triesLeft: ROOM_RULES.maxVaultTries - a.vault_tries - 1 }) };
       }
       this.run("UPDATE room_attempts SET status = 'completed', completed_at = ? WHERE id = ?", this.now(), a.id);
+      this.award(a.id);
       return { escaped: true as const, attempt: this.view(this.attemptRow(a.id)!) };
     });
     if ('error' in out) throw out.error;

@@ -170,11 +170,12 @@ export class Game {
     const lastByStudent = new Map(this.all<{ user_id: number; t: number | null }>(
       'SELECT a.user_id, MAX(al.created_at) AS t FROM answer_log al JOIN attempts a ON a.id = al.attempt_id WHERE a.user_id IN (SELECT value FROM json_each(?)) GROUP BY a.user_id', memberIds,
     ).map((r) => [r.user_id, r.t]));
+    const roomXp = this.roomXpForUsers(memberIds);
     const aggregates = new Map<number, StudentAggregates>();
     for (const id of ids) {
       const rows = bestByStudent.get(id) ?? [];
       aggregates.set(id, {
-        xp: rows.reduce((sum, r) => sum + r.best_score, 0) + (carryByStudent.get(id) ?? 0),
+        xp: rows.reduce((sum, r) => sum + r.best_score, 0) + (carryByStudent.get(id) ?? 0) + (roomXp.get(id) ?? 0),
         lastActiveAt: lastByStudent.get(id) ?? null,
         labsCompleted: this.labsCompletedFromRows(rows),
       });
@@ -185,9 +186,16 @@ export class Game {
   private exits(uid: number): Set<string> {
     return new Set(this.all<{ lab_slug: string }>('SELECT lab_slug FROM lab_exits WHERE user_id = ?', uid).map((r) => r.lab_slug));
   }
-  /** Earned XP: the sum of the best score per mission. */
+  /** Earned XP: the sum of the best score per mission, plus the best score per teacher room. */
   earnedXp(uid: number): number {
-    return this.one<{ s: number | null }>('SELECT SUM(best_score) AS s FROM mission_best WHERE user_id = ?', uid)?.s ?? 0;
+    return (this.one<{ s: number | null }>('SELECT SUM(best_score) AS s FROM mission_best WHERE user_id = ?', uid)?.s ?? 0) + this.roomXp(uid);
+  }
+  /** XP from teacher rooms (best score per room). */
+  roomXp(uid: number): number {
+    return this.one<{ s: number | null }>('SELECT SUM(best_score) AS s FROM room_best WHERE user_id = ?', uid)?.s ?? 0;
+  }
+  private roomXpForUsers(memberIds: string): Map<number, number> {
+    return new Map(this.all<{ user_id: number; s: number }>('SELECT user_id, SUM(best_score) AS s FROM room_best WHERE user_id IN (SELECT value FROM json_each(?)) GROUP BY user_id', memberIds).map((r) => [r.user_id, r.s]));
   }
   /** Total XP = earned XP + XP carried over from earlier content (imports and the demo account only; 0 for everyone else). */
   totalXp(uid: number): number {
@@ -821,6 +829,7 @@ export class Game {
         'SELECT id, xp_carry AS carry FROM users WHERE id IN (SELECT value FROM json_each(?))', memberIds,
       )) xpByStudent.set(row.id, row.carry ?? 0);
       for (const [id, rows] of bestByStudent) xpByStudent.set(id, (xpByStudent.get(id) ?? 0) + rows.reduce((sum, r) => sum + r.best_score, 0));
+      for (const [id, xp] of this.roomXpForUsers(memberIds)) xpByStudent.set(id, (xpByStudent.get(id) ?? 0) + xp);
     } else {
       for (const row of this.all<{ user_id: number; xp: number | null }>(
         'SELECT user_id, SUM(delta) AS xp FROM xp_events WHERE user_id IN (SELECT value FROM json_each(?)) AND at > ? GROUP BY user_id', memberIds, since,

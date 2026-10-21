@@ -36,6 +36,7 @@ Les dix missions intégrées forment un catalogue verrouillé et très testé (f
 - **Laboratoires à venir** : la carte des laboratoires indique sur une carte « Bientôt disponible » (ex. Immunologie) les salles d'enseignants déjà ouvertes dans cette discipline, avec un lien direct ; le tableau de bord affiche un encart « De vos enseignants ».
 - **Résultats par classe** : filtre de classe sur les résultats (`GET /api/studio/rooms/:id/results?classId=`), limité aux classes de l'enseignant.
 - **Partage entre enseignants** : export d'une salle en fichier JSON et import depuis la liste ; les images envoyées par un autre enseignant ne voyagent pas et sont signalées.
+- **XP (décision du propriétaire)** : le meilleur score de chaque étudiant sur une salle compte en XP pour son niveau et le classement (y compris hebdomadaire), comme une mission ; seule une amélioration rapporte à nouveau, et l'XP acquise reste si la salle est supprimée. La fin de salle affiche « +N XP ». La classe simulée de la démonstration ne gagne pas d'XP sur les salles, pour que les chiffres préparés restent identiques.
 - **Création de zone au clavier** : « Ajouter un cercle / un rectangle au centre », puis placement par les champs x / y / rayon, sans souris.
 
 ### Garanties techniques
@@ -71,7 +72,7 @@ Node 22.23.2, macOS. Commandes : `cd be && npm test && npm run typecheck && npm 
 
 | Contrôle | Résultat |
 |---|---|
-| Tests backend | **313/313** (dont 22 pour le Studio, filtre de classe inclus, et 1 pour la démonstration) |
+| Tests backend | **314/314** (dont 23 pour le Studio, filtre de classe et XP inclus, et 1 pour la démonstration) |
 | Typecheck backend | propre |
 | Tests unitaires web (Vitest, couverture française, contrat d'API, frontières client) | **405/405** |
 | Build de production et budget | entrée 421 258 / 440 000 o (plafond inchangé), JS différé élève 40 492 / 160 000, dictionnaire français 148 055 / 180 000, Studio 71 087 / 120 000, CSS d'entrée 136 119 / 140 000, CSS différé 36 252 / 60 000 |
