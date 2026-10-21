@@ -1,6 +1,8 @@
 // The route table. It is also the source of the OpenAPI document (scripts/openapi.ts).
 import { hashPassword, signToken, verifyPassword } from './auth.ts';
 import type { Game } from './game.ts';
+import { Studio } from './studio.ts';
+import { studioRoutes } from './studio-routes.ts';
 import { ApiError, EMPTY_BODY, bad, forbidden, notFound, unauthorized, visibleSecretLength } from './http.ts';
 import type { Ctx, RateLimiter, Route, Schema } from './http.ts';
 import type { DB } from './db.ts';
@@ -11,6 +13,8 @@ import { DEMO_STUDENT_EMAIL, DEMO_TEACHER_EMAIL, isDemoEmail, resetDemoStudent, 
 export interface Deps {
   db: DB;
   game: Game;
+  /** Defaults to a Studio on the same database (the OpenAPI script and some tests build the table without one). */
+  studio?: Studio;
   limiter: RateLimiter;
   secret: string;
   teacherInviteCode: string;
@@ -285,5 +289,6 @@ export function buildRoutes(d: Deps): Route[] {
         return c.user!.role === 'teacher' ? resetDemoTeacher(db, game, uid(c)) : resetDemoStudent(db, game, uid(c));
       },
     },
+    ...studioRoutes({ studio: d.studio ?? new Studio(db, d.now), hit, write, perUserScale, limits: d.limits }),
   ];
 }

@@ -169,3 +169,36 @@ test('reset restores the demo student identity without removing other class memb
   const rosterOther = (await h.call('GET', `/api/classes/${external.body.id}/students`, { token: otherTeacher.token })).body;
   assert.ok(rosterOther.students.some((s: any) => s.name === 'Alex Martin'), 'reset must preserve the student in the other class roster');
 });
+
+test('Teacher Studio showcase: three published rooms with simulated class results; the demo reset restores them and drops visitors\' rooms', async () => {
+  const list = (await h.call('GET', '/api/studio/rooms', { token: claire })).body.rooms;
+  assert.deepEqual(list.map((r: { id: string }) => r.id).sort(), ['room-demo-immunology', 'room-demo-microbiology', 'room-demo-smear']);
+  for (const r of list) {
+    assert.equal(r.status, 'published');
+    assert.ok(r.stats.finished >= 10, `${r.id} has class results`);
+    assert.ok(r.quality >= 70, `${r.id} quality ${r.quality}`);
+  }
+  const res = (await h.call('GET', '/api/studio/rooms/room-demo-smear/results', { token: claire })).body;
+  const spot = res.questions.find((q: { id: string }) => q.id === 'sm-1');
+  assert.ok(spot.clicks.length >= 20, 'clicks for the heatmap');
+  assert.ok(spot.clicks.some((c: { trap: boolean }) => c.trap), 'some students fell into a visual trap');
+  // The shared demo student has not played them: visitors start fresh.
+  const rooms = (await h.call('GET', '/api/rooms', { token: alex })).body.rooms;
+  assert.equal(rooms.length, 3);
+  assert.ok(rooms.every((r: { best: unknown }) => r.best === null));
+  const started = await h.call('POST', '/api/rooms/room-demo-smear/start', { token: alex, body: {} });
+  assert.equal(started.status, 201);
+
+  // A visitor edits the showcase: new room, a deleted showcase room.
+  const mine = await h.call('POST', '/api/studio/rooms', { token: claire, body: { doc: { title: 'Visitor room', questions: [] } } });
+  assert.equal(mine.status, 201);
+  assert.equal((await h.call('DELETE', '/api/studio/rooms/room-demo-immunology', { token: claire })).status, 200);
+  const reset = await h.call('POST', '/api/demo/reset', { token: claire });
+  assert.equal(reset.status, 200, JSON.stringify(reset.body));
+  const after = (await h.call('GET', '/api/studio/rooms', { token: claire })).body.rooms;
+  assert.deepEqual(after.map((r: { id: string }) => r.id).sort(), ['room-demo-immunology', 'room-demo-microbiology', 'room-demo-smear']);
+  // The student reset removes the guest's own room attempts.
+  await h.call('POST', '/api/rooms/room-demo-smear/start', { token: alex, body: {} });
+  assert.equal((await h.call('POST', '/api/demo/reset', { token: alex })).status, 200);
+  assert.ok((await h.call('GET', '/api/rooms', { token: alex })).body.rooms.every((r: { activeAttemptId: unknown }) => r.activeAttemptId === null));
+});

@@ -16,6 +16,18 @@ const EXTRA_ERRORS: Record<string, number[]> = {
   'PUT /api/content/missions/:id/status': [409, 429],
   'POST /api/classes': [409, 429],
   'PUT /api/profile': [409, 429],
+  'POST /api/studio/media': [409, 429],
+  'DELETE /api/studio/media/:id': [409],
+  'POST /api/studio/rooms': [409, 429],
+  'PUT /api/studio/rooms/:id': [409, 429],
+  'PUT /api/studio/rooms/:id/status': [422, 429],
+  'PUT /api/studio/rooms/:id/classes': [422, 429],
+  'POST /api/studio/rooms/:id/duplicate': [409, 429],
+  'POST /api/rooms/:id/start': [409, 429],
+  'POST /api/room-attempts/:id/answer': [409, 429],
+  'POST /api/room-attempts/:id/hint': [409, 429],
+  'POST /api/room-attempts/:id/escape': [409, 422, 429],
+  'GET /api/room-attempts/:id/review': [409],
 };
 const ERROR_RESPONSE = { $ref: '#/components/responses/Error' };
 const RATE_LIMITED_RESPONSE = { $ref: '#/components/responses/RateLimited' };
@@ -39,10 +51,11 @@ export function openApi(routes: Route[]) {
         : {}),
       ...(r.body ? { requestBody: { required: !!r.body.required?.length, content: { 'application/json': { schema: r.body } } } } : {}),
       responses: {
-        [String(r.status ?? 200)]: { description: 'Success' },
+        [String(r.status ?? 200)]: r.raw ? { description: 'Success', content: Object.fromEntries(r.raw.split(',').map((t) => [t.trim(), { schema: { type: 'string', format: 'binary' } }])) } : { description: 'Success' },
         // 400 covers body, query and path validation; 413/415 only exist where a JSON body is read.
         ...(r.body || params.length ? { '400': ERROR_RESPONSE } : {}),
         ...(r.body || r.method === 'POST' || r.method === 'PUT' ? { '400': ERROR_RESPONSE, '413': ERROR_RESPONSE, '415': ERROR_RESPONSE } : {}),
+        ...(r.maxBody ? { '413': { description: `Request body larger than ${r.maxBody} bytes.`, content: ERROR_BODY } } : {}),
         ...(r.auth !== 'none' ? { '401': ERROR_RESPONSE, '403': ERROR_RESPONSE } : {}),
         '404': ERROR_RESPONSE,
         '405': ERROR_RESPONSE,
@@ -59,7 +72,7 @@ export function openApi(routes: Route[]) {
       description: 'Server-authoritative API for Escape Lab. Answer keys, explanations and hints never leave the server before they are earned. All scoring is computed here from server timestamps.',
     },
     servers: [{ url: 'http://localhost:3000' }],
-    tags: ['System', 'Auth', 'Student', 'Labs', 'Vault', 'Missions', 'Social', 'Profile', 'Classes', 'Content', 'Demo'].map((name) => ({ name })),
+    tags: ['System', 'Auth', 'Student', 'Labs', 'Vault', 'Missions', 'Social', 'Profile', 'Classes', 'Content', 'Studio', 'Rooms', 'Demo'].map((name) => ({ name })),
     paths,
     components: {
       securitySchemes: { bearer: { type: 'http', scheme: 'bearer' } },

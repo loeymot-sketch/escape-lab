@@ -42,6 +42,12 @@
       "name": "Content"
     },
     {
+      "name": "Studio"
+    },
+    {
+      "name": "Rooms"
+    },
+    {
       "name": "Demo"
     }
   ],
@@ -1025,7 +1031,7 @@
                   },
                   "response": {
                     "type": "object",
-                    "description": "Engine specific. point: {x,y} (0-100). choice: {choice}. decision: {decision}. order: {order:[ids]}. match: {pairs:{leftId:rightId}}."
+                    "description": "Engine specific. point: {x,y} (0-100), or guided point: {points:{targetId:{x,y}}} / {selections:{targetId:string}}; these maps may be combined across observations. choice: {choice}. decision: {decision}. order: {order:[ids]}. match: {pairs:{leftId:rightId}}."
                   }
                 }
               }
@@ -1706,6 +1712,1516 @@
             "$ref": "#/components/responses/Error"
           },
           "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/media/{id}": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "An uploaded picture. Public by id (128 random bits), immutable, served with a sandboxing Content-Security-Policy.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/studio/media": {
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Upload a picture (PNG, JPEG, WebP or GIF, at most 4 MB) as base64 or a data: URL. The type and size are read from the bytes; SVG is refused.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account. 409 media_quota when the teacher's library is full.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "data"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "data": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 5872026
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 120
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "description": "Request body larger than 5876122 bytes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Your uploaded pictures and the quota.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/studio/media/{id}": {
+      "delete": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Delete one of your pictures. 409 media_in_use while a room or a past attempt uses it.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/studio/library": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Built-in pictures a room may use without uploading, with their natural sizes, and the authoring limits.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/studio/rooms": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Your rooms with status, quality score and attempt statistics.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Create a room (draft): from a document, empty, or as an editable copy of a built-in mission (fromMission). Assigned to every class of yours unless classIds says otherwise.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "doc": {
+                    "type": "object",
+                    "description": "A room document: { title, summary, discipline, cover?, mode: escape|exam, timeLimitSec, shuffleQuestions, shuffleOptions, passPct, showFeedback, revealAnswers, vaultCode, maxAttempts, intro, outro, questions[] }. Question types: choice, truefalse, text, number, hotspot, order, match. Every question has id, type, prompt, points (1-100), hints (0-3), explanation, optional context, image and feedbackWrong. choice: options [{id, label, correct, trap?, feedback?}], multiple. truefalse: answer, trap?. text: accepted[], typoTolerance, traps [{answer, feedback}]. number: value, tolerance, unit?, traps [{value, feedback}]. hotspot: image (required), zones [{id, label, shape: circle {x,y,r} | rect {x,y,w,h}, trap?, feedback?}] in natural pixels of the image, tolerance (pixels, default 5), require: any|all, decoys (extra labels for the text alternative). order: items in the correct order. match: pairs [{id, left, right}]. An image is {media: uploadId, alt} or {asset: libraryId, alt}; its size is set by the server. Every problem is reported at once in error.details (400 validation_error). At most 40 questions."
+                  },
+                  "fromMission": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "classIds": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "description": "Request body larger than 524288 bytes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/studio/rooms/{id}": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "One of your rooms: full document (with answers), classes, quality check and statistics.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Replace the room document. `version` must be the version you loaded (409 version_conflict otherwise). Attempts already started keep the version they started with.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "doc",
+                  "version"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "doc": {
+                    "type": "object",
+                    "description": "A room document: { title, summary, discipline, cover?, mode: escape|exam, timeLimitSec, shuffleQuestions, shuffleOptions, passPct, showFeedback, revealAnswers, vaultCode, maxAttempts, intro, outro, questions[] }. Question types: choice, truefalse, text, number, hotspot, order, match. Every question has id, type, prompt, points (1-100), hints (0-3), explanation, optional context, image and feedbackWrong. choice: options [{id, label, correct, trap?, feedback?}], multiple. truefalse: answer, trap?. text: accepted[], typoTolerance, traps [{answer, feedback}]. number: value, tolerance, unit?, traps [{value, feedback}]. hotspot: image (required), zones [{id, label, shape: circle {x,y,r} | rect {x,y,w,h}, trap?, feedback?}] in natural pixels of the image, tolerance (pixels, default 5), require: any|all, decoys (extra labels for the text alternative). order: items in the correct order. match: pairs [{id, left, right}]. An image is {media: uploadId, alt} or {asset: libraryId, alt}; its size is set by the server. Every problem is reported at once in error.details (400 validation_error). At most 40 questions."
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "description": "Request body larger than 524288 bytes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Delete a room with all its attempts and results.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/studio/rooms/{id}/status": {
+      "put": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Publish, unpublish (draft) or archive. Publishing needs at least one question, no quality error and one class (422 room_not_ready).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "published",
+                      "archived"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/studio/rooms/{id}/classes": {
+      "put": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Choose the classes that can play the room (your own classes only).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "classIds"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "classIds": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/studio/rooms/{id}/duplicate": {
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Copy a room into a new draft.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/studio/rooms/{id}/preview": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "The saved room as a student would receive it (no answers), for \"play as a student\". Nothing is recorded.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/studio/rooms/{id}/check": {
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Grade one preview answer exactly as for a student (verdict, trap, feedback, expected answer). Nothing is recorded.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "questionId",
+                  "response"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "questionId": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "response": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/studio/rooms/{id}/results": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Results of a room: summary, every attempt, per-question success, trap rates, option picks, text answers and hotspot clicks (heatmap).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/studio/attempts/{id}": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "One student attempt on one of your rooms, answer by answer, with the expected answers.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a teacher account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/rooms": {
+      "get": {
+        "tags": [
+          "Rooms"
+        ],
+        "summary": "Rooms your teachers published for your classes, with your best result and any attempt in progress.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/rooms/{id}/start": {
+      "post": {
+        "tags": [
+          "Rooms"
+        ],
+        "summary": "Start a room, or resume the attempt in progress. 409 attempts_exhausted when the teacher limited attempts.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/room-attempts/{id}": {
+      "get": {
+        "tags": [
+          "Rooms"
+        ],
+        "summary": "State of your attempt: current question (no answers), timer, progress, vault fragments.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/room-attempts/{id}/answer": {
+      "post": {
+        "tags": [
+          "Rooms"
+        ],
+        "summary": "Answer the current question. Escape mode: right / wrong with feedback (trap feedback when you fell for a trap), retry until right. Exam mode: one answer per question.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account. response by type: choice {choice} or {choices:[...]}; truefalse {value}; text {text}; number {value}; hotspot {x, y} (natural pixels) or {points:[{x,y}...]} or, as the text alternative, {zone} / {zones:[...]}; order {order:[...]}; match {pairs:{leftId: rightId}}. Ids are the ones of the question as you received it.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "questionId",
+                  "response"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "questionId": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "response": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/room-attempts/{id}/hint": {
+      "post": {
+        "tags": [
+          "Rooms"
+        ],
+        "summary": "Read the next hint of the current question (costs 10% of its points).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "questionId"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "questionId": {
+                    "type": "string",
+                    "maxLength": 40
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/room-attempts/{id}/escape": {
+      "post": {
+        "tags": [
+          "Rooms"
+        ],
+        "summary": "Enter the vault code assembled from the fragments. 422 wrong_code.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 24
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "431": {
+            "$ref": "#/components/responses/HeaderTooLarge"
+          }
+        }
+      }
+    },
+    "/api/room-attempts/{id}/review": {
+      "get": {
+        "tags": [
+          "Rooms"
+        ],
+        "summary": "Review of a finished attempt: score, every answer, explanations and (if the teacher allows) the expected answers.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "Requires a student account.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
             "$ref": "#/components/responses/Error"
           },
           "431": {

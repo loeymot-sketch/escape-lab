@@ -127,7 +127,38 @@ export interface Route {
   query?: Array<{ name: string; schema: Schema; description?: string }>;
   /** HTTP status for success. Defaults to 200. */
   status?: number;
+  /** Largest accepted JSON body in bytes (default 64 KB): image uploads and whole room documents need more. */
+  maxBody?: number;
+  /** Not JSON: the handler returns a RawBody (an image). Documented as such in OpenAPI. */
+  raw?: string;
   handler: (ctx: Ctx) => unknown;
+}
+
+/** A non-JSON success answer (an uploaded picture). */
+export class RawBody {
+  readonly contentType: string;
+  readonly bytes: Uint8Array;
+  readonly headers: Record<string, string>;
+  constructor(contentType: string, bytes: Uint8Array, headers: Record<string, string> = {}) {
+    this.contentType = contentType;
+    this.bytes = bytes;
+    this.headers = headers;
+  }
+}
+
+export function sendRaw(res: ServerResponse, body: RawBody, extra: Record<string, string> = {}): void {
+  res.writeHead(200, {
+    'Content-Type': body.contentType,
+    'Content-Length': body.bytes.byteLength,
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+    // The bytes are an image, never a document: nothing in them may run even when opened directly.
+    'Content-Security-Policy': "default-src 'none'; sandbox",
+    'Cross-Origin-Resource-Policy': 'cross-origin',
+    ...extra,
+    ...body.headers,
+  });
+  res.end(body.bytes);
 }
 
 export function compilePath(path: string): { re: RegExp; keys: string[] } {
