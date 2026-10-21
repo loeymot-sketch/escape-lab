@@ -116,6 +116,19 @@ Gestes de sécurité : ne cliquez pas « Mark reviewed ». Pour la ligne 5, arr�
 - **+15 s, étape 3** : montrez le point de l'image et l'étiquette « illustrative ».
 - Total estimé : environ 6 min 45 s avec les déplacements (le rapport du round 17 donne « 6:45-7:15 », et 7:45 sur téléphone) ; le guide intégré additionne 390 s hors déplacements et affiche « environ 7 minutes ». Ces trois chiffres sont des estimations non chronométrées par un humain, volontairement du même ordre. Gardez 15 s de marge.
 
+### 3.3 Variante « Studio enseignant » (+3 minutes, ajoutée le 2026-10-21)
+
+À montrer quand le public est enseignant : c'est la réponse à « et nous, que pouvons-nous créer ? ».
+
+1. **Basculer en invité enseignant** (« Faculty guest »), puis menu **Studio enseignant**. Trois salles publiées sont déjà là, avec des résultats de classe simulés : *Immunologie : ouverture du laboratoire* (prépare un laboratoire qui n'est pas encore ouvert), *Hématologie : le frottis piégé*, *Microbiologie : examen flash* (mode examen chronométré).
+2. **Modifier « le frottis piégé »** : montrer la question « Clic sur l'image ». Les zones sont dessinées sur la photo : une zone correcte (verte) et trois zones **pièges** (rouges : hématie normale, hématies superposées, plaquette). L'**anneau en pointillés** matérialise la tolérance de clic (**5 px** de l'image d'origine, réglable au curseur).
+3. **Outil « Tester un clic »** : cliquer juste à côté du schistocyte (« Accepté : … 3 px du bord, tolérance 5 px »), puis sur l'hématie normale (« Piège : … l'étudiant lit : … »). C'est exactement la correction du serveur.
+4. **Onglet « Contrôle qualité »** : le score sur 100 et les remarques (piège sans explication, zone trop petite pour un téléphone, description d'image trop courte…). Les erreurs bloquent la publication.
+5. **Résultats** : score moyen, taux de réussite, part des réponses tombées dans un piège, puis la **carte de chaleur** : chaque clic de chaque étudiant (vert, rouge, orange). Ouvrir une ligne « Réponses » pour montrer le détail d'un étudiant. Export CSV possible.
+6. Phrase clé : « L'enseignant écrit, l'étudiant joue, le serveur corrige, et l'enseignant voit exactement quelle idée reçue a piégé sa classe. »
+
+Après la démo : `Reset guest session` côté enseignant restaure les trois salles de démonstration et supprime celles créées par les visiteurs.
+
 ### 3.2 Ce qu'il faut couper pour 5 minutes
 
 Selon les rapports de parcours : sautez la carte des labos (étape 2), et arrêtez Fix the Sample après le réessai (donc pas d'écran de résultat). Ne coupez jamais la phrase sur les données générées ni l'étape 8.

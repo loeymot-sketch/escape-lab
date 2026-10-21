@@ -172,7 +172,7 @@ test.describe('phone polish', () => {
       await expect(page.getByRole('button', { name, exact: true })).toBeFocused();
     }
     await menuButton(page).tap();
-    const secondary = ['Lab map', 'Leaderboard', 'Lab results', 'Learning settings', 'About & demo guide'];
+    const secondary = ['Lab map', 'Teacher rooms', 'Leaderboard', 'Lab results', 'Learning settings', 'About & demo guide'];
     await page.getByRole('button', { name: secondary[0]!, exact: true }).focus();
     for (const name of secondary.slice(1)) {
       await page.keyboard.press('Tab');

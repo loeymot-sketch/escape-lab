@@ -74,7 +74,7 @@ for (const width of [320, 390, 600, 601, 768, 1280]) test(`game navigation and s
     await expect(popover).toHaveCount(0);
   } else {
     await expect(footer(page)).toBeHidden();
-    await expect(page.locator('.student-app>aside nav button')).toHaveCount(8);
+    await expect(page.locator('.student-app>aside nav button')).toHaveCount(9);
   }
   if ([320, 390, 1280].includes(width)) await expect(page).toHaveScreenshot(`rooms-${width}.png`, { animations: 'disabled', scale: 'css', maxDiffPixelRatio: 0.002 });
   const requests: string[] = [];
@@ -245,7 +245,7 @@ test('short phone menu scrolls above the real footer and preserves safe reset ca
   await noOverflow(page);
 });
 
-test('faculty keeps its own four sections; full-screen questions never inherit the bottom bar', async ({ page }) => {
+test('faculty keeps its own five sections (Teacher Studio included); full-screen questions never inherit the bottom bar', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await resetDemo(page);
   await startMissionViaUi(page, 'Hematology Lab', 'Fix the Sample');
@@ -257,7 +257,8 @@ test('faculty keeps its own four sections; full-screen questions never inherit t
   const calls: string[] = [];
   page.on('request', (r) => calls.push(new URL(r.url()).pathname));
   await openFaculty(page);
-  await expect(page.locator('.app>aside nav button')).toHaveCount(4);
+  await expect(page.locator('.app>aside nav button')).toHaveCount(5);
+  await expect(page.getByRole('button', { name: 'Teacher Studio', exact: true })).toBeVisible();
   await expect(footer(page)).toHaveCount(0);
   for (const label of ['Rooms', 'Vault', 'Badges', 'Leaderboard']) await expect(page.getByRole('button', { name: label, exact: true })).toHaveCount(0);
   expect(calls.filter((p) => /^\/api\/(vault|badges|leaderboard)$/.test(p))).toEqual([]);
@@ -474,7 +475,7 @@ for (const label of ['Vault', 'Badges', 'Leaderboard']) test(`Faculty switch fro
   await stable(page);
   await settle(page);
   expect(requests.filter((p) => /^\/api\/(vault|badges|leaderboard)$/.test(p))).toEqual([]);
-  await expect(page.locator('.app>aside nav button')).toHaveCount(4);
+  await expect(page.locator('.app>aside nav button')).toHaveCount(5);
   await expect(footer(page)).toHaveCount(0);
   await noOverflow(page);
   if (label === 'Badges') {

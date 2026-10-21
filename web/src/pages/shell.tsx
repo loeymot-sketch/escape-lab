@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { ArrowRight, Beaker, BookOpen, Briefcase, ClipboardCheck, ClipboardList, DoorOpen, FlaskConical, Loader2, Menu, Settings as SettingsIcon, Sparkles, Trophy, Users, X } from 'lucide-react';
+import { ArrowRight, Beaker, BookOpen, Briefcase, ClipboardCheck, ClipboardList, DoorOpen, FlaskConical, KeyRound, Loader2, Menu, PenTool, Settings as SettingsIcon, Sparkles, Trophy, Users, X } from 'lucide-react';
 import labescapeInvestigationHero from '../assets/labescape-investigation-hero.webp';
 import { ApiError } from '../lib/api';
 import { LanguageSwitch, t } from '../i18n';
@@ -50,7 +50,7 @@ export function GuestGate({ loading, error, retry }: { loading: boolean; error: 
 const CRUMBS: Record<View, string> = {
   home: 'Mission control', labs: 'Lab map', lab: 'Laboratory', progress: 'Progress vault', results: 'Lab results',
   badges: 'Milestones', leaderboard: 'Leaderboard',
-  profile: 'Learning settings', teacher: 'Faculty analytics', student: 'Student detail', content: 'Content review', about: 'About & demo guide',
+  profile: 'Learning settings', teacher: 'Faculty analytics', student: 'Student detail', content: 'Content review', studio: 'Teacher Studio', rooms: 'Teacher rooms', about: 'About & demo guide',
 };
 
 /** What the guest is waiting for, if anything. */
@@ -273,6 +273,7 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
   </>;
   const secondaryStudentNav = <>
     {navItem('labs', t('Lab map'), <Beaker size={17} aria-hidden="true" />, ['labs', 'lab'], t('Labs'))}
+    {navItem('rooms', t('Teacher rooms'), <KeyRound size={17} aria-hidden="true" />, ['rooms'], t('Teacher rooms'))}
     {navItem('leaderboard', t('Leaderboard'), <Trophy size={17} aria-hidden="true" />)}
     {navItem('results', t('Lab results'), <ClipboardList size={17} aria-hidden="true" />, ['results'], t('Results'))}
     {navItem('profile', t('Learning settings'), <SettingsIcon size={17} aria-hidden="true" />, ['profile'], t('Settings'))}
@@ -291,6 +292,7 @@ export function Shell({ teacher, view, setView, resetGuest, switchGuest, menuOpe
             ? (
               <>
                 {navItem('teacher', t('Faculty'), <Sparkles size={17} aria-hidden="true" />, ['teacher'], t('Faculty'))}
+                {navItem('studio', t('Teacher Studio'), <PenTool size={17} aria-hidden="true" />, ['studio'], t('Studio'))}
                 {navItem('student', t('Student detail'), <Users size={17} aria-hidden="true" />, ['student'], t('Learners'))}
                 {navItem('content', t('Content review'), <ClipboardCheck size={17} aria-hidden="true" />, ['content'], t('Review'))}
                 {navItem('about', t('About & demo guide'), <BookOpen size={17} aria-hidden="true" />, ['about'], t('Guide'))}

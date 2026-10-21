@@ -1,4 +1,4 @@
-import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { StrictMode, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ApiError, api, apiConfigError, demoSession, onUnauthorized } from './lib/api';
 import { normalizeAttempt, normalizeStart, type Attempt } from './lib/attempt';
@@ -27,6 +27,11 @@ import './neon-theme.css';
 import './game-world.css';
 
 type Role = 'student' | 'teacher';
+
+// Loaded on demand: the Teacher Studio only for the faculty guest, the teacher rooms only when a student opens them.
+const StudioPage = lazy(() => import('./pages/studio'));
+const RoomsPage = lazy(() => import('./pages/rooms'));
+const Lazy = ({ children }: { children: ReactNode }) => <Suspense fallback={<LoadingPanel label={t('Opening…')} />}>{children}</Suspense>;
 
 function App() {
   // Subscribing here re-renders every screen below when the display language is switched (state is kept: nothing is remounted).
@@ -357,6 +362,8 @@ function Ready({ me, view: requestedView, setView, labSlug, setLabSlug, student,
       case 'teacher': return <Teacher />;
       case 'student': return <StudentDetail />;
       case 'content': return <ContentReview />;
+      case 'studio': return <Lazy><StudioPage /></Lazy>;
+      case 'rooms': return <Lazy><RoomsPage /></Lazy>;
       case 'about': return <About role={teacher ? 'teacher' : 'student'} />;
       default: return <Dashboard />;
     }

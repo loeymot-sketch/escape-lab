@@ -18,6 +18,8 @@ export function resolveApiBase(env: { PROD?: boolean; VITE_API_URL?: string }): 
 const resolved = resolveApiBase(import.meta.env);
 /** Non-null when the bundle cannot know its API (production build without VITE_API_URL). */
 export const apiConfigError: string | null = resolved.error;
+/** Address of a teacher-uploaded picture (public by id, drawn with <img>, never fetched by script). */
+export const mediaUrl = (id: string): string => `${resolved.base ?? ''}/media/${encodeURIComponent(id)}`;
 const TOKEN_KEY = 'escape-demo-token';
 const ATTEMPT_KEY = 'escape-demo-attempt';
 const ROLE_KEY = 'escape-demo-role';

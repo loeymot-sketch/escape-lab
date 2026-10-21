@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { deflateSync, crc32 } from 'node:zlib';
 import { harness } from './helpers.ts';
 import type { Harness } from './helpers.ts';
-import { foldText, fromPublic, grade, inZone, publicQuestion, qualityCheck, textMatches, validateRoomDoc } from '../src/rooms.ts';
+import { foldText, fromPublic, grade, inZone, publicQuestion, qualityCheck, seededShuffle, textMatches, validateRoomDoc } from '../src/rooms.ts';
 import type { Question } from '../src/rooms.ts';
 import { sniffImage } from '../src/media.ts';
 
@@ -286,6 +286,9 @@ test('escape mode end to end: trap, retry penalty, hint, fragments, vault, revie
     assert.equal((await h.call('GET', `/api/room-attempts/${a.attemptId}/review`, { token: student.token })).status, 409, 'no review before the vault');
     const wrongCode = await h.call('POST', `/api/room-attempts/${a.attemptId}/escape`, { token: student.token, body: { code: 'IGG42' } });
     assert.equal(wrongCode.status, 422);
+    assert.equal(wrongCode.body.error.details.triesLeft, 9);
+    const again = await h.call('POST', `/api/room-attempts/${a.attemptId}/escape`, { token: student.token, body: { code: 'XXXXX' } });
+    assert.equal(again.body.error.details.triesLeft, 8, 'wrong codes are counted (not rolled back)');
     const out = await h.call('POST', `/api/room-attempts/${a.attemptId}/escape`, { token: student.token, body: { code: 'igm 42' } });
     assert.equal(out.status, 200, JSON.stringify(out.body));
     assert.equal(out.body.attempt.status, 'completed');
@@ -325,8 +328,11 @@ test('exam mode: one answer per question, partial credit, no feedback when the t
     const room = await publishedRoom(h, teacher.token, doc);
     let a = (await h.call('POST', `/api/rooms/${room.id}/start`, { token: student.token, body: {} })).body.attempt;
     assert.equal(a.vault, null, 'no vault in exam mode');
+    assert.equal(a.score, null, 'no running score in an exam without feedback');
     const r1 = await h.call('POST', `/api/room-attempts/${a.attemptId}/answer`, { token: student.token, body: { questionId: a.question.id, response: { choice: a.question.options[0].id } } });
     assert.equal(r1.body.correct, null, 'feedback hidden');
+    assert.equal(r1.body.earned, null, 'points hidden too: they would tell right from wrong');
+    assert.equal(r1.body.attempt.score, null);
     a = r1.body.attempt;
     assert.equal(a.index, 1, 'moved on whatever the answer');
     for (let i = 1; i < 5; i++) {
@@ -402,5 +408,92 @@ test('publishing needs a class and no quality error; preview grades like a stude
     assert.equal(dup.status, 201);
     assert.equal((await h.call('DELETE', `/api/studio/rooms/${dup.body.id}`, { token: teacher.token })).status, 200);
     assert.equal((await h.call('GET', '/api/studio/rooms', { token: teacher.token })).body.rooms.length, 2);
+  } finally { await h.close(); }
+});
+
+// ------------------------------------------------------------------ adversarial review (2026-10-21) regressions
+test('review fix: stored ids are refused; only this attempt\'s tokens are accepted (no identity-map match, no copied ids)', async () => {
+  const { h, teacher, student } = await setup();
+  try {
+    const room = await publishedRoom(h, teacher.token);
+    const a = (await h.call('POST', `/api/rooms/${room.id}/start`, { token: student.token, body: {} })).body.attempt;
+    const byId = await h.call('POST', `/api/room-attempts/${a.attemptId}/answer`, { token: student.token, body: { questionId: a.question.id, response: { choice: 'o1' } } });
+    assert.equal(byId.status, 400, 'a stored option id is not an answer');
+    const q = validateRoomDoc(sampleDoc(), noMedia).questions[4]!;
+    assert.throws(() => grade(q, fromPublic(q, { pairs: { p1: 'p1', p2: 'p2', p3: 'p3' } }, 'salt')), /pairs/);
+    assert.equal((await h.call('GET', `/api/room-attempts/${a.attemptId}`, { token: student.token })).body.question.wrong, 0, 'a refused response is not a wrong try');
+  } finally { await h.close(); }
+});
+
+test('review fix: with revealAnswers off the learner review carries no id, no label table, no expected answer, no explanation for unsolved questions', async () => {
+  const { h, teacher, student } = await setup();
+  try {
+    const room = await publishedRoom(h, teacher.token, { ...sampleDoc(), mode: 'exam', revealAnswers: false, showFeedback: false });
+    let a = (await h.call('POST', `/api/rooms/${room.id}/start`, { token: student.token, body: {} })).body.attempt;
+    while (a.status === 'in_progress') {
+      const q = a.question;
+      const response = q.type === 'choice' ? { choice: q.options[0].id } : q.type === 'hotspot' ? { x: 1, y: 1 } : q.type === 'text' ? { text: 'macrophage' } : q.type === 'number' ? { value: 3 } : { pairs: Object.fromEntries(q.left.map((l: { id: string }, j: number) => [l.id, q.right[j].id])) };
+      a = (await h.call('POST', `/api/room-attempts/${a.attemptId}/answer`, { token: student.token, body: { questionId: q.id, response } })).body.attempt;
+    }
+    const review = (await h.call('GET', `/api/room-attempts/${a.attemptId}/review`, { token: student.token })).body;
+    const json = JSON.stringify(review.questions);
+    assert.doesNotMatch(json, /"p1"|"o1"|"z-schisto"|:right/);
+    for (const q of review.questions) {
+      assert.deepEqual(q.labels, {});
+      assert.equal(q.expected, null);
+      if (!q.solved) assert.equal(q.explanation, '');
+      for (const r of q.responses) assert.equal(typeof r.display, 'string');
+    }
+    // The teacher still sees everything.
+    const detail = (await h.call('GET', `/api/studio/attempts/${a.attemptId}`, { token: teacher.token })).body;
+    assert.ok(detail.questions[0].expected);
+  } finally { await h.close(); }
+});
+
+test('review fix: "any" accepts one click in any of several correct zones; matching stays fast with 12 overlapping zones', () => {
+  const doc = sampleDoc();
+  doc.questions[1] = { ...doc.questions[1]!, zones: [
+    { id: 'a', label: 'A', shape: 'circle', x: 200, y: 200, r: 30 }, { id: 'b', label: 'B', shape: 'circle', x: 600, y: 600, r: 30 },
+  ], decoys: ['C'] } as never;
+  const q = validateRoomDoc(doc, noMedia).questions[1]!;
+  assert.equal(grade(q, { x: 600, y: 600 }).correct, true);
+  assert.equal(grade(q, { x: 200, y: 200 }).correct, true);
+  const many = { ...sampleDoc(), questions: [{ id: 'm', type: 'hotspot', prompt: 'All', points: 10, image: IMG, require: 'all', tolerance: 5,
+    zones: Array.from({ length: 12 }, (_, i) => ({ id: `z${i}`, label: `Zone ${i}`, shape: 'circle', x: 800, y: 400, r: 200 + i })) }] };
+  const big = validateRoomDoc(many, noMedia).questions[0]!;
+  const t0 = performance.now();
+  const v = grade(big, { points: Array.from({ length: 12 }, () => ({ x: 800, y: 400 })) });
+  assert.ok(performance.now() - t0 < 100, 'polynomial matching');
+  assert.equal(v.correct, true, 'twelve clicks in twelve overlapping zones can be paired');
+});
+
+test('review fix: two-item lists are shuffled without bias; a one-label text alternative blocks publishing; methanol is not ethanol', () => {
+  const seen = new Set<string>();
+  for (let i = 0; i < 64; i++) seen.add(seededShuffle(['a', 'b'], `seed-${i}`).join(''));
+  assert.deepEqual([...seen].sort(), ['ab', 'ba']);
+  const doc = sampleDoc();
+  doc.questions[1] = { ...doc.questions[1]!, zones: [{ id: 'only', label: 'Target', shape: 'circle', x: 1232, y: 440, r: 60 }], decoys: [] } as never;
+  assert.ok(qualityCheck(validateRoomDoc(doc, noMedia)).notes.some((n) => n.code === 'few_choices' && n.level === 'error'));
+  assert.equal(textMatches('methanol', 'ethanol', true), false);
+  assert.equal(textMatches('ilium', 'ileum', true), false);
+  assert.equal(textMatches('dendritc cell', 'dendritic cell', true), true);
+});
+
+test('review fix: a late answer closes the attempt for good (no rollback), a new start begins a fresh attempt, and an unpublished room cannot be played on', async () => {
+  const { h, teacher, student } = await setup();
+  try {
+    const room = await publishedRoom(h, teacher.token, { ...sampleDoc(), timeLimitSec: 60 });
+    const a = (await h.call('POST', `/api/rooms/${room.id}/start`, { token: student.token, body: {} })).body.attempt;
+    h.clock.t += 61_000;
+    assert.equal((await h.call('POST', `/api/room-attempts/${a.attemptId}/hint`, { token: student.token, body: { questionId: a.question.id } })).status, 409);
+    const stored = h.app.db.prepare('SELECT status FROM room_attempts WHERE id = ?').get(a.attemptId) as { status: string };
+    assert.equal(stored.status, 'timeout');
+    const again = await h.call('POST', `/api/rooms/${room.id}/start`, { token: student.token, body: {} });
+    assert.equal(again.body.resumed, false);
+    assert.notEqual(again.body.attempt.attemptId, a.attemptId);
+    await h.call('PUT', `/api/studio/rooms/${room.id}/status`, { token: teacher.token, body: { status: 'draft' } });
+    const closed = await h.call('POST', `/api/room-attempts/${again.body.attempt.attemptId}/answer`, { token: student.token, body: { questionId: again.body.attempt.question.id, response: { choice: again.body.attempt.question.options[0].id } } });
+    assert.equal(closed.status, 409);
+    assert.equal(closed.body.error.code, 'room_closed');
   } finally { await h.close(); }
 });

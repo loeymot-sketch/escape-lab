@@ -375,8 +375,9 @@ export function textMatches(answer: string, expected: string, typoTolerance: boo
   const e = foldText(expected);
   if (!a) return false;
   if (a === e) return true;
-  // One typo is forgiven on words long enough for a typo not to change the meaning; numbers and short answers must be exact.
-  return typoTolerance && e.length >= 5 && !/\d/.test(e) && editDistance(a, e, 1) <= 1;
+  // One typo is forgiven on answers long enough for a typo not to change the meaning, and never on the first letter (methanol is not ethanol,
+  // ileum is not ilium): numbers and short answers must be exact.
+  return typoTolerance && e.length >= 7 && !/\d/.test(e) && a[0] === e[0] && editDistance(a, e, 1) <= 1;
 }
 
 /** Distance from a point to a zone's edge (0 inside). */
@@ -406,22 +407,21 @@ const point = (v: unknown, w: number, h: number): { x: number; y: number } => {
   return { x: v.x, y: v.y };
 };
 
-/** Largest number of clicks that can each be paired with a different correct zone (tiny sizes: exhaustive search). */
+/** Largest number of clicks that can each be paired with a different correct zone: bipartite matching by augmenting paths (at most 12 x 12). */
 function bestMatching(points: Array<{ x: number; y: number }>, zones: Zone[], tolerance: number): number {
   const fits = points.map((pt) => zones.map((z, j) => (inZone(z, pt.x, pt.y, tolerance) ? j : -1)).filter((j) => j >= 0));
-  const used = new Set<number>();
-  const go = (i: number): number => {
-    if (i === points.length) return 0;
-    let best = go(i + 1);
+  const owner = new Array<number>(zones.length).fill(-1);
+  const augment = (i: number, seen: boolean[]): boolean => {
     for (const j of fits[i]!) {
-      if (used.has(j)) continue;
-      used.add(j);
-      best = Math.max(best, 1 + go(i + 1));
-      used.delete(j);
+      if (seen[j]) continue;
+      seen[j] = true;
+      if (owner[j] === -1 || augment(owner[j]!, seen)) { owner[j] = i; return true; }
     }
-    return best;
+    return false;
   };
-  return go(0);
+  let matched = 0;
+  for (let i = 0; i < points.length; i++) if (augment(i, new Array<boolean>(zones.length).fill(false))) matched += 1;
+  return matched;
 }
 
 /** Grades one response. Throws 400 on a malformed response (that is never counted as a wrong try). */
@@ -501,7 +501,8 @@ export function grade(q: Question, response: unknown): Verdict {
         return { x: Math.round(c.x * 10) / 10, y: Math.round(c.y * 10) / 10, zone: zone?.id ?? null, trap: !!zone?.trap };
       });
       const matched = bestMatching(clicks, right, q.tolerance);
-      const correct = matched === right.length && clicks.length === right.length;
+      // "any": one click in any correct zone; "all": every correct zone gets its own click.
+      const correct = q.require === 'all' ? matched === right.length && clicks.length === right.length : matched === 1;
       const trapHit = hits.find((x) => x.trap);
       const trapZone = trapHit ? traps.find((z) => z.id === trapHit.zone) : undefined;
       return { correct, fraction: correct ? 1 : q.require === 'all' ? matched / right.length : 0, trap: !correct && !!trapHit, feedback: correct ? undefined : (trapZone?.feedback || wrongFeedback), hits };
@@ -543,7 +544,9 @@ export function seededShuffle<T>(items: T[], seed: string): T[] {
   const rnd = () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 1_000_000) / 1_000_000; };
   const out = [...items];
   for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [out[i], out[j]] = [out[j]!, out[i]!]; }
-  if (out.length > 1 && out.every((x, i) => x === items[i])) out.push(out.shift()!);
+  // With 3 items or more a shuffle that lands on the original order is redrawn by rotation (it would show an order answer for free). Two items stay
+  // unbiased: always swapping them would itself give the original order away.
+  if (out.length > 2 && out.every((x, i) => x === items[i])) out.push(out.shift()!);
   return out;
 }
 
@@ -591,10 +594,12 @@ export function publicQuestion(q: Question, seed: string, shuffleOptions: boolea
  * Translates a response written with the public tokens of `publicQuestion` back to the stored ids (what `grade` and the results views use).
  * An unknown token is left as it is, so `grade` refuses it with its usual 400.
  */
+const UNKNOWN = '\u0000unknown';
 export function fromPublic(q: Question, response: unknown, seed: string): unknown {
   if (!isObj(response)) return response;
   const table = (kind: string, ids: string[]) => new Map(ids.map((x) => [publicToken(seed, kind, x), x]));
-  const back = (m: Map<string, string>, v: unknown) => (typeof v === 'string' ? m.get(v) ?? v : v);
+  // Strict: a value that is not one of this attempt's tokens (a stored id copied from somewhere, a guess) becomes a value grade refuses with 400.
+  const back = (m: Map<string, string>, v: unknown) => (typeof v === 'string' ? m.get(v) ?? UNKNOWN : v);
   switch (q.type) {
     case 'choice': {
       const m = table('option', q.options.map((o) => o.id));
@@ -608,7 +613,7 @@ export function fromPublic(q: Question, response: unknown, seed: string): unknow
       const left = table('left', q.pairs.map((x) => x.id));
       const right = table('right', q.pairs.map((x) => x.id));
       if (!isObj(response.pairs)) return response;
-      return { ...response, pairs: Object.fromEntries(Object.entries(response.pairs).map(([l, r]) => [left.get(l) ?? l, back(right, r)])) };
+      return { ...response, pairs: Object.fromEntries(Object.entries(response.pairs).map(([l, r]) => [left.get(l) ?? `${UNKNOWN}${l}`, back(right, r)])) };
     }
     case 'hotspot': {
       const m = table('zone', [...q.zones.map((z) => z.id), ...q.decoys.map((_, i) => `decoy-${i + 1}`)]);
@@ -699,7 +704,8 @@ export function qualityCheck(doc: RoomDoc): { score: number; notes: QualityNote[
         for (const a of q.zones) for (const b of q.zones) {
           if (a.id < b.id && !!a.trap !== !!b.trap && overlap(a, b, q.tolerance)) add('error', 'zones_overlap', `Correct zone and trap zone overlap ("${a.label}", "${b.label}"): one click could count as both.`, q.id);
         }
-        if (q.decoys.length === 0 && q.zones.length < 3) add('tip', 'few_choices', 'The text alternative offers few labels: add decoy labels so a non-visual learner is not guessing between two.', q.id);
+        if (q.zones.length + q.decoys.length < 3) add('error', 'few_choices', 'The text alternative offers fewer than 3 labels: add decoy labels, otherwise a learner using it gets the answer for free.', q.id);
+        else if (q.decoys.length === 0) add('tip', 'no_decoys', 'Add a decoy label or two: the text alternative then tests recognition, not elimination.', q.id);
         break;
       }
       case 'truefalse':

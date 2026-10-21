@@ -345,7 +345,7 @@ test.describe('Escape Lab critical paths', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible();
     // Reach the first navigation button the way a keyboard user does, so :focus-visible really applies.
-    const enter = page.getByRole('button', { name: 'Rooms' });
+    const enter = page.getByRole('button', { name: 'Rooms', exact: true });
     await expect(enter).not.toBeFocused();
     // The first tab stop is the skip link; it jumps past the sidebar to the page content.
     await page.keyboard.press('Tab');

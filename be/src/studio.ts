@@ -241,6 +241,15 @@ export class Studio {
     return r;
   }
 
+  /** A room a student may still play: published and assigned to one of their classes (checked again on every answer, hint and vault try). */
+  private isOpen(uid: number, roomId: string): boolean {
+    return !!this.one<{ one: number }>(`SELECT 1 AS one FROM rooms r WHERE r.id = ? AND r.status = 'published'
+      AND EXISTS (SELECT 1 FROM room_classes rc JOIN class_members cm ON cm.class_id = rc.class_id WHERE rc.room_id = r.id AND cm.user_id = ?)`, roomId, uid);
+  }
+  private assertOpen(uid: number, roomId: string) {
+    if (!this.isOpen(uid, roomId)) throw conflict('room_closed', 'Your teacher has closed this room: this attempt can no longer continue.');
+  }
+
   roomsFor(uid: number) {
     const rows = this.all<RoomRow & { teacher_name: string }>(
       `SELECT r.*, u.name AS teacher_name FROM rooms r JOIN users u ON u.id = r.teacher_id WHERE r.status = 'published'
@@ -249,7 +258,7 @@ export class Studio {
     return {
       rooms: rows.map((r) => {
         const doc = JSON.parse(r.doc_json) as RoomDoc;
-        const mine = this.all<AttemptRow>('SELECT * FROM room_attempts WHERE room_id = ? AND user_id = ? ORDER BY started_at DESC', r.id, uid);
+        const mine = this.all<AttemptRow>('SELECT * FROM room_attempts WHERE room_id = ? AND user_id = ? ORDER BY started_at DESC', r.id, uid).map((a) => this.refresh(a));
         const active = mine.find((a) => a.status === 'in_progress' || a.status === 'vault');
         const finished = mine.filter((a) => a.status === 'completed' || a.status === 'timeout');
         const best = finished.reduce<AttemptRow | null>((b, a) => (!b || a.score > b.score ? a : b), null);
@@ -268,8 +277,10 @@ export class Studio {
     const r = this.visibleRoom(uid, roomId);
     const doc = JSON.parse(r.doc_json) as RoomDoc;
     return tx(this.db, () => {
-      const active = this.one<AttemptRow>("SELECT * FROM room_attempts WHERE room_id = ? AND user_id = ? AND status IN ('in_progress','vault')", roomId, uid);
-      if (active) return { resumed: true, attempt: this.view(this.refresh(active)) };
+      const found = this.one<AttemptRow>("SELECT * FROM room_attempts WHERE room_id = ? AND user_id = ? AND status IN ('in_progress','vault')", roomId, uid);
+      // An attempt whose time ran out is closed here (and kept as a timeout); a new one starts.
+      const active = found ? this.refresh(found) : undefined;
+      if (active && (active.status === 'in_progress' || active.status === 'vault')) return { resumed: true, attempt: this.view(active) };
       if (doc.maxAttempts > 0) {
         const done = this.one<{ n: number }>("SELECT COUNT(*) AS n FROM room_attempts WHERE room_id = ? AND user_id = ? AND status IN ('completed','timeout')", roomId, uid)!.n;
         if (done >= doc.maxAttempts) throw conflict('attempts_exhausted', 'You have used every attempt your teacher allowed for this room.', { maxAttempts: doc.maxAttempts });
@@ -340,7 +351,9 @@ export class Studio {
       attemptId: a.id, roomId: a.room_id, title: doc.title, discipline: doc.discipline, mode: doc.mode, cover: doc.cover ?? null, intro: doc.intro,
       status: a.status, index: Math.min(a.current, t.length), total: t.length, startedAt: a.started_at, completedAt: a.completed_at,
       timeLimitSec: doc.timeLimitSec, remainingSec: finished ? null : this.remaining(a, doc), serverNow: this.now(),
-      score: t.reduce((s, x) => s + x.earned, 0), maxScore: a.max_score, passPct: doc.passPct, showFeedback: doc.mode === 'escape' || doc.showFeedback,
+      // An exam without feedback must not reveal right / wrong through the running score.
+      score: doc.mode === 'escape' || doc.showFeedback || finished ? t.reduce((s, x) => s + x.earned, 0) : null,
+      maxScore: a.max_score, passPct: doc.passPct, showFeedback: doc.mode === 'escape' || doc.showFeedback,
       question: current ? { ...publicQuestion(current.q, a.salt, doc.shuffleOptions), ordinal: current.index + 1, wrong: current.wrong, hintsGiven } : null,
       progress: t.map((x) => ({ ordinal: x.index + 1, done: x.done, solved: doc.mode === 'escape' || doc.showFeedback || finished ? x.solved : null })),
       vault: doc.vaultCode
@@ -353,9 +366,11 @@ export class Studio {
   getAttempt(uid: number, id: string) { return this.view(this.refresh(this.ownAttempt(uid, id))); }
 
   answer(uid: number, attemptId: string, questionId: string, rawResponse: unknown) {
+    // Closed first, in its own write: a time_up thrown inside the transaction below would roll the timeout back.
+    if (this.refresh(this.ownAttempt(uid, attemptId)).status === 'timeout') throw conflict('time_up', 'Time is up: this attempt is closed. Your score so far is kept.');
     return tx(this.db, () => {
-      const a = this.refresh(this.ownAttempt(uid, attemptId));
-      if (a.status === 'timeout') throw conflict('time_up', 'Time is up: this attempt is closed. Your score so far is kept.');
+      const a = this.ownAttempt(uid, attemptId);
+      this.assertOpen(uid, a.room_id);
       if (a.status !== 'in_progress') throw conflict('not_in_progress', 'This attempt is not waiting for an answer.');
       const doc = JSON.parse(a.doc_json) as RoomDoc;
       const order = JSON.parse(a.order_json) as string[];
@@ -383,7 +398,7 @@ export class Studio {
         trap: reveal ? v.trap : null,
         feedback: reveal && !v.correct ? v.feedback ?? null : null,
         explanation: reveal && (v.correct || doc.mode === 'exam') ? q.explanation || null : null,
-        earned: advance ? t[index]!.earned : null,
+        earned: reveal && advance ? t[index]!.earned : null,
         fragment: doc.mode === 'escape' && v.correct && doc.vaultCode ? fragmentSlices(doc.vaultCode, order.length)[index] || null : null,
         attempt: this.view(after),
       };
@@ -391,9 +406,10 @@ export class Studio {
   }
 
   hint(uid: number, attemptId: string, questionId: string) {
+    if (this.refresh(this.ownAttempt(uid, attemptId)).status === 'timeout') throw conflict('time_up', 'Time is up: this attempt is closed.');
     return tx(this.db, () => {
-      const a = this.refresh(this.ownAttempt(uid, attemptId));
-      if (a.status === 'timeout') throw conflict('time_up', 'Time is up: this attempt is closed.');
+      const a = this.ownAttempt(uid, attemptId);
+      this.assertOpen(uid, a.room_id);
       if (a.status !== 'in_progress') throw conflict('not_in_progress', 'This attempt is not waiting for an answer.');
       const doc = JSON.parse(a.doc_json) as RoomDoc;
       const qid = (JSON.parse(a.order_json) as string[])[a.current];
@@ -408,34 +424,44 @@ export class Studio {
   }
 
   escape(uid: number, attemptId: string, code: string) {
-    return tx(this.db, () => {
-      const a = this.refresh(this.ownAttempt(uid, attemptId));
-      if (a.status === 'timeout') throw conflict('time_up', 'Time is up: this attempt is closed.');
-      if (a.status !== 'vault') throw conflict('vault_locked', 'The vault opens once every question is solved.');
+    // A wrong code is COUNTED (committed) before it is refused: throwing inside the transaction would roll the counter back.
+    if (this.refresh(this.ownAttempt(uid, attemptId)).status === 'timeout') throw conflict('time_up', 'Time is up: this attempt is closed.');
+    const out = tx(this.db, () => {
+      const a = this.ownAttempt(uid, attemptId);
+      if (!this.isOpen(uid, a.room_id)) return { error: conflict('room_closed', 'Your teacher has closed this room: this attempt can no longer continue.') };
+      if (a.status !== 'vault') return { error: conflict('vault_locked', 'The vault opens once every question is solved.') };
       const doc = JSON.parse(a.doc_json) as RoomDoc;
-      if (a.vault_tries >= ROOM_RULES.maxVaultTries) throw conflict('vault_blocked', 'Too many wrong codes: ask your teacher.');
+      if (a.vault_tries >= ROOM_RULES.maxVaultTries) return { error: conflict('vault_blocked', 'Too many wrong codes: ask your teacher.') };
       const ok = foldText(code).replace(/\s+/g, '').toUpperCase() === doc.vaultCode;
       if (!ok) {
         this.run('UPDATE room_attempts SET vault_tries = vault_tries + 1 WHERE id = ?', a.id);
-        throw new ApiError(422, 'wrong_code', 'The vault stays shut: that is not the code.', { triesLeft: ROOM_RULES.maxVaultTries - a.vault_tries - 1 });
+        return { error: new ApiError(422, 'wrong_code', 'The vault stays shut: that is not the code.', { triesLeft: ROOM_RULES.maxVaultTries - a.vault_tries - 1 }) };
       }
       this.run("UPDATE room_attempts SET status = 'completed', completed_at = ? WHERE id = ?", this.now(), a.id);
-      return { escaped: true, attempt: this.view(this.attemptRow(a.id)!) };
+      return { escaped: true as const, attempt: this.view(this.attemptRow(a.id)!) };
     });
+    if ('error' in out) throw out.error;
+    return out;
   }
 
   /** The review after an attempt: every question with the learner's answer, the explanation and (when allowed) the expected answer. */
   review(uid: number, attemptId: string) {
     const a = this.refresh(this.ownAttempt(uid, attemptId));
     if (a.status !== 'completed' && a.status !== 'timeout') throw conflict('not_finished', 'The review opens once the attempt is finished.');
-    return this.reviewOf(a);
+    return this.reviewOf(a, false);
   }
 
-  private reviewOf(a: AttemptRow) {
+  /**
+   * `teacher`: the expected answers, the stored ids and every explanation. A learner of a room that hides the answers gets each of their answers
+   * as words only (no ids, no label table: ids in order or a left/right label table would rebuild the key) and the explanations of the questions
+   * they solved.
+   */
+  private reviewOf(a: AttemptRow, teacher: boolean) {
     const doc = JSON.parse(a.doc_json) as RoomDoc;
     const t = this.tally(a, doc);
     const score = t.reduce((s, x) => s + x.earned, 0);
     const p = pct(score, a.max_score) ?? 0;
+    const open = teacher || doc.revealAnswers;
     return {
       attemptId: a.id, roomId: a.room_id, title: doc.title, mode: doc.mode, status: a.status, startedAt: a.started_at, completedAt: a.completed_at,
       durationSec: a.completed_at ? Math.round((a.completed_at - a.started_at) / 1000) : null,
@@ -444,10 +470,16 @@ export class Studio {
       questions: t.map((x) => ({
         ordinal: x.index + 1, id: x.q.id, type: x.q.type, prompt: x.q.prompt, image: x.q.image ?? null, points: x.q.points, earned: x.earned,
         answered: x.answers.length > 0, solved: x.solved, tries: x.answers.length, wrong: x.wrong, traps: x.traps, hints: x.hints,
-        responses: x.answers.map((r) => ({ correct: r.correct === 1, trap: r.trap === 1, ...(JSON.parse(r.response_json) as { r: unknown; h: unknown }) })),
-        explanation: x.q.explanation,
-        expected: doc.revealAnswers ? expectedAnswer(x.q) : null,
-        labels: labelsOf(x.q),
+        responses: x.answers.map((row) => {
+          const stored = JSON.parse(row.response_json) as { r: Record<string, unknown>; h: Array<{ x: number; y: number; zone: string | null; trap: boolean }> | null };
+          const display = describeStored(x.q, stored.r);
+          return open
+            ? { correct: row.correct === 1, trap: row.trap === 1, display, r: stored.r, h: stored.h }
+            : { correct: row.correct === 1, trap: row.trap === 1, display, r: {}, h: stored.h?.map((c) => ({ x: c.x, y: c.y, zone: null, trap: c.trap })) ?? null };
+        }),
+        explanation: open || x.solved ? x.q.explanation : '',
+        expected: open ? expectedAnswer(x.q) : null,
+        labels: open ? labelsOf(x.q) : {},
       })),
     };
   }
@@ -456,6 +488,7 @@ export class Studio {
   results(teacherId: number, roomId: string) {
     const r = this.ownRoom(teacherId, roomId);
     const doc = JSON.parse(r.doc_json) as RoomDoc;
+    for (const open of this.all<AttemptRow>("SELECT * FROM room_attempts WHERE room_id = ? AND status IN ('in_progress','vault')", roomId)) this.refresh(open);
     const attempts = this.all<AttemptRow & { name: string }>(
       'SELECT a.*, u.name FROM room_attempts a JOIN users u ON u.id = a.user_id WHERE a.room_id = ? ORDER BY a.started_at DESC', roomId);
     const finished = attempts.filter((a) => a.status === 'completed' || a.status === 'timeout');
@@ -544,10 +577,27 @@ export class Studio {
     if (!a) throw notFound('Attempt not found.');
     this.ownRoom(teacherId, a.room_id);
     const student = this.one<{ id: number; name: string }>('SELECT id, name FROM users WHERE id = ?', a.user_id)!;
-    const review = this.reviewOf(this.refresh(a));
     // The teacher always sees the expected answers, whatever the room shows learners.
-    const doc = JSON.parse(a.doc_json) as RoomDoc;
-    return { student, ...review, questions: review.questions.map((q) => ({ ...q, expected: expectedAnswer(doc.questions.find((x) => x.id === q.id)!) })) };
+    return { student, ...this.reviewOf(this.refresh(a), true) };
+  }
+}
+
+/** A stored response in words (the student's own answer, without any id). Click wording matches the client template "Click at {x}, {y} px". */
+function describeStored(q: Question, r: Record<string, unknown>): string {
+  const L = labelsOf(q);
+  const name = (id: unknown) => (typeof id === 'string' ? L[id] ?? '?' : '?');
+  switch (q.type) {
+    case 'choice': return Array.isArray(r.choices) ? r.choices.map(name).join(', ') : name(r.choice);
+    case 'truefalse': return r.value ? 'True' : 'False';
+    case 'text': return String(r.text ?? '');
+    case 'number': return String(r.value ?? '');
+    case 'hotspot':
+      if (r.zone !== undefined) return name(r.zone);
+      if (Array.isArray(r.zones)) return r.zones.map(name).join(', ');
+      if (Array.isArray(r.points)) return `${r.points.length} clicks on the picture`;
+      return `Click at ${Math.round(Number(r.x))}, ${Math.round(Number(r.y))} px`;
+    case 'order': return Array.isArray(r.order) ? r.order.map(name).join(' → ') : '';
+    case 'match': return r.pairs && typeof r.pairs === 'object' ? Object.entries(r.pairs as Record<string, string>).map(([l, x]) => `${name(l)} → ${L[`${x}:right`] ?? '?'}`).join(' · ') : '';
   }
 }
 

@@ -32,6 +32,10 @@ npm run dev
 
 The frontend uses `VITE_API_URL` when provided and otherwise targets `http://localhost:3000/api`. The demo API listens on `127.0.0.1` only (IPv4); to avoid depending on how `localhost` resolves, start the frontend with `VITE_API_URL=http://127.0.0.1:3000/api npm run dev` and open it at `http://localhost:5173` (the `CORS_ORIGIN` of `.env.example`). It opens directly in the student guest demo: no user account, registration or sign-in screen is exposed. The faculty demo is an optional in-product guest switch. Demo mode requires the backend to be seeded and started with `DEMO_MODE=1`.
 
+## Teacher Studio (2026-10-21)
+
+The faculty guest has a **Teacher Studio**: create escape rooms and exams, upload a picture or pick one from the library, write multiple-choice, true/false, short-answer, numeric, order and match questions with **trap answers** that get their own feedback, and draw **click zones on a picture with a tolerance in pixels** (5 px by default), with a live "test a click" tool. A server-side quality check scores each room before publishing; "preview as a student" grades exactly like a real attempt. Results show every attempt, per-question success and trap rates, the options students chose, and a **heatmap of every click**, with CSV export. Students find the published rooms under **Teacher rooms**. Report: [docs/TEACHER_STUDIO_REPORT_2026-10-21.md](docs/TEACHER_STUDIO_REPORT_2026-10-21.md).
+
 ## Product boundary
 
 The backend remains authoritative for answers, scoring, timers, attempts, hints, code fragments, exits, badges, and teacher analytics. The frontend only renders public payloads and submits user responses.
